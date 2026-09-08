@@ -1,6 +1,6 @@
 # ADR-020 — Deployment, Environments & Migration Policy
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
