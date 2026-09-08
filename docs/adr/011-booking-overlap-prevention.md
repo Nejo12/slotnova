@@ -1,6 +1,6 @@
 # ADR-011 — Booking Overlap Prevention
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
