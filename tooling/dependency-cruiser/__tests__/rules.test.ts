@@ -37,6 +37,27 @@ async function violatedRules(fixture: string): Promise<string[]> {
   return (result.summary.violations ?? []).map((violation) => violation.rule.name);
 }
 
+/** Cruise a fixture tree and return `{ rule, from }` for every violation. */
+async function violations(fixture: string): Promise<Array<{ rule: string; from: string }>> {
+  const options: ICruiseOptions = {
+    baseDir: join(fixturesRoot, fixture),
+    validate: true,
+    ruleSet: { forbidden },
+    doNotFollow: { path: "node_modules" },
+    tsPreCompilationDeps: true,
+  };
+  const enhanced = dc.options?.enhancedResolveOptions;
+  if (enhanced) options.enhancedResolveOptions = enhanced;
+
+  const { output } = await cruise(["."], options);
+  const result: ICruiseResult =
+    typeof output === "string" ? (JSON.parse(output) as ICruiseResult) : output;
+  return (result.summary.violations ?? []).map((violation) => ({
+    rule: violation.rule.name,
+    from: violation.from,
+  }));
+}
+
 /** Each entry: a fixture directory and the single rule it must trigger. */
 const VIOLATION_CASES: ReadonlyArray<readonly [fixture: string, rule: string]> = [
   ["no-circular", "no-circular"],
@@ -53,6 +74,14 @@ const UNFIXTURED_RULES = new Set(["not-to-unresolvable"]);
 describe("dependency-cruiser core boundary ruleset", () => {
   it.each(VIOLATION_CASES)("fixture '%s' trips rule '%s'", async (fixture, rule) => {
     expect(await violatedRules(fixture)).toContain(rule);
+  });
+
+  it("blocks packages/observability-browser from importing observability-server", async () => {
+    const fired = await violations("no-observability-server-in-browser");
+    expect(fired).toContainEqual({
+      rule: "no-observability-server-in-browser",
+      from: "packages/observability-browser/src/bad.ts",
+    });
   });
 
   it("the compliant fixture trips no rule", async () => {
