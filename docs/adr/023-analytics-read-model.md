@@ -1,6 +1,6 @@
 # ADR-023 — Analytics as an Event-Fed Read Model
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
