@@ -1,6 +1,6 @@
 # ADR-015 — Money, Tax & Allocation
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
