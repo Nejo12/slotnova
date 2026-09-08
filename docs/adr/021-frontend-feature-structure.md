@@ -1,6 +1,6 @@
 # ADR-021 — Frontend Feature Structure & State Ownership
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
