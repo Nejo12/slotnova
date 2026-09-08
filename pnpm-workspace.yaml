@@ -1,0 +1,31 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+# --- pnpm 12 supply-chain controls (kept ON; per-package reviewed exceptions only) ---
+
+# Dependency install/build scripts are blocked by default. Allowlist only
+# packages that genuinely need a native build step:
+#   - unrs-resolver: the napi resolver used by eslint-plugin-import-x; its
+#     postinstall links the prebuilt platform binding (@unrs/resolver-binding-*).
+allowBuilds:
+  unrs-resolver: true
+
+# pnpm 12 enforces a package-age cooldown (minimumReleaseAge) by default. These
+# packages are newer than the cooldown but are deliberately selected: they are
+# the typescript-eslint 8.70.0 family — the version that officially supports our
+# pinned TypeScript 6.0.x (peer `>=4.8.4 <6.1.0`). The exact pins are locked in
+# pnpm-lock.yaml and revisited in T080 (docs/decisions/0002-version-pins.md).
+# The cooldown stays active for every other dependency.
+minimumReleaseAgeExclude:
+  - "@typescript-eslint/eslint-plugin@8.70.0"
+  - "@typescript-eslint/parser@8.70.0"
+  - "@typescript-eslint/project-service@8.70.0"
+  - "@typescript-eslint/scope-manager@8.70.0"
+  - "@typescript-eslint/tsconfig-utils@8.70.0"
+  - "@typescript-eslint/type-utils@8.70.0"
+  - "@typescript-eslint/types@8.70.0"
+  - "@typescript-eslint/typescript-estree@8.70.0"
+  - "@typescript-eslint/utils@8.70.0"
+  - "@typescript-eslint/visitor-keys@8.70.0"
+  - "typescript-eslint@8.70.0"

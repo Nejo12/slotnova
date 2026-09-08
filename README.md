@@ -18,6 +18,27 @@ Figma: https://www.figma.com/design/WDH7Ku5JXhUQeJ054GFLPd
 
 Some generic Figma metadata/API surfaces expose only the cover page. The Figma Plugin API has verified the full 61-page corpus. If your tooling cannot access a referenced design, use `docs/product-handoff.md` and surface visual ambiguity; do not invent the UI.
 
+## Local development
+
+Prerequisites: Node (see `.nvmrc`) and Corepack-managed pnpm (the version is pinned in `package.json` → `packageManager`; run `corepack enable` once).
+
+```bash
+corepack enable
+pnpm install          # cold install; runs approved native build scripts only
+pnpm build            # turbo build graph (no output units yet in the bootstrap)
+pnpm typecheck        # strict tsc, no escape hatches
+pnpm lint             # ESLint (flat config from packages/eslint-config)
+pnpm lint:styles      # Stylelint / design-token rules (raw-value ban lands in PR-12)
+pnpm lint:boundaries  # dependency-cruiser architecture-boundary rules
+pnpm test             # Vitest (unit / property)
+pnpm format:check     # Prettier
+```
+
+CI runs the same gates in the `fast` workflow (target: under 3 minutes on a warm cache). No auto-merge — the founder performs the final merge.
+
+Full setup, troubleshooting and the toolchain-pin rationale: [`docs/runbooks/local-dev.md`](docs/runbooks/local-dev.md).
+Architecture-boundary rules: [`tooling/dependency-cruiser/.dependency-cruiser.cjs`](tooling/dependency-cruiser/.dependency-cruiser.cjs).
+
 ## Architecture baseline
 
 Slotnova starts as a **modular monolith** inside a **pnpm + Turborepo monorepo**.
