@@ -1,6 +1,6 @@
 # ADR-010 — Time & Timezone Model
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
