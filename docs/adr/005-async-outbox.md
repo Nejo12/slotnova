@@ -1,6 +1,6 @@
 # ADR-005 — Transactional Outbox
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
