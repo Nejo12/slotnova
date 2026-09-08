@@ -1,6 +1,6 @@
 # ADR-013 — API Contract Strategy
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
