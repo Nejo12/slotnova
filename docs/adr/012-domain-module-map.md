@@ -1,6 +1,6 @@
 # ADR-012 — Domain Module Map & Tiering
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
