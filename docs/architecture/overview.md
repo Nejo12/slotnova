@@ -2,7 +2,7 @@
 
 ## Architectural style
 
-Slotnova starts as a **modular monolith** in a **pnpm workspace / Turborepo monorepo**. This gives one deployable product architecture while enforcing bounded contexts strongly enough to support future extraction if scale or organizational constraints justify it.
+Slotnova starts as a **modular monolith** in a **pnpm workspace / Turborepo monorepo**. This keeps deployment and transactions simple while enforcing domain boundaries strongly enough to support later extraction only when scale or organizational evidence justifies it.
 
 Microservices are not the default. Extraction requires evidence and an ADR.
 
@@ -10,17 +10,17 @@ Microservices are not the default. Extraction requires evidence and an ADR.
 
 ```text
 apps/
-  web/        React application
-  api/        NestJS API
-  worker/     background jobs / outbox consumers
-  storybook/  UI development and visual-state harness
+  web/        React operator application
+  api/        NestJS + Fastify modular-monolith API
+  worker/     durable background jobs and outbox consumers
 packages/
-  ui/               approved reusable UI primitives
-  design-tokens/    semantic design/motion tokens
-  contracts/        generated/public API contracts only
-  db/               schema, migrations, database test utilities
-  testing/          shared test builders/fixtures
-  observability/    logging/tracing helpers
+  ui/                    reusable UI primitives + Storybook
+  design-tokens/         generated semantic design/motion tokens
+  contracts/             generated external API client/types only
+  db/                    database client, migration runner, test harness
+  testing/               shared test builders/fixtures
+  observability-browser/ browser telemetry helpers
+  observability-server/  server/worker telemetry helpers
   eslint-config/
   tsconfig/
 docs/
@@ -32,50 +32,65 @@ docs/
   observability/
 ```
 
-Do not turn every business domain into a package immediately. Backend domains live inside `apps/api/src/modules/*` until multiple real consumers justify promotion.
+Storybook belongs with `packages/ui`; it is not a deployable application. Business domains do **not** become workspace packages by default. Backend domains live inside `apps/api/src/modules/*` until multiple real consumers justify promotion.
 
-## Backend modules
+Do not create generic `common`, `core`, `shared`, `utils`, `helpers`, `types`, `constants` or wrapper packages as dumping grounds. Prefer local ownership and the rule of three before abstraction.
 
-Initial bounded contexts:
+## Final domain/module map
 
-- Identity / Workspace
-- Calendar / Availability
-- Booking
-- Clients
-- Recovery
-- Messaging
-- Payments
-- Inventory
-- Staff
-- Marketing / Retention
-- Analytics
-- Settings
-- Audit
+### Core domains — full domain/application/infrastructure/http layering
 
-Each substantial module should separate:
+- **Scheduling** — availability algebra, recurring working patterns, time off, buffers, blocking intervals and overlap invariants
+- **Booking** — booking aggregate, lifecycle, cancellation/no-show rules and booking consistency
+- **Recovery** — vacancy/offer state machines, ranking, orchestration/process manager and recovered-revenue attribution
+- **Payments** — payments, refunds, deposits, tax/discount/tip calculation and reconciliation
 
-```text
-domain/          entities, value objects, invariants, domain events
-application/     use cases / commands / queries / ports
-infrastructure/  persistence and provider adapters
-http/            controllers / transport DTO mapping
-tests/
-```
+### Supporting domains — lighter application/infrastructure/http structure; add domain layer only where invariants justify it
 
-Dependencies point inward. Domain code must not depend on HTTP, database drivers, provider SDKs, or React.
+- **Identity** — users, workspaces, locations, memberships, invitations, roles and permissions
+- **Catalog** — services, categories, duration, buffers, price, add-ons and staff-service capability
+- **Clients** — client records, contact preferences, consent, quiet hours, frequency limits, history and future dedupe/merge
+- **Staff** — staff profiles, employment/operating data and working-pattern ownership consumed by Scheduling
+- **Messaging** — human conversation threads
+- **Notifications** — system-initiated templated sends, delivery records, throttling and provider adapters
+- **Inventory** — products and append-only stock movements
+- **Marketing / Retention** — rebooking/win-back orchestration built on Clients, Notifications and Analytics read models
+
+### Generic/platform capabilities — deliberately thin
+
+- **Audit** — append-only security/business audit records
+- **Analytics** — event-fed read models with their own tables; never cross-query another domain's tables directly
+- **Platform infrastructure** — tenancy context, outbox, jobs, telemetry, feature flags and provider composition
+
+### UI surfaces that are not backend bounded contexts
+
+- **Calendar** — frontend view over Scheduling + Booking
+- **Settings** — frontend composition over configuration owned by the relevant domains
+- **Dashboard** — frontend/read-model composition
+
+## Module tiering rule
+
+Full DDD ceremony is reserved for invariant-heavy core domains. Supporting modules must not receive aggregates/value-object/repository abstractions unless they protect real business invariants. Generic modules stay thin. This is an explicit defense against AI-generated architecture bloat.
+
+## Cross-context dependency rule
+
+Cross-context behavior goes through application ports/contracts. A module must never import another module's repository or access another module's tables directly. Recovery is intentionally a process manager coordinating Booking, Scheduling, Catalog, Clients and Notifications through ports.
 
 ## Frontend baseline
 
-- React
-- TypeScript with strict configuration
-- Vite
-- React Router data/framework capabilities where useful
+- React + TypeScript
+- Vite SPA
+- React Router data router (`createBrowserRouter`); loaders/actions are for route gating/prefetch/navigation concerns, not a second server-state cache
+- TanStack Query owns remote/server state
+- query keys are workspace-scoped: `['ws', workspaceId, ...]`
+- clear the QueryClient on logout and workspace switch
+- Zustand only for justified client-only cross-route state
 - SCSS Modules + semantic CSS custom properties
-- TanStack Query for server state
-- Zustand only for justified cross-route client state
-- Zod for runtime boundary validation
-- Motion for React + CSS + View Transitions API according to `docs/standards/motion.md`
-- Storybook for reusable UI/state coverage
+- Zod at runtime boundaries
+- CSS transitions for simple state changes
+- View Transitions for route transitions where supported
+- Motion for React only for richer presence/layout/sheet/drawer transitions and code-split where practical
+- Storybook colocated with `packages/ui`
 
 No Tailwind unless explicitly approved by the founder.
 
@@ -84,23 +99,31 @@ No Tailwind unless explicitly approved by the founder.
 - Node.js LTS
 - NestJS with Fastify adapter
 - PostgreSQL
-- Drizzle for typed database access and reviewed migrations
-- OpenAPI as the external HTTP contract
-- durable Postgres-backed outbox + worker for asynchronous side effects
+- Drizzle for typed access and reviewed migrations
+- per-module Drizzle schema ownership under each module's infrastructure layer; `packages/db` does not own all business tables
+- OpenAPI is the external HTTP contract
+- request/response validation schemas live at API boundaries and generate OpenAPI; client/types/MSW artifacts are generated into `packages/contracts`
+- RFC 9457-style `application/problem+json` errors
+- transactional outbox for reliable event publication
+- Postgres-backed job scheduler/worker for delayed/recurring/retryable work; scheduler and outbox are separate concerns
 
 ## Provider boundaries
 
-Persistence, authentication, messaging, payments, external calendars, files and observability vendors must sit behind intentional adapter boundaries. UI/domain code must not import provider SDKs directly.
+Authentication, persistence, payments, messaging/notifications, external calendars, files and observability vendors sit behind intentional adapters. Domain/UI code must not import provider SDKs directly.
 
 ## Architectural quality gates
 
 - no deep imports across bounded contexts
 - no circular domain dependencies
+- no cross-context repository/table access
 - no frontend-to-database access
-- no shared mutable domain state
 - no float-based money arithmetic
+- no raw JavaScript `Date` in domain scheduling code
 - no timezone-naive appointment logic
-- no tenant-owned record without workspace ownership
+- no tenant-owned table without database-enforced tenant isolation
+- no booking overlap protection that relies only on check-then-insert
 - no non-idempotent external side effect without an idempotency strategy
+- no HTTP GET endpoint with a state-changing side effect
+- no user-facing status represented by color alone
 
-Violations should be made mechanically detectable through linting, package exports, tests or CI wherever practical.
+Violations should be mechanically detectable through linting, database policies/constraints, package exports, tests or CI wherever practical.
