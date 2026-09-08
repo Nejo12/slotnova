@@ -70,6 +70,22 @@ const CORRELATION_FIELDS = [
   "userId",
 ] as const;
 
+/**
+ * Fields the logger owns. Their values come from the call site (`event`,
+ * `message`, `meta`), the clock (`time`), the level and the active correlation
+ * context — never from static configuration. `LoggerOptions.base` may not carry
+ * any of them, so a stray config key can never shadow authoritative data or
+ * break stable event semantics.
+ */
+const RESERVED_FIELDS: ReadonlySet<string> = new Set([
+  "level",
+  "time",
+  "event",
+  "message",
+  "meta",
+  ...CORRELATION_FIELDS,
+]);
+
 const defaultSink = (line: string): void => {
   process.stdout.write(`${line}\n`);
 };
@@ -79,6 +95,16 @@ export function createLogger(options: LoggerOptions = {}): Logger {
   const clock = options.clock ?? ((): string => new Date().toISOString());
   const minWeight = LEVEL_WEIGHT[options.level ?? "info"];
   const redactionOptions = options.redactionOptions;
+
+  if (options.base !== undefined) {
+    const collisions = Object.keys(options.base).filter((key) => RESERVED_FIELDS.has(key));
+    if (collisions.length > 0) {
+      throw new Error(
+        `createLogger: base may not set reserved log field(s): ${collisions.join(", ")}`,
+      );
+    }
+  }
+
   const base =
     options.base === undefined
       ? undefined

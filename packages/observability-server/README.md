@@ -47,6 +47,12 @@ runWithContext({ correlationId: req.headers["x-correlation-id"] }, () => {
 `runWithChildContext(overrides, fn)` carries the current correlation id into
 background work triggered by a request (FR-054).
 
+`base` is for static deployment context only (`service`, `component`, `version`,
+`region`, …). It may **not** carry a reserved field the logger owns — `level`,
+`time`, `event`, `message`, `meta`, `correlationId`, `requestId`, `traceId`,
+`workspaceId`, `userId` — `createLogger` throws at construction if it does, so
+configuration can never shadow authoritative per-record data.
+
 ### Redaction
 
 `redact(value, options?)` returns a defensive deep copy with every value under a

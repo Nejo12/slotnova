@@ -92,6 +92,44 @@ describe("createLogger", () => {
     expect(records()[0]).toMatchObject({ service: "api", apiKey: REDACTED });
   });
 
+  it("keeps legitimate custom base fields on every record", () => {
+    const { logger, records } = testLogger({
+      base: { service: "api", component: "http", version: "1.2.3", region: "eu-west-1" },
+    });
+    logger.info("boot.ok");
+    expect(records()[0]).toMatchObject({
+      service: "api",
+      component: "http",
+      version: "1.2.3",
+      region: "eu-west-1",
+    });
+  });
+
+  it.each([
+    "level",
+    "time",
+    "event",
+    "message",
+    "correlationId",
+    "requestId",
+    "traceId",
+    "workspaceId",
+    "userId",
+    "meta",
+  ])("rejects a base that would override the reserved field %j", (field) => {
+    expect(() => testLogger({ base: { [field]: "attacker" } })).toThrow(/reserved/i);
+  });
+
+  it("names every offending reserved key in the construction error", () => {
+    expect(() => testLogger({ base: { event: "x", level: "debug", service: "ok" } })).toThrow(
+      /event.*level|level.*event/,
+    );
+  });
+
+  it("a base with only custom keys constructs without error", () => {
+    expect(() => testLogger({ base: { service: "api" } })).not.toThrow();
+  });
+
   it("drops records below the configured minimum level", () => {
     const { logger, lines } = testLogger({ level: "warn" });
     logger.debug("nope");
