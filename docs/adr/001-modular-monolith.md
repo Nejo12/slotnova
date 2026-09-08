@@ -1,6 +1,6 @@
 # ADR-001 — Modular Monolith
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
