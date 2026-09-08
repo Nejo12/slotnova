@@ -1,6 +1,6 @@
 # ADR-003 — Frontend Stack
 
-Status: Proposed
+Status: Accepted
 
 ## Decision
 
