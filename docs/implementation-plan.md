@@ -1,117 +1,155 @@
 # Slotnova Implementation Plan
 
-This plan converts the approved Figma product corpus into dependency-ordered engineering work. Each batch should be split into bounded issues/PRs rather than implemented as one oversized change.
+Slotnova is intentionally specification-led. Product implementation does **not** start immediately after repository creation. Phase 0 establishes architecture, agent workflow and verification rules that later feature PRs must obey.
 
-## Batch 1 — Foundations & shell
+## Phase 0 — Architecture & Engineering Foundation
 
-- Vite + React + TypeScript bootstrap
-- routing
-- SCSS foundations and semantic tokens
-- desktop shell/navigation
-- mobile shell + fixed bottom navigation
+Status: in progress in PR #10.
+
+### Deliverables
+
+- modular-monolith architecture
+- pnpm/Turborepo monorepo plan
+- frontend/backend/data ADRs
+- bounded-context/domain map
+- tenancy, time and money conventions
+- API/provider boundary rules
+- transactional outbox/worker strategy
+- security/audit baseline
+- observability baseline
+- testing architecture
+- motion/accessibility standard
+- Claude Code project instructions
+- Spec Kit + Superpowers operating model
+- independent architecture critique and reconciliation
+- CI quality-gate design
+
+### Exit gate
+
+All required items in `docs/architecture/phase-0-gate.md` are approved. PR #10 is merged manually by the founder only after the gate is satisfied.
+
+---
+
+## Phase 1 — Platform Foundation & Shell
+
+- initialize pnpm workspace + Turborepo
+- `apps/web`, `apps/api`, `apps/worker`, `apps/storybook`
+- shared TypeScript/ESLint/test configuration packages
+- React/Vite/Router shell
+- Nest/Fastify API shell
+- PostgreSQL/Drizzle migration harness
+- semantic design tokens and SCSS Modules foundation
+- Storybook
 - Light/Dark infrastructure
-- shared primitives wiring
-- test harness
+- desktop/mobile navigation shells
+- OpenAPI generation path
+- structured logging/request IDs
+- Vitest/MSW/Testcontainers/Playwright base harness
+- architecture-boundary linting
+- baseline GitHub Actions quality gates
 
-Exit criteria: app shell works on desktop/mobile, semantic modes work, routing is in place, tests run in CI/local workflow.
+Exit: repository builds/tests from a clean checkout; shell works desktop/mobile; API health path and database integration test pass; CI enforces architecture/type/test/build gates.
 
-## Batch 2 — Calendar & Booking
+## Phase 2 — Calendar & Booking
 
-- calendar views/navigation
-- booking list/detail
-- create booking
-- review/create lifecycle
-- booking system states
-- destructive cancellation confirmation
+- calendar navigation/views
+- availability boundaries
+- booking list/detail/create/review
+- cancellation/destructive confirmation
+- system states
+- booking state-machine tests
+- DST/overlap property tests
 
-Exit criteria: booking draft → review → created flow is implemented and tested.
+Exit: booking draft → review → created/confirmed and cancellation flows are behaviorally complete and tested.
 
-## Batch 3 — Clients & Messaging
+## Phase 3 — Clients & Messaging
 
 - client directory/detail/create
-- relationship health context
+- relationship-health context
+- rebooking entry points
 - messaging inbox/thread/new message
-- client context linking
-- empty/failure states
+- messaging provider port
+- failure/retry/empty states
 
-Exit criteria: client can be found, opened, messaged and rebooked through typed domain boundaries.
+Exit: clients can be found, opened, messaged and rebooked through typed boundaries.
 
-## Batch 4 — Recovery engine
+## Phase 4 — Recovery Engine
 
-- vacancy model
-- value-at-risk calculation boundary
-- ranked candidates
+- vacancy/value-at-risk model
+- candidate ranking contract
 - offer lifecycle
-- first-acceptance-wins behavior
+- first-valid-acceptance-wins concurrency rule
 - competing-offer closure
-- booking/calendar update
+- booking/calendar/client-history update
 - recovered-revenue attribution
-- recovery failure/offline states
+- outbox/worker delivery
+- failure/offline/no-match states
 
-Exit criteria: cancellation → recovery → acceptance → recovered booking is behaviorally complete and tested as a state machine.
+Exit: cancellation → vacancy → ranking → offers → acceptance → recovered booking is idempotent, race-tested and observable.
 
-## Batch 5 — Payments & Inventory
+## Phase 5 — Payments & Inventory
 
 - appointment/client anchored checkout
-- payment processing state boundary
-- receipt/refund lifecycle
+- payment provider adapter
+- processing/paid/receipt/refund/refunded lifecycle
+- webhook/idempotency handling
 - product catalogue
-- stock movement reasons
-- low-stock/replenishment flows
+- stock movement ledger/reasons
+- low-stock/replenishment workflows
 
-Exit criteria: checkout → paid → refund and stock mutation workflows are implemented with failure handling.
+Exit: money invariants, refund lifecycle and stock mutation transactions are tested against real PostgreSQL.
 
-## Batch 6 — Staff & Settings
+## Phase 6 — Staff & Settings
 
 - staff directory/profile
 - working hours/availability/time off
-- service assignment
-- roles/permissions UI
-- business/services settings
+- service capability
+- workspace membership/roles/permissions UI
+- business/location/services settings
 - booking/recovery configuration
 - payments/integrations/access settings
+- permission-restricted states
 
-Exit criteria: operational staff and configuration workflows are available with permission-restricted states.
+Exit: operational staff/settings workflows function with server-authoritative authorization and audit events.
 
-## Batch 7 — Growth & Analytics
+## Phase 7 — Growth & Analytics
 
-- retention opportunities
+- retention/rebooking opportunities
 - campaign creation/performance
-- revenue/recovery/loss analytics
-- utilization
-- staff/service performance context
-- actionable insights
+- attributed bookings/revenue
+- revenue/recovered/lost revenue analytics
+- utilization and service/staff context
+- actionable mobile insight summaries
 
-Exit criteria: retention and analytics remain distinct from Recovery while sharing canonical client/business data.
+Exit: Retention remains distinct from Recovery and analytics use canonical domain data/definitions.
 
-## Batch 8 — Hardening & prototypes
+## Phase 8 — Cross-product Hardening
 
-- full system-state coverage
-- accessibility/focus regression
-- responsive regression
-- Light/Dark regression
-- critical journey e2e tests
-- performance and error-boundary review
-- documentation synchronization
+- system-state parity
+- full keyboard/focus/touch regression
+- Light/Dark and reduced-motion regression
+- critical-journey Playwright coverage
+- visual regression
+- performance budgets/load tests for priority paths
+- failure/degraded-mode exercises
+- dependency/security scanning
+- backup/restore and operational runbooks before production
 
-Exit criteria: core desktop/mobile journeys pass automated and manual regression without known critical accessibility/state defects.
+Exit: no known critical dead ends or architectural violations; product docs match shipped behavior.
 
 ## Dependency order
 
-`1 → 2 → 3 → 4 → 5 → 6 → 7 → 8`
+`Phase 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8`
 
-Parallel work is allowed only when domain contracts are already stable and PRs remain independently reviewable.
-
-## Infrastructure decisions
-
-Do not prematurely couple UI/domain code to specific providers. Use typed adapters/interfaces for persistence, auth, payments, messaging and external calendar/integration providers until each provider is intentionally selected.
+Individual domain issues should still be split into bounded PRs. Parallelism is allowed only where contracts are stable and changes remain independently reviewable.
 
 ## PR discipline
 
-- one bounded issue per PR
-- current `main` as base
+- current `main` is the base
+- one bounded issue/slice per PR
 - no unrelated refactors
-- tests for changed state transitions
-- accessibility verification for changed UI
+- architecture-changing decisions require ADR update/approval
+- relevant tests are required
+- changed interactive UI receives accessibility verification
 - no auto-merge
-- founder manually merges
+- founder merges manually
