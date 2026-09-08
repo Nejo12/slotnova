@@ -1,6 +1,6 @@
 # ADR-009 — Authorization Model
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
