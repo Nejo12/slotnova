@@ -7,76 +7,80 @@ Testing is part of architecture, not a final hardening activity.
 ### 1. Domain/unit — Vitest
 Fast tests for pure rules and state transitions.
 
-Priority areas: scheduling, booking lifecycle, permissions, recovery matching/acceptance, money, inventory movements, analytics calculations.
+Priority: scheduling interval algebra, booking lifecycle, permissions, Recovery state machines/ranking, money allocation, inventory ledger rules.
 
 ### 2. Property-based — fast-check
-Use for invariant-heavy logic where example tests are insufficient:
-- timezone/DST boundaries
-- slot overlap and availability
-- recovery ranking/acceptance invariants
-- money/refund arithmetic
-- inventory mutation invariants
+Use for invariant-heavy logic where examples are insufficient:
+
+- timezone/DST and recurrence expansion
+- interval/availability algebra
+- deterministic Recovery ranking and illegal transition generation
+- money allocation/tax/refund conservation
+- inventory balance invariants
 
 ### 3. Component — Testing Library + Vitest
-Test user-visible behavior and accessibility semantics; avoid testing implementation internals.
+Test user-visible behavior, keyboard semantics and accessibility; avoid private implementation details.
 
 ### 4. API mocking — MSW
-Use shared handlers for component tests, Storybook edge states and development fixtures.
+Use shared/generated handlers for component tests, Storybook edge states and development fixtures. Do not use MSW as evidence for database correctness.
 
 ### 5. Database integration — Testcontainers + real PostgreSQL
-Validate migrations, constraints, transactions, locking, indexes and repository behavior against a disposable real database.
+Required for migrations, RLS policies, exclusion constraints, transactions, locking, indexes, outbox claiming, repository behavior and webhook/idempotency persistence.
 
-### 6. API integration
-Run Nest application slices against real PostgreSQL. Provider integrations remain mocked at typed adapter boundaries unless an explicit contract/integration test is required.
+Use transaction rollback for fast independent tests where possible. Tests that require real commits (concurrency/locking/constraint interactions) use isolated schemas/databases or controlled truncation.
 
-### 7. End-to-end — Playwright
-Critical journeys:
-- create booking
-- cancel booking
-- cancel → recovery → acceptance → recovered booking
-- client rebooking
-- message client
-- checkout → paid → refund → refunded
-- staff time off / coverage impact
+### 6. Concurrency
+Concurrency tests use genuinely separate database connections/tasks synchronized to overlap in time; sequential loops are not concurrency tests.
 
-### 8. Accessibility — axe + manual keyboard checks
-Automated checks are required but do not replace manual keyboard/focus testing for changed interactive flows.
+Required examples:
 
-### 9. Visual regression
-Use Storybook states plus targeted Playwright screenshots for stable, high-value UI states. Do not make pixel screenshots the only verification of behavior.
+- two operators attempt the same staff/time booking → exactly one succeeds
+- N Recovery clients accept the same vacancy concurrently → exactly one accepted offer, one recovered booking, one attribution
+- duplicate/out-of-order payment webhooks do not regress or double-apply state
+- outbox/job claims are not double-processed under concurrent workers
 
-### 10. Performance
-Add k6 or equivalent when real endpoints/data volumes exist. Establish budgets before load becomes a production problem.
+### 7. API integration
+Run Nest slices against real PostgreSQL. Provider SDKs remain mocked behind ports for normal CI, with narrow provider contract/sandbox smoke tests separately.
 
-## CI gates
+Tenant isolation is tested systematically: workspace A must not read/mutate workspace B resources, and every tenant-owned table must have RLS/policies.
 
-A normal implementation PR should be able to run, as applicable:
+### 8. End-to-end — Playwright
+Keep the core E2E set small and high-value:
 
-```text
-format/check
-lint
-architecture-boundary lint
-typecheck
-unit/property tests
-component tests
-database/API integration tests
-build
-a11y checks
-relevant Playwright journey(s)
-```
+1. create booking
+2. cancel booking
+3. cancel → Recovery offer → unauthenticated client accepts in a second browser context → recovered booking exists
+4. client rebooking
+5. checkout → paid → refund → refunded
+6. workspace switch shows no previous-workspace data
+7. restricted-permission user sees the restricted state and cannot perform the action server-side
 
-Do not run every expensive suite for every trivial docs-only change; use path-aware CI where practical.
+Additional feature journeys are added only when they protect a real integration seam.
+
+### 9. Accessibility — axe + manual keyboard checks
+Automated axe checks are required but do not replace manual keyboard/focus testing for changed interactive flows. Dialog/drawer focus trap, Escape behavior and focus restoration require behavioral tests.
+
+### 10. Visual regression
+Use Storybook for stable primitives/system states and targeted Playwright screenshots. Do not snapshot entire route DOMs or use screenshots as the only behavioral verification.
+
+### 11. Performance
+Establish build/bundle/test baselines in Phase 1. Add k6 or equivalent when representative endpoints/data volumes exist. Priority load paths: availability search, booking writes, Recovery ranking/acceptance, checkout and analytics reads.
+
+## What not to test
+
+Do not spend tests on framework internals, Drizzle internals, third-party component internals, getters/setters, exact animation timing or broad DOM snapshots. Avoid application-service tests whose only assertion is which mocked repository method was called; prefer observable behavior and invariants.
 
 ## Test quality rules
 
-- tests verify requirements and invariants, not private implementation details
+- requirements/invariants over implementation trivia
 - bug fixes require regression coverage
-- no arbitrary sleeps in async tests
-- fixtures use builders/factories, not giant shared mutable objects
-- no real external provider calls in ordinary CI
-- flaky tests are defects; quarantine is temporary and documented
+- no arbitrary sleeps
+- builders/factories over giant shared mutable fixtures
+- ordinary CI makes no real external-provider calls
+- flaky tests are defects; quarantine is temporary/documented
 - never weaken a correct test merely to make a PR green
+- coverage percentage is diagnostic, not the goal
 
-## Coverage
+## CI
 
-Coverage percentage is a diagnostic, not the objective. Critical domain invariants require explicit tests even when line coverage is already high.
+See `docs/standards/ci-quality-gates.md` for fast/heavy lanes and required gates.
