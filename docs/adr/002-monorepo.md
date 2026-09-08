@@ -1,6 +1,6 @@
 # ADR-002 — pnpm + Turborepo Monorepo
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
