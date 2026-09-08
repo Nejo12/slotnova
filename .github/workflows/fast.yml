@@ -1,0 +1,67 @@
+# Fast lane — runs on every PR and on pushes to main.
+# Target: under 3 minutes on a warm Turborepo cache (see docs/standards/ci-quality-gates.md).
+# Heavy lane (real PostgreSQL, migrations, Playwright, a11y, security scans) is a
+# separate required workflow added in a later PR.
+#
+# Merge policy: this workflow is a REQUIRED status check. Auto-merge is disabled
+# at the repository level; the founder performs the final merge.
+name: fast
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: fast-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  TURBO_TELEMETRY_DISABLED: "1"
+  # Optional remote cache — set repo/org secret TURBO_TOKEN and variable TURBO_TEAM to enable.
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+  TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+
+jobs:
+  fast:
+    name: format · lint · boundaries · typecheck · test · build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Formatting
+        run: pnpm format:check
+
+      - name: ESLint
+        run: pnpm lint
+
+      - name: Stylelint / token rules
+        run: pnpm lint:styles
+
+      - name: Architecture boundaries
+        run: pnpm lint:boundaries
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Unit / property tests
+        run: pnpm test
+
+      - name: Build / type-generation smoke
+        run: pnpm build
