@@ -15,7 +15,9 @@
     "lint:boundaries": "depcruise --config tooling/dependency-cruiser/.dependency-cruiser.cjs --no-progress .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:integration": "turbo run test:integration",
+    "db:migrate": "turbo run db:migrate"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

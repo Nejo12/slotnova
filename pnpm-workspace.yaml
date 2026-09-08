@@ -8,7 +8,16 @@ packages:
 # packages that genuinely need a native build step:
 #   - unrs-resolver: the napi resolver used by eslint-plugin-import-x; its
 #     postinstall links the prebuilt platform binding (@unrs/resolver-binding-*).
+#
+# Explicitly denied (transitive deps of `testcontainers`, pulled in by
+# `packages/db`). Their build scripts are NOT needed for local-Docker use:
+#   - ssh2 / cpu-features: an optional native crypto binding; ssh2's pure-JS
+#     path is used for the unix-socket Docker connection.
+#   - protobufjs: a postinstall CLI helper, irrelevant to library use.
 allowBuilds:
+  cpu-features: false
+  protobufjs: false
+  ssh2: false
   unrs-resolver: true
 
 # pnpm 12 enforces a package-age cooldown (minimumReleaseAge) by default. These
