@@ -201,6 +201,18 @@ importers:
         specifier: ^8.70.0
         version: 8.70.0(eslint@10.10.0(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3)
 
+  packages/observability-browser:
+    devDependencies:
+      '@slotnova/tsconfig':
+        specifier: workspace:*
+        version: link:../tsconfig
+
+  packages/observability-server:
+    devDependencies:
+      '@slotnova/tsconfig':
+        specifier: workspace:*
+        version: link:../tsconfig
+
   packages/tsconfig: {}
 
 packages:

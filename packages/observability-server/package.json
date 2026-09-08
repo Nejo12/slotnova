@@ -1,0 +1,26 @@
+{
+  "name": "@slotnova/observability-server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "UNLICENSED",
+  "description": "Slotnova server/worker observability infrastructure: structured JSON logging, AsyncLocalStorage correlation context, sensitive-field redaction. Server-only; never importable from browser code. Not the audit trail; vendor exporters are future adapters.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@slotnova/tsconfig": "workspace:*"
+  }
+}
