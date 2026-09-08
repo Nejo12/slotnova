@@ -1,6 +1,6 @@
 # ADR-014 — Job Scheduler Separate from Outbox
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
