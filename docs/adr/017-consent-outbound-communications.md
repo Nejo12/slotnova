@@ -1,6 +1,6 @@
 # ADR-017 — Consent, Quiet Hours & Frequency Capping
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
