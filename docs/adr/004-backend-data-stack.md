@@ -1,6 +1,6 @@
 # ADR-004 — Backend & Data Stack
 
-Status: Proposed
+Status: Accepted
 
 ## Decision
 
