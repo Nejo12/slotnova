@@ -7,8 +7,8 @@ Covers the Slotnova monorepo bootstrap delivered in PR-01 (tasks T001–T008 of
 
 | Tool | Version | Source of truth |
 |---|---|---|
-| Node.js | `.nvmrc` (currently **22**) | `.nvmrc`, `package.json` → `engines.node` (`>=22.13.0`) |
-| pnpm | `package.json` → `packageManager` (currently **10.34.5**) | managed by Corepack |
+| Node.js | **24.20.0** (current Node 24 LTS) | `.nvmrc`, `package.json` → `engines.node` (`>=24.20.0 <25`) |
+| pnpm | **12.3.4** (current stable major) | `package.json` → `packageManager`, managed by Corepack |
 | Git | any recent | — |
 
 ```bash
@@ -24,7 +24,7 @@ required from PR-02 onward for real-PostgreSQL tests.
 
 | Command | What it does |
 |---|---|
-| `pnpm install` | Cold-installs the workspace. Only build scripts in `pnpm.onlyBuiltDependencies` run. |
+| `pnpm install` | Cold-installs the workspace. Only build scripts allowlisted in `pnpm-workspace.yaml` → `allowBuilds` run. |
 | `pnpm build` | `turbo run build` across the workspace. No unit produces build output yet. |
 | `pnpm typecheck` | `tsc --noEmit` with the strict flag set from `@slotnova/tsconfig`. |
 | `pnpm lint` | ESLint flat config (`eslint.config.mjs` → `@slotnova/eslint-config`). |
@@ -51,23 +51,32 @@ proven by `tooling/dependency-cruiser/__tests__/rules.test.ts`. Rule *tightening
 (per-module public-entry allowlists, `packages/contracts` import direction, the
 test-harness production-graph guard) is deferred to PR-19 (task T085).
 
-## Toolchain pin rationale (PR-01)
+## Toolchain pins (PR-01)
 
-Two deliberate deviations from the `research.md` R2 baseline, both explicitly a
-Phase-1-exit concern for task T080 (`docs/decisions/0002-version-pins.md`):
+Runtime and package manager follow the `research.md` R2 baseline exactly:
 
-1. **Node 22, not 24.** The entire PR-01 toolchain (eslint 10, vitest 5,
-   typescript-eslint 8, dependency-cruiser 18, turbo 2) supports Node 22, and 22
-   is an active LTS. `research-basis.md` defers the exact pin to a Phase-1
-   compatibility run. T080 verifies Node 24 and finalizes.
-2. **TypeScript `~6.0.3`, not 7.** `typescript` 7.x (the native port) is
-   published, but `typescript-eslint@8.70` still caps at `typescript <6.1.0`.
-   Pinning TS 6.0.x keeps the lint + type toolchain coherent. T080 re-checks once
-   `typescript-eslint` (and other TS-API consumers) support TS 7.
-3. **pnpm 10.34.5, not the latest major.** pnpm 12's new supply-chain gates
-   (`minimumReleaseAge` auto-exclusions written into `pnpm-workspace.yaml`) added
-   friction to a clean bootstrap. pnpm 10 is current, stable and uses the same
-   lockfile format. T080 revisits.
+- **Node 24.20.0** — current Node 24 LTS, latest patch at pin time. `.nvmrc`,
+  `engines.node` (`>=24.20.0 <25`) and CI (`node-version-file: .nvmrc`) all pinned
+  to the Node 24 line.
+- **pnpm 12.3.4** — current stable major, via Corepack (`packageManager`). pnpm
+  12's supply-chain controls are kept ON:
+  - `pnpm-workspace.yaml` → `allowBuilds` allowlists **only** `unrs-resolver`
+    (the one package that genuinely needs a postinstall — it links the prebuilt
+    napi resolver binding for `eslint-plugin-import-x`).
+  - `pnpm-workspace.yaml` → `minimumReleaseAgeExclude` keeps the package-age
+    cooldown active for every dependency except the deliberately-selected
+    `typescript-eslint` 8.70.0 family (the version that officially supports the
+    pinned TypeScript 6.0.x). Every excluded version is also frozen in
+    `pnpm-lock.yaml` and reviewed in T080.
+
+One deliberate deviation, an explicit Phase-1-exit concern for task T080
+(`docs/decisions/0002-version-pins.md`):
+
+- **TypeScript `~6.0.3`, not 7.** `typescript` 7.x (the native port) is
+  published, but `typescript-eslint@8.70` officially supports only
+  `typescript >=4.8.4 <6.1.0`. Pinning TS 6.0.x keeps the lint + type toolchain
+  on a supported combination. T080 re-checks once `typescript-eslint` (and other
+  TS-API consumers) support TS 7.
 
 Exact versions are pinned by `pnpm-lock.yaml`; `package.json` uses caret/tilde
 ranges until T080 locks them.
