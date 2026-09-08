@@ -12,6 +12,8 @@ Maintain at least local, preview/CI, staging and production environment classes 
 
 Hosting/provider selection remains adapter-compatible and is finalized before Phase 1 exit after confirming support for the chosen Node/PostgreSQL versions, private networking, backups and observability requirements.
 
+`apps/worker` is an independently deployable process that may scale horizontally. Outbox consumers and scheduled-job workers must therefore use database-safe claiming/idempotency semantics (`FOR UPDATE SKIP LOCKED` or library-equivalent) rather than assuming a singleton worker. Any task that truly requires singleton execution must use an explicit database-backed lease/advisory-lock mechanism and document that invariant.
+
 ## Consequences
 
-Adds release discipline early, reduces deploy-time lock/schema incidents, and keeps provider selection from silently dictating architecture.
+Adds release discipline early, reduces deploy-time lock/schema incidents, and keeps provider selection from silently dictating architecture. Worker correctness remains valid as topology grows from one process to multiple replicas.
