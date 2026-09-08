@@ -1,12 +1,18 @@
 # Slotnova Product Handoff
 
-## Canonical design source
+## Canonical product/design sources
 
-Figma: https://www.figma.com/design/WDH7Ku5JXhUQeJ054GFLPd
+GitHub committed product/architecture specifications are the **agent-readable behavioral authority**.
 
-Implementation handoff lives on page `19 — Implementation Handoff`.
+Approved Figma is the **visual/interaction authority**:
 
-## Core product domains
+- File: https://www.figma.com/design/WDH7Ku5JXhUQeJ054GFLPd
+- `18 — Prototypes`: page id `3:21`
+- `19 — Implementation Handoff`: page id `372:2`
+
+Important tooling note: some generic Figma metadata/API surfaces have returned only `00 — Cover` for this file, while a Plugin API read verified **61 pages**, including the full product corpus and implementation handoff. An agent that cannot access the full Figma document must use this committed handoff/specification and must not infer that referenced designs are absent.
+
+## Core product surfaces
 
 1. Dashboard
 2. Calendar
@@ -21,49 +27,47 @@ Implementation handoff lives on page `19 — Implementation Handoff`.
 11. Analytics
 12. Settings
 
+These are product/UI surfaces; backend bounded contexts are defined separately in ADR-012. In particular, Calendar and Settings are not backend domains, and Catalog/Notifications/Scheduling exist as backend ownership modules even though they are not standalone primary navigation items.
+
 ## Approved mobile information architecture
 
 `Home · Calendar · Clients · Recovery · More`
 
-Messaging, Payments, Staff, Inventory, Marketing, Analytics and Settings live under `More` on mobile unless a later product decision explicitly changes the IA.
+Messaging, Payments, Staff, Inventory, Marketing, Analytics and Settings live under `More` on mobile unless a later founder-approved product decision changes the IA.
 
-## Important domain distinctions
-
-### Booking
+## Booking
 
 Primary lifecycle:
 
-`Draft → Review → Created/Pending → Confirmed → Completed`
+`Draft → Review → Pending/Confirmed → Completed`
 
-`Cancelled` and `No-show` are exceptional outcomes, not normal forward lifecycle stages.
+`Cancelled` and `No-show` are exceptional outcomes. Recovery is associated with newly available capacity and is not a Booking status.
 
-### Recovery
+## Recovery
 
 Recovery begins from cancelled/unfilled capacity and is optimized around recovered revenue.
 
-`Vacancy → value at risk → candidate ranking → offer → waiting → acceptance → close competing offers → booking/calendar update → client-history update → recovered-revenue attribution`
+`Vacancy → value at risk → candidate ranking → offers → waiting → first valid acceptance → close competing offers → booking/calendar update → client-history update → attribution`
 
-The first valid acceptance wins.
+The first valid acceptance wins. Detailed concurrency/security/accounting invariants live in ADR-016/018 and `docs/architecture/domain-modeling.md`.
 
-### Retention
+## Retention
 
-Retention is not Recovery.
+Retention is not Recovery. Retention addresses existing-client return behavior through rebooking opportunities, lifecycle signals, targeted outreach and campaign attribution.
 
-Retention addresses existing-client return behavior through rebooking opportunities, lifecycle signals, targeted outreach and campaign attribution.
+## Payments
 
-### Payments
+Checkout is appointment/client anchored first; retail/POS lines are additive.
 
-Checkout is anchored to appointment/client context first; retail/POS additions are secondary.
+The visual prototype simplifies the happy path, while the backend/payment domain must support the fuller lifecycle required by ADR-015 and payment architecture: processing/additional-action, authorization/capture where provider model requires it, paid, receipt, partial/full refunds, void/dispute/failure without conflating Refund as a single Payment status.
 
-`Checkout → Processing → Paid → Receipt → Refund → Refunded`
+## Inventory
 
-### Inventory
-
-Inventory is service-business stock management, not warehouse software. Stock movements should explain their operating cause: POS sale, service consumption, supplier delivery, damage/loss or manual correction.
+Inventory is service-business stock management, not warehouse software. Every movement explains its operating cause: sale, service consumption, supplier delivery, damage/loss or manual correction.
 
 ## System-state baseline
 
-Reusable system states:
+Reusable states:
 
 - Empty
 - Loading
@@ -75,20 +79,21 @@ Reusable system states:
 - Permission restricted
 - Partial/stale data
 
-Representative real-state designs already exist in Booking, Recovery, Messaging, Payments, Inventory and Settings.
+Representative real-state designs exist in Booking, Recovery, Messaging, Payments, Inventory and Settings in the full Figma corpus.
 
 ## Cross-product interaction rules
 
-- Progressive disclosure for optional/advanced fields.
-- Compact review/check-answers for high-consequence actions.
-- Do not insert review screens into low-risk editable actions.
-- Preserve input when a recoverable error occurs.
-- Destructive confirmations name the consequence and keep a safe exit path visible.
-- Status cannot rely on color alone.
-- Mobile uses deliberate stacked summaries instead of compressed desktop grids.
-- Fixed mobile navigation must not cover primary actions.
+- progressive disclosure for optional/advanced fields
+- compact review/check-answers for high-consequence actions
+- no unnecessary review screens for low-risk editable actions
+- preserve input when recoverable errors occur
+- destructive confirmations name the consequence and keep a safe exit visible
+- status cannot rely on color alone
+- mobile uses deliberate stacked substitutions, not compressed desktop grids
+- fixed mobile navigation must not cover primary actions
+- reduced-motion preference must be respected
 
-## Critical prototype journeys
+## Critical prototypes
 
 Desktop and mobile prototypes exist for:
 
@@ -96,4 +101,4 @@ Desktop and mobile prototypes exist for:
 - Cancel → recover
 - Checkout → payment/refund
 
-Prototype page: `18 — Prototypes`.
+Prototype page: `18 — Prototypes` (`3:21`).
