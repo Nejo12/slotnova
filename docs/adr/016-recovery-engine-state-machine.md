@@ -1,6 +1,6 @@
 # ADR-016 — Recovery Engine State Machines
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
