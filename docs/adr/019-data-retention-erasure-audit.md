@@ -1,6 +1,6 @@
 # ADR-019 — Data Retention, Erasure & Immutable Records
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
