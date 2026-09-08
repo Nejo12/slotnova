@@ -1,6 +1,6 @@
 # ADR-008 — Tenant Isolation
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
