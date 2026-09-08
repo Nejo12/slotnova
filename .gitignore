@@ -1,0 +1,14 @@
+node_modules/
+dist/
+coverage/
+.env
+.env.*
+!.env.example
+.DS_Store
+.vscode/
+.idea/
+*.log
+
+# Claude Code plugin/generated local state. Project authority lives in tracked
+# AGENTS.md, CLAUDE.md, .specify/ and repository-owned docs/skills only.
+.claude/
