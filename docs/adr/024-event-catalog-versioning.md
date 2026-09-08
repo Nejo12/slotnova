@@ -1,6 +1,6 @@
 # ADR-024 — Domain Event Catalogue & Versioning
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
