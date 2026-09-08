@@ -2,28 +2,45 @@
 
 @AGENTS.md
 
-## Working mode
+## Start here
 
-Slotnova is specification-led. Do not jump from a feature request directly to implementation.
+Before non-trivial work, read:
 
-For non-trivial work:
-1. Read the linked GitHub issue and relevant Figma/handoff references.
-2. Read applicable ADRs and architecture standards.
-3. Produce or update a feature specification and technical plan before code.
-4. Keep the change bounded to one issue/PR.
-5. Use tests to verify domain behavior, not to justify hard-coded implementations.
-6. Run the required verification gates before claiming completion.
+1. `.specify/memory/constitution.md`
+2. linked GitHub issue/spec
+3. applicable accepted ADRs and architecture standards
+4. `docs/product-handoff.md`
+5. Figma node/page when your tooling can access it fully
 
-## Agent workflow
+Do not jump directly from a request to code.
 
-- Spec Kit is the canonical specification/planning layer once initialized locally.
-- Superpowers is the preferred execution discipline for brainstorming, planning, worktrees, TDD, systematic debugging, review and verification.
-- GitHub remains the durable execution record.
-- Do not let generated plans in chat override committed specifications/ADRs silently.
+## Planning model
 
-## Architecture rule
+Spec Kit is the canonical specification/planning layer.
 
-Slotnova begins as a modular monolith in a pnpm/Turborepo monorepo. Domain boundaries are explicit; provider infrastructure sits behind typed ports/adapters. Do not introduce microservices, generic base services, generic repositories, or one-off abstractions without an accepted ADR.
+Use the sequence as appropriate:
+
+```text
+constitution → specify → clarify → plan → tasks → implement
+```
+
+Superpowers is execution discipline (brainstorming, planning, worktrees, TDD, debugging, review, verification), not a second source of truth.
+
+If a generated plan conflicts with accepted ADR/specification, stop and reconcile into the canonical artifact instead of keeping competing plans.
+
+## Figma access caveat
+
+Generic Figma metadata can expose only `00 — Cover` even though the Plugin API verifies a 61-page Slotnova file. If you cannot access `18 — Prototypes`, `19 — Implementation Handoff`, or another referenced page, trust the committed product handoff/spec for behavior and report the visual-access limitation. Never infer that the design is absent and never invent a replacement.
+
+## Implementation discipline
+
+- work from current `main`
+- one bounded issue/PR
+- follow module tiering and rule of three
+- use real PostgreSQL for database constraints/RLS/concurrency correctness
+- do not weaken tests to make a change pass
+- run required fast/heavy gates before claiming completion
+- do not merge or enable auto-merge; founder merges manually
 
 ## Before implementation
 
