@@ -1,147 +1,174 @@
 # Slotnova Implementation Plan
 
-Slotnova is intentionally specification-led. Product implementation does **not** start immediately after repository creation. Phase 0 establishes architecture, agent workflow and verification rules that later feature PRs must obey.
+Slotnova is specification-led. Product implementation begins only after Phase 0 is explicitly approved.
 
 ## Phase 0 — Architecture & Engineering Foundation
 
 Status: in progress in PR #10.
 
-### Deliverables
+Deliverables include modular-monolith boundaries, monorepo structure, domain map/tiering, auth/tenancy/time/money/API/async/security/testing/motion/observability/CI decisions, Spec Kit constitution, agent workflow, independent architecture review and reconciliation.
 
-- modular-monolith architecture
-- pnpm/Turborepo monorepo plan
-- frontend/backend/data ADRs
-- bounded-context/domain map
-- tenancy, time and money conventions
-- API/provider boundary rules
-- transactional outbox/worker strategy
-- security/audit baseline
-- observability baseline
-- testing architecture
-- motion/accessibility standard
-- Claude Code project instructions
-- Spec Kit + Superpowers operating model
-- independent architecture critique and reconciliation
-- CI quality-gate design
-
-### Exit gate
-
-All required items in `docs/architecture/phase-0-gate.md` are approved. PR #10 is merged manually by the founder only after the gate is satisfied.
+Exit: every required item in `docs/architecture/phase-0-gate.md` is approved and PR #10 is manually merged by the founder.
 
 ---
 
 ## Phase 1 — Platform Foundation & Shell
 
+### Repository/platform
+
 - initialize pnpm workspace + Turborepo
-- `apps/web`, `apps/api`, `apps/worker`, `apps/storybook`
-- shared TypeScript/ESLint/test configuration packages
-- React/Vite/Router shell
-- Nest/Fastify API shell
-- PostgreSQL/Drizzle migration harness
-- semantic design tokens and SCSS Modules foundation
-- Storybook
-- Light/Dark infrastructure
-- desktop/mobile navigation shells
-- OpenAPI generation path
-- structured logging/request IDs
-- Vitest/MSW/Testcontainers/Playwright base harness
-- architecture-boundary linting
-- baseline GitHub Actions quality gates
+- `apps/web`, `apps/api`, `apps/worker`
+- `packages/ui` with Storybook colocated inside it
+- `packages/design-tokens`, generated-contract output, testing/config packages
+- split browser/server observability packages
+- no business-domain packages
 
-Exit: repository builds/tests from a clean checkout; shell works desktop/mobile; API health path and database integration test pass; CI enforces architecture/type/test/build gates.
+### Web foundation
 
-## Phase 2 — Calendar & Booking
+- React/Vite SPA + React Router data router
+- semantic SCSS/token foundation generated from approved Figma variables
+- Light/Dark + reduced-motion infrastructure
+- desktop/mobile application shells
+- TanStack Query with workspace-scoped query-key convention and cache-clear behavior
+- base accessible primitives and system-state stories
 
-- calendar navigation/views
-- availability boundaries
-- booking list/detail/create/review
-- cancellation/destructive confirmation
-- system states
-- booking state-machine tests
-- DST/overlap property tests
+### API/data/security foundation
 
-Exit: booking draft → review → created/confirmed and cancellation flows are behaviorally complete and tested.
+- NestJS + Fastify shell
+- PostgreSQL + Drizzle migration/test harness
+- per-module schema ownership
+- minimal Identity/Workspace/Location/Membership/session schema needed for safe tenant context
+- secure server-managed session boundary
+- PostgreSQL RLS infrastructure and RLS-coverage tests
+- authorization policy boundary
+- OpenAPI/problem+json generation path
+- transactional outbox infrastructure
+- benchmark/select Postgres-backed job scheduler (graphile-worker vs pg-boss) before Phase 1 exit
 
-## Phase 3 — Clients & Messaging
+### Quality/operations
 
-- client directory/detail/create
-- relationship-health context
+- structured logs/request/correlation ids
+- OpenTelemetry/Sentry integration seams
+- Vitest/Testing Library/MSW/fast-check/Testcontainers/Playwright base harness
+- dependency-cruiser + ESLint + Stylelint token rules
+- fast/heavy GitHub Actions lanes with Turborepo caching
+- deployment environments/migration pipeline per ADR-020
+
+Exit: clean checkout installs/builds/tests; shell works desktop/mobile; secure session + workspace context works; real PostgreSQL test proves RLS isolation; API health/contract generation works; CI enforces architecture/type/test/build gates. No Booking/Recovery product behavior is implemented.
+
+## Phase 2 — Catalog, Scheduling & Booking
+
+- Catalog: services, duration, buffers, prices, add-ons, staff-service capability boundary
+- Scheduling: recurring availability, time off input, interval algebra, timezone/DST behavior, blocking intervals
+- PostgreSQL booking-overlap exclusion constraint
+- Booking workspace/list/detail/create/review/cancel lifecycle
+- optimistic concurrency for concurrent booking edits where applicable
+- Calendar UI as a composition over Scheduling + Booking
+- representative loading/no-results/error states
+
+Testing emphasis: property-based interval/DST tests; real-PG constraint/concurrency tests; booking create/cancel E2E.
+
+Exit: draft → review → pending/confirmed → complete/cancel behavior is correct; two concurrent attempts cannot double-book the same blocking capacity.
+
+## Phase 3 — Clients, Notifications & Messaging
+
+- Clients directory/detail/create
+- contact preferences + consent/lawful-basis metadata
+- quiet hours/frequency cap policy inputs
 - rebooking entry points
-- messaging inbox/thread/new message
-- messaging provider port
-- failure/retry/empty states
+- Notifications: templates, delivery records, throttling, provider port, failure/retry states
+- Messaging: human inbox/thread/new message and reply seam from Notifications where applicable
+- tenant/permission isolation across all APIs
 
-Exit: clients can be found, opened, messaged and rebooked through typed boundaries.
+Exit: clients can be found/opened/rebooked; notification eligibility is server-authoritative/auditable; Messaging and Notifications remain separate ownership areas.
 
 ## Phase 4 — Recovery Engine
 
-- vacancy/value-at-risk model
-- candidate ranking contract
-- offer lifecycle
-- first-valid-acceptance-wins concurrency rule
+- vacancy + immutable value-at-risk snapshot
+- deterministic candidate ranking
+- Vacancy/Offer state machines
+- public high-entropy offer surface
+- GET read-only; POST explicit accept/decline
+- expiry/supersede/replay validation inside transaction
+- first-valid-acceptance-wins database/application concurrency guard
+- exactly one recovered booking + attribution
 - competing-offer closure
-- booking/calendar/client-history update
-- recovered-revenue attribution
-- outbox/worker delivery
-- failure/offline/no-match states
+- Notifications integration with consent/quiet-hours/frequency limits
+- outbox + scheduled expiry/retry jobs
+- `recoveredBooked` vs `recoveredRealised` and reversal transitions
+- workspace/global outbound kill controls
+- failure/offline/no-match system states
 
-Exit: cancellation → vacancy → ranking → offers → acceptance → recovered booking is idempotent, race-tested and observable.
+Testing emphasis: genuine concurrent acceptance, idempotent retries, public-token security, attribution reversal and critical Recovery E2E.
+
+Exit: cancellation → vacancy → ranking → offers → first valid acceptance → recovered booking is idempotent, race-safe, auditable and observable.
 
 ## Phase 5 — Payments & Inventory
 
-- appointment/client anchored checkout
-- payment provider adapter
-- processing/paid/receipt/refund/refunded lifecycle
-- webhook/idempotency handling
-- product catalogue
-- stock movement ledger/reasons
+### Payments
+
+- appointment/client-anchored checkout
+- Money/tax/allocation rules
+- provider adapter + idempotent command/webhook processing
+- processing/additional-action/authorization-capture semantics as required by provider
+- paid/receipt
+- refund entities supporting partial/full multiple refunds
+- void/dispute/failure handling
+- deposits/no-show fees as first-class monetary records
+
+### Inventory
+
+- product catalogue linkage
+- append-only stock movement ledger
+- sale/service-consumption/delivery/damage/manual correction reasons
 - low-stock/replenishment workflows
 
-Exit: money invariants, refund lifecycle and stock mutation transactions are tested against real PostgreSQL.
+Exit: money allocation conserves totals, provider events cannot double-apply/regress state, refund lifecycle is explicit, and inventory balance reconciles to movements.
 
-## Phase 6 — Staff & Settings
+## Phase 6 — Staff & Configuration UI
 
 - staff directory/profile
-- working hours/availability/time off
-- service capability
-- workspace membership/roles/permissions UI
-- business/location/services settings
-- booking/recovery configuration
-- payments/integrations/access settings
-- permission-restricted states
+- working patterns/time off/coverage impact feeding Scheduling
+- service capability editing through Catalog ownership
+- workspace membership/role/permission UI through Identity ownership
+- Settings UI composes per-domain configuration rather than owning backend settings tables
+- booking/recovery/payment/integration configuration surfaces
+- permission-restricted states and audit events
 
-Exit: operational staff/settings workflows function with server-authoritative authorization and audit events.
+Exit: staff/configuration workflows operate through owning domains with server-authoritative authorization.
 
-## Phase 7 — Growth & Analytics
+## Phase 7 — Retention/Marketing & Analytics
 
-- retention/rebooking opportunities
-- campaign creation/performance
-- attributed bookings/revenue
+- rebooking/at-risk opportunities
+- campaign creation/performance through Clients + Notifications
+- attributed booking/revenue definitions
+- Analytics event-fed read-model tables/projections
 - revenue/recovered/lost revenue analytics
-- utilization and service/staff context
-- actionable mobile insight summaries
+- utilization/service/staff context without simplistic leaderboards
+- projection rebuild/backfill path
 
-Exit: Retention remains distinct from Recovery and analytics use canonical domain data/definitions.
+Exit: Retention remains distinct from Recovery; Analytics never cross-queries operational-domain tables.
 
-## Phase 8 — Cross-product Hardening
+## Phase 8 — Cross-product Hardening & Production Readiness
 
-- system-state parity
-- full keyboard/focus/touch regression
-- Light/Dark and reduced-motion regression
-- critical-journey Playwright coverage
-- visual regression
+- full system-state parity
+- keyboard/focus/touch/Light-Dark/reduced-motion regression
+- seven critical Playwright journeys from `docs/testing/strategy.md`
+- visual regression for primitives/system states
 - performance budgets/load tests for priority paths
-- failure/degraded-mode exercises
+- error/degraded/offline exercises
 - dependency/security scanning
-- backup/restore and operational runbooks before production
+- backup/restore and incident/runbook drills
+- PII retention/erasure/pseudonymization verification
+- documentation/spec/ADR synchronization
 
-Exit: no known critical dead ends or architectural violations; product docs match shipped behavior.
+Exit: no known critical dead ends, tenant/booking/recovery/payment invariants pass under concurrency, operational runbooks are tested, and shipped behavior matches committed specs.
 
 ## Dependency order
 
 `Phase 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8`
 
-Individual domain issues should still be split into bounded PRs. Parallelism is allowed only where contracts are stable and changes remain independently reviewable.
+Within a phase, work is split into bounded issues/PRs. Parallelism is allowed only when contracts are stable and PRs remain independently reviewable.
 
 ## PR discipline
 
@@ -149,7 +176,7 @@ Individual domain issues should still be split into bounded PRs. Parallelism is 
 - one bounded issue/slice per PR
 - no unrelated refactors
 - architecture-changing decisions require ADR update/approval
-- relevant tests are required
-- changed interactive UI receives accessibility verification
+- relevant invariant tests are mandatory
+- changed interactive UI receives accessibility/reduced-motion verification
 - no auto-merge
 - founder merges manually
