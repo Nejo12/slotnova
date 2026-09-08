@@ -1,6 +1,6 @@
 # ADR-022 — Design Token Pipeline
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
