@@ -1,6 +1,6 @@
 # ADR-006 — Testing Architecture
 
-Status: Proposed
+Status: Accepted
 
 ## Decision
 
