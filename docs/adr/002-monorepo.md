@@ -4,16 +4,28 @@ Status: Proposed
 
 ## Context
 
-Slotnova will contain a web app, API, worker, Storybook, shared tokens/contracts/testing utilities and potentially more deployables later.
+Slotnova will contain multiple deployables plus shared UI/tokens/contracts/testing/configuration. Business domains still need clear ownership without becoming a package-per-domain architecture.
 
 ## Decision
 
-Use pnpm workspaces with Turborepo. Keep independently deployable applications under `apps/` and genuinely shared libraries/configuration under `packages/`.
+Use pnpm workspaces with Turborepo.
 
-Do not create a package merely to mirror every business domain. Backend bounded contexts remain modules in the API until multiple consumers justify extraction.
+Deployables live under `apps/`:
+
+```text
+apps/web
+apps/api
+apps/worker
+```
+
+Genuinely shared/reusable tooling lives under `packages/`, including `ui` (with Storybook colocated), `design-tokens`, generated `contracts`, database client/migration/test harness, testing helpers, browser/server observability and config packages.
+
+Do not create workspace packages merely to mirror business domains. Backend bounded contexts remain modules under `apps/api/src/modules/*` until multiple real consumers justify extraction.
+
+Do not create generic `common`, `shared`, `core`, `utils`, `helpers`, `types`, `constants` or single-dependency wrapper packages as dumping grounds. Apply the rule of three before extraction.
 
 ## Consequences
 
-Benefits: one dependency graph, shared tooling, cached tasks, atomic contract changes, simpler local onboarding.
+Benefits: one dependency graph, cached tasks, atomic contract/tooling changes, simple local onboarding and explicit deployables.
 
-Costs: requires package-boundary discipline and CI configuration to avoid every change rebuilding everything.
+Costs: requires package/module-boundary enforcement and Turborepo-aware CI/caching. Shared-package growth must be reviewed aggressively to prevent a monorepo-wide coupling layer.
