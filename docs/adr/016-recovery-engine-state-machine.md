@@ -12,6 +12,8 @@ Model Recovery with explicit Vacancy and Offer state machines plus an applicatio
 
 Track `recoveredBooked` separately from `recoveredRealised`; later cancellation/no-show/refund transitions attribution/revenue explicitly rather than leaving headline metrics monotonically inflated.
 
+`recoveredRealised` is not set by Recovery acceptance itself. It is advanced only when the recovered booking reaches the accounting event defined with Payments for the relevant business model (normally completed/earned service, subject to deposit/no-show/refund rules). Phase 4 must expose the attribution state and Phase 5 must finalize the Payments↔Recovery realization/reversal contract before money-impacting production release.
+
 ## Consequences
 
 Recovery requires real PostgreSQL integration and concurrency tests, not mocked repository-only tests. It remains a process manager using ports to Scheduling, Booking, Catalog, Clients and Notifications rather than importing their persistence.
