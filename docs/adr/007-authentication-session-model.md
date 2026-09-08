@@ -1,6 +1,6 @@
 # ADR-007 — Authentication & Session Model
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
