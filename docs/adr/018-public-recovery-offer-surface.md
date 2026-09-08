@@ -1,6 +1,6 @@
 # ADR-018 — Public Recovery Offer Surface
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
