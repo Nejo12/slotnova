@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "@slotnova/tsconfig/node.json",
+  "compilerOptions": {
+    // The MSW browser-worker seam (`src/msw/browser.ts`) is type-checked against
+    // DOM lib here; it is never imported by node-only entry points. The root
+    // `pnpm typecheck` relies on `skipLibCheck` for the same file.
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist", "**/__fixtures__/**"]
+}

@@ -10,8 +10,22 @@
 
 import js from "@eslint/js";
 import tseslint from "typescript-eslint";
-import importX from "eslint-plugin-import-x";
+import importX, { createNodeResolver } from "eslint-plugin-import-x";
 import prettier from "eslint-config-prettier";
+
+// `import-x` rules (notably `no-cycle`) need a resolver that understands the
+// `exports` field and NodeNext's `.js` -> `.ts` mapping. The plugin's legacy
+// default node resolver does neither and throws on any dependency published
+// exports-only (for example `msw`). Use the bundled unrs-resolver instead.
+const nodeResolver = createNodeResolver({
+  extensions: [".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs", ".json", ".node"],
+  extensionAlias: {
+    ".js": [".ts", ".tsx", ".js"],
+    ".mjs": [".mts", ".mjs"],
+    ".cjs": [".cts", ".cjs"],
+  },
+  conditionNames: ["types", "import", "require", "node", "default"],
+});
 
 /** @type {import("eslint").Linter.Config[]} */
 export const base = tseslint.config(
@@ -32,6 +46,9 @@ export const base = tseslint.config(
   {
     name: "slotnova/base",
     plugins: { "import-x": importX },
+    settings: {
+      "import-x/resolver-next": [nodeResolver],
+    },
     linterOptions: {
       // No convenience `eslint-disable`: an unused directive is an error.
       reportUnusedDisableDirectives: "error",

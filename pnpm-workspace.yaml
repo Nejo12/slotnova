@@ -14,8 +14,16 @@ packages:
 #   - ssh2 / cpu-features: an optional native crypto binding; ssh2's pure-JS
 #     path is used for the unix-socket Docker connection.
 #   - protobufjs: a postinstall CLI helper, irrelevant to library use.
+#
+# Explicitly denied (dev/test dep of `packages/testing`, task T016):
+#   - msw: its `postinstall` only acts when the *consuming* project sets
+#     `msw.workerDirectory` in package.json (to copy `mockServiceWorker.js`).
+#     We do not — the browser worker script is installed on demand with
+#     `pnpm --filter @slotnova/testing exec msw init <public-dir>` once a
+#     Storybook/dev host exists. The script is a no-op here, so it stays denied.
 allowBuilds:
   cpu-features: false
+  msw: false
   protobufjs: false
   ssh2: false
   unrs-resolver: true
