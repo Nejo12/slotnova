@@ -1,0 +1,63 @@
+{
+  "name": "@slotnova/testing",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "UNLICENSED",
+  "description": "Slotnova test-support package: fast-check property scaffold, MSW HTTP-contract harness (node + browser), valid-by-default test-data builders, and an in-memory telemetry/domain-event sink. Test code only; carries no product domain model, no database mock, and no vendor SDK.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./property": {
+      "types": "./dist/property/index.d.ts",
+      "default": "./dist/property/index.js"
+    },
+    "./builders": {
+      "types": "./dist/builders/index.d.ts",
+      "default": "./dist/builders/index.js"
+    },
+    "./telemetry": {
+      "types": "./dist/telemetry.d.ts",
+      "default": "./dist/telemetry.js"
+    },
+    "./msw": {
+      "types": "./dist/msw/handlers.d.ts",
+      "default": "./dist/msw/handlers.js"
+    },
+    "./msw/node": {
+      "types": "./dist/msw/node.d.ts",
+      "default": "./dist/msw/node.js"
+    },
+    "./msw/browser": {
+      "types": "./dist/msw/browser.d.ts",
+      "default": "./dist/msw/browser.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "fast-check": "^4.9.0",
+    "msw": "^2.15.0"
+  },
+  "peerDependencies": {
+    "vitest": "^5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "vitest": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@slotnova/tsconfig": "workspace:*",
+    "vitest": "^5.0.0"
+  }
+}
