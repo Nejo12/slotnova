@@ -8,6 +8,11 @@ packages:
 # packages that genuinely need a native build step:
 #   - unrs-resolver: the napi resolver used by eslint-plugin-import-x; its
 #     postinstall links the prebuilt platform binding (@unrs/resolver-binding-*).
+#   - esbuild: transitive dev/test-only dependency of vite/vitest (pulled in
+#     via vite's optional `tsx` dependency once `apps/api` joined the
+#     workspace, task T019); its postinstall only downloads the prebuilt
+#     binary for the current platform (same rationale as unrs-resolver).
+#     Never a production runtime dependency.
 #
 # Explicitly denied (transitive deps of `testcontainers`, pulled in by
 # `packages/db`). Their build scripts are NOT needed for local-Docker use:
@@ -23,6 +28,7 @@ packages:
 #     Storybook/dev host exists. The script is a no-op here, so it stays denied.
 allowBuilds:
   cpu-features: false
+  esbuild: true
   msw: false
   protobufjs: false
   ssh2: false
