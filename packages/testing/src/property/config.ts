@@ -30,6 +30,20 @@ function readPositiveIntEnv(name: string): number | undefined {
   return Number.isInteger(value) && value > 0 ? value : undefined;
 }
 
+/**
+ * fast-check seeds are, in theory, signed 32-bit integers — including
+ * negative values, which fast-check reports and replays on failure (e.g.
+ * `seed: -18472931`). Unlike `PROPERTY_RUNS_ENV`, a seed has no "must be
+ * positive" constraint, so it gets its own parser rather than sharing
+ * `readPositiveIntEnv`.
+ */
+function readSeedEnv(name: string): number | undefined {
+  const raw = process.env[name];
+  if (raw === undefined || raw.trim() === "") return undefined;
+  const value = Number(raw);
+  return Number.isInteger(value) ? value : undefined;
+}
+
 /** Example count in effect once env overrides are applied. */
 export function defaultPropertyRuns(): number {
   return readPositiveIntEnv(PROPERTY_RUNS_ENV) ?? DEFAULT_PROPERTY_RUNS;
@@ -67,7 +81,7 @@ export interface PropertyParametersInput {
  * exactly.
  */
 export function propertyParameters(input: PropertyParametersInput = {}): fc.Parameters<unknown> {
-  const seed = input.seed ?? readPositiveIntEnv(PROPERTY_SEED_ENV);
+  const seed = input.seed ?? readSeedEnv(PROPERTY_SEED_ENV);
 
   return {
     numRuns: input.numRuns ?? defaultPropertyRuns(),
