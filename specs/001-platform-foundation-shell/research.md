@@ -54,13 +54,14 @@ Format per item: **Decision** (what is proposed) · **Rationale** · **Alternati
 | `@js-temporal/polyfill` | current | structure only in Phase 1 |
 | Vitest | aligned with Vite 8 | |
 | Playwright | current | |
-| Storybook | current major, colocated in `packages/ui` | |
+| Storybook | current major, colocated in `packages/ui` (Slotnova-local stories only, ADR-025) | |
 | Testcontainers (node) | current | |
 | fast-check | current | |
-| Style Dictionary (or equivalent) | current | token build |
+| Style Dictionary (or equivalent) | current | Slotnova reconciliation-layer build only, not a duplicate Nova token pipeline |
+| `@nova-component/ui`, `@nova-component/design-tokens` | reviewed exact versions pinned per ADR-025's own version policy (current observed: `@nova-component/ui@0.3.0`) | React `>=18.3.0 <20` peer range confirmed against Slotnova's React 19 baseline; tracked alongside, but not part of, this R2 exercise since Nova owns its own release/versioning |
 | dependency-cruiser / ESLint / Stylelint / Prettier | current | flat ESLint config |
 
-**Rationale**: `research-basis.md` already fixes the majors and mandates a compatibility check before pinning; this task executes that check and records the exact patch versions + a "no automatic major upgrades to `main`" policy (security baseline, supply chain).
+**Rationale**: `research-basis.md` already fixes the majors and mandates a compatibility check before pinning; this task executes that check and records the exact patch versions + a "no automatic major upgrades to `main`" policy (security baseline, supply chain). Nova package versions are reviewed and pinned under ADR-025's version policy rather than reopened here.
 
 **Alternatives considered**: Pinning to newest-of-everything (rejected — Nest/Fastify adapter lag is a real ADR-004 risk); leaving ranges unpinned (rejected — supply-chain + reproducibility).
 
@@ -158,17 +159,17 @@ A real production provider is selected **only if** operating Phase 1 (e.g. a sta
 
 ---
 
-## R8 — Design-token pipeline mechanics (ADR-022)
+## R8 — Design-token pipeline mechanics (ADR-022, amended by ADR-025)
 
-**Decision**: `Figma Variables export → normalized token JSON (committed) → Style Dictionary build → CSS custom properties + TS types in packages/design-tokens`. Generated output is reviewed in PRs, never hand-edited. Theme modes (Light/Dark) are expressed as token sets mapped through **semantic** names; value-named tokens (`radius-12px`) are renamed to scale names (`radius-md`) before entering the canonical layer. Covers color, typography, spacing/radius, elevation, motion (`motion.duration.*`, `motion.easing.*`, `motion.spring.*` per `docs/standards/motion.md`).
+**Decision**: Pin a reviewed `@nova-component/design-tokens` version as the shared Nova token foundation. `Figma Variables export → normalized token JSON (committed) → deterministic Slotnova semantic alias/override reconciliation (Style Dictionary build or equivalent) layered over the Nova foundation → CSS custom properties + TS types in packages/design-tokens`. Generated output is reviewed in PRs, never hand-edited. Theme modes (Light/Dark) are expressed as token sets mapped through **semantic** names; value-named tokens (`radius-12px`) are renamed to scale names (`radius-md`) before entering the canonical layer. Covers color, typography, spacing/radius, elevation, motion (`motion.duration.*`, `motion.easing.*`, `motion.spring.*` per `docs/standards/motion.md`). Nova generic values are reused as-is wherever they faithfully match approved Figma (e.g. neutral scale primitives); Slotnova-specific semantics such as `Recovery/*` and `Appointment/*` remain Slotnova-owned aliases and are **not** promoted into Nova merely to remove a local token. This is a reconciliation layer over Nova, not a duplicate general-purpose token pipeline.
 
-**Interim fallback** (if Figma Variables access is unavailable during the task, per the spec assumption): build the pipeline and seed it with a **documented interim token JSON** derived from `19 — Implementation Handoff` / the committed handoff, flagged `INTERIM — reconcile against Figma Variables` so the reconciliation is tracked, not silently permanent.
+**Interim fallback** (if Figma Variables access is unavailable during the task, per the spec assumption): build the reconciliation layer and seed it with a **documented interim token JSON** derived from `19 — Implementation Handoff` / the committed handoff, flagged `INTERIM — reconcile against Figma Variables` so the reconciliation is tracked, not silently permanent.
 
-**Rationale**: Exactly ADR-022. Style Dictionary is the standard multi-target token transformer and gives deterministic output; Stylelint then bans raw values outside `packages/design-tokens`.
+**Rationale**: Exactly ADR-022 as amended by ADR-025. Nova's `@nova-component/design-tokens` gives the shared primitive/generic-semantic foundation with a real second consumer (Klinnova); Style Dictionary (or equivalent) is the standard multi-target transformer for the thin Slotnova reconciliation layer on top, giving deterministic output; Stylelint then bans raw values outside `packages/design-tokens`.
 
-**Alternatives considered**: Tokens Studio sync (viable add-on later); hand-authored SCSS variables (rejected — drift, ADR-022); Tailwind config as the token layer (rejected — no Tailwind).
+**Alternatives considered**: Replacing Slotnova's Figma contract wholesale with Nova's current generic values (rejected — ADR-025 §"Token reconciliation finding": Nova's neutral `color.actionPrimary` and surface defaults do not match Slotnova's approved Oxblood/Paper-Cream Figma semantics); Tokens Studio sync (viable add-on later); hand-authored SCSS variables (rejected — drift, ADR-022); Tailwind config as the token layer (rejected — no Tailwind).
 
-**Verification required**: confirm Figma Variables API/export access for the token task; determinism check (same input → identical CSS); Stylelint rule proven to fail on a raw hex outside the token package.
+**Verification required**: confirm Figma Variables API/export access for the token task; confirm the reviewed `@nova-component/design-tokens` version and its React/browser compatibility; determinism check (same input → identical CSS); Stylelint rule proven to fail on a raw hex outside the token package.
 
 ---
 

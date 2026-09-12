@@ -14,7 +14,7 @@ Phase 1 delivers the **executable platform foundation** for Slotnova: the reposi
 
 Phase 1 deliberately ships **no product-domain behavior**. Its value is that it makes correctness mechanically enforceable — tenant isolation, type-safe contracts, reliable events, real-database tests, architecture boundaries and accessible shell infrastructure — before any feature code exists.
 
-This specification is the WHAT/WHY. The HOW (framework wiring, file layout, library selection) belongs in `plan.md` and `tasks.md`, constrained by the accepted ADR-001…ADR-024 and `.specify/memory/constitution.md`.
+This specification is the WHAT/WHY. The HOW (framework wiring, file layout, library selection) belongs in `plan.md` and `tasks.md`, constrained by the accepted ADR-001…ADR-025 and `.specify/memory/constitution.md`.
 
 ## Clarifications
 
@@ -197,7 +197,7 @@ Before Phase 1 is declared complete, the founder has an explicit, researched, wr
 #### Repository, build system and quality gates
 
 - **FR-001**: The repository MUST be organized as a single multi-package workspace containing exactly three deployable applications — an operator web application, an API application, and a background-worker application — plus shared library packages, with one dependency graph and a task runner that caches unchanged work.
-- **FR-002**: Shared library packages MUST be limited to genuinely reusable concerns: reusable UI primitives (with their component workshop colocated), generated design/motion tokens, generated external API client artifacts, database client/migration/test-harness tooling, shared test builders/fixtures, browser telemetry helpers, server/worker telemetry helpers, and shared lint/compiler configuration. No package may be a generic `common`/`core`/`shared`/`utils`/`helpers`/`types`/`constants` catch-all, and no package may be created merely to mirror a business domain.
+- **FR-002**: Shared library packages MUST be limited to genuinely reusable concerns: Slotnova's consumption/composition layer over the shared Nova-UI design-system packages (with a component workshop colocated for Slotnova-local stories only, per ADR-025), the deterministic Slotnova semantic token/theme reconciliation layer over the consumed Nova design-token foundation, generated external API client artifacts, database client/migration/test-harness tooling, shared test builders/fixtures, browser telemetry helpers, server/worker telemetry helpers, and shared lint/compiler configuration. No package may be a generic `common`/`core`/`shared`/`utils`/`helpers`/`types`/`constants` catch-all, no package may be created merely to mirror a business domain, and no package may duplicate a primitive or token the shared Nova-UI packages already publish (ADR-025).
 - **FR-003**: Business/domain packages MUST NOT exist in Phase 1; backend modules live inside the API application until multiple real consumers justify extraction.
 - **FR-004**: The workspace MUST enforce strict type-checking with no convenience escape hatches; any relaxation of a compiler strictness setting requires written justification in the pull request.
 - **FR-005**: Code style and design-token usage MUST be linted such that raw colors and raw motion durations/easings outside the token layer are rejected, with only narrowly documented exceptions.
@@ -214,12 +214,12 @@ Before Phase 1 is declared complete, the founder has an explicit, researched, wr
 - **FR-013**: Server-state cache keys MUST be scoped by active workspace, and the cache MUST be cleared on sign-out and on workspace switch.
 - **FR-014**: Client-only cross-route state MUST use a minimal dedicated store and only where URL state, server state and local component state are insufficient; each such use is justified in a short client-state decision note under `docs/decisions/` (e.g. `docs/decisions/0007-client-only-state.md`) referenced from this feature spec.
 - **FR-015**: The shell MUST present the approved desktop navigation and the approved mobile navigation `Home · Calendar · Clients · Recovery · More`, with the remaining destinations reachable under `More` on mobile; mobile layouts are deliberate substitutions, not compressed desktop layouts.
-- **FR-016**: All shell theming (Light and Dark) MUST be driven by semantic tokens generated from the approved design source through a deterministic, checked-in, never-hand-edited pipeline; token names describe semantic purpose, not literal values. (Token-set scope and the theme-mode mapping rule are FR-022.)
+- **FR-016**: All shell theming (Light and Dark) MUST be driven by semantic tokens generated from the approved design source through a deterministic, checked-in, never-hand-edited pipeline — the shared Nova design-token foundation plus a Slotnova semantic alias/override reconciliation layer per ADR-025, not a standalone duplicate implementation; token names describe semantic purpose, not literal values. (Token-set scope and the theme-mode mapping rule are FR-022.)
 - **FR-017**: The shell MUST respect a reduced-motion preference globally; no information may be conveyed by animation alone; focus MUST be preserved through transitions; and exit animations MUST NOT delay high-consequence state commits.
 - **FR-018**: The shell MUST provide a shared presentation for the reusable system states (empty, loading, no results, error, offline/degraded, success, destructive confirmation, permission-restricted, partial/stale data), each preserving a safe exit and never relying on color alone to convey status.
 - **FR-019**: Shell dialogs, drawers and sheets MUST trap focus while open, close on Escape, restore focus to the invoking control on close, and MUST NOT become interactive before their focus contract is valid.
 - **FR-020**: Navigation destinations for product surfaces MUST render as placeholder/empty surfaces only; no product-domain behavior is implemented in Phase 1.
-- **FR-021**: The reusable UI primitive library MUST contain no product-domain logic and MUST NOT import domain services; its component workshop is colocated with it and is not a deployable application.
+- **FR-021**: Slotnova's UI consumption/composition layer (over the consumed shared Nova-UI primitive library, per ADR-025) MUST contain no product-domain logic and MUST NOT import domain services; its component workshop is colocated with it, holds Slotnova-local stories only, and is not a deployable application.
 - **FR-022**: The token set (produced by the FR-016 pipeline) MUST cover color, typography, spacing/radius where represented, elevation and motion. Light/Dark MUST be expressed by mapping semantic tokens per mode — never by per-component style overrides.
 
 #### Identity, session, tenancy and authorization foundation
@@ -313,7 +313,7 @@ Before Phase 1 is declared complete, the founder has an explicit, researched, wr
 - **Outbox record**: A domain-event entry written atomically with the state change that caused it; carries a stable event name, version, and correlation/workspace context; consumed at least once, handled idempotently.
 - **Scheduled job**: A durable unit of delayed/recurring/retryable work with bounded retries and an explicit dead-letter/parked state.
 - **Contract document**: The generated external API description produced from boundary schemas; the single source for generated client/types/mocks.
-- **Design token set**: The generated semantic tokens (color, typography, spacing/radius, elevation, motion) that drive Light/Dark and shell presentation.
+- **Design token set**: The generated semantic tokens (color, typography, spacing/radius, elevation, motion) that drive Light/Dark and shell presentation — the shared Nova design-token foundation plus the Slotnova semantic alias/override reconciliation layer (ADR-025).
 - **Environment**: A deployment class (local, preview/CI, staging, production) with independently managed secrets and data.
 - **Decision record**: A written, evidence-backed record of a Phase 1 exit decision, consistent with the accepted ADRs or accompanied by an explicit ADR-change proposal.
 
@@ -342,7 +342,7 @@ Before Phase 1 is declared complete, the founder has an explicit, researched, wr
 
 ## Assumptions
 
-- **Authority**: This spec is subordinate to `.specify/memory/constitution.md` and the accepted ADR-001…ADR-024. Where this spec and an accepted ADR appear to conflict, the ADR wins and the conflict is surfaced (see `analysis` output), not silently resolved here.
+- **Authority**: This spec is subordinate to `.specify/memory/constitution.md` and the accepted ADR-001…ADR-025. Where this spec and an accepted ADR appear to conflict, the ADR wins and the conflict is surfaced (see `analysis` output), not silently resolved here.
 - **Product IA**: The desktop navigation and the mobile `Home · Calendar · Clients · Recovery · More` navigation from `docs/product-handoff.md` are treated as approved. Exact visual detail comes from Figma `18 — Prototypes` / `19 — Implementation Handoff`; where full Figma access is unavailable, the committed handoff governs behavior and visual ambiguity is surfaced rather than invented.
 - **Authentication mechanism** (clarified 2026-09-08): Phase 1 builds the full Slotnova-owned session/authorization/RLS spine and the workspace invitation/membership flow, but credential verification sits behind the ADR-007 Identity provider adapter — no bespoke password/login infrastructure and no auth-vendor lock-in in this slice. Local/test uses a controlled development credential adapter exercising the same real code paths. Production identity-provider selection is a bounded exit decision only if required (FR-033e, FR-069a). See Clarifications.
 - **Shell breadth**: The Phase 1 shell renders the full approved navigation with every product destination present as an empty/placeholder surface, so later phases attach features without shell rework.
@@ -350,13 +350,13 @@ Before Phase 1 is declared complete, the founder has an explicit, researched, wr
 - **Toolchain baseline**: The research baseline (React 19.2 / Vite 8 / Node 24 LTS / PostgreSQL 18 where the provider supports it) from `docs/architecture/research-basis.md` is the starting point; exact patches are pinned only at FR-066 after compatibility verification.
 - **Scheduler candidates**: The two accepted job-scheduler candidates are graphile-worker and pg-boss (ADR-014). No other queue technology is in scope.
 - **Deployment provider timing**: Per ADR-020, provider selection is finalized before Phase 1 *exit*, not before Phase 1 start; Phase 1 implementation work that does not depend on the provider proceeds in parallel with the research.
-- **Design-token source access**: The token pipeline (ADR-022) assumes access to the approved Figma Variables during the token-generation task; if unavailable, the pipeline is still built and seeded with a documented interim token set flagged for reconciliation.
+- **Design-token source access**: The token reconciliation layer (ADR-022, amended by ADR-025) assumes access to the approved Figma Variables during the token-generation task; if unavailable, the Slotnova alias/override layer over the consumed Nova token foundation is still built and seeded with a documented interim token set flagged for reconciliation.
 - **No production data**: Phase 1 involves no real customer PII; retention/erasure workflows (ADR-019) are designed but exercised with synthetic data.
 - **Team size**: A small team; the plan favors a small number of well-understood tools over breadth, consistent with the constitution's "simple architecture over speculative abstraction".
 
 ## Dependencies
 
-- Accepted ADR-001…ADR-024 and `.specify/memory/constitution.md` (Phase 0, merged in PR #10).
+- Accepted ADR-001…ADR-025 and `.specify/memory/constitution.md` (Phase 0, merged in PR #10; ADR-025 accepted 2026-09-12 for the Phase 1 Nova-UI reconciliation, issue #20).
 - `docs/architecture/overview.md`, `docs/architecture/domain-modeling.md`, `docs/testing/strategy.md`, `docs/security/security-and-audit.md`, `docs/observability/observability.md`, `docs/standards/ci-quality-gates.md`, `docs/standards/motion.md`, `docs/implementation-plan.md`.
 - GitHub issue #2 (Phase 1 scope and acceptance criteria).
 - Approved Figma corpus for visual/interaction detail (`docs/product-handoff.md`), with the documented generic-API access caveat.

@@ -10,7 +10,7 @@ description: "Phase 1 platform-foundation task list"
 
 **Scope guard**: every task is platform/foundation only. No Booking/Scheduling/Catalog/Recovery/Payments/Messaging/Notifications/Staff/Inventory/Marketing/Analytics behavior (FR-070). A task that seems to need product behavior is mis-scoped — stop and re-scope.
 
-**Authority**: `.specify/memory/constitution.md` + accepted ADR-001…ADR-024. A task that conflicts with an accepted ADR is surfaced (in the PR and `/speckit-analyze`), never silently resolved.
+**Authority**: `.specify/memory/constitution.md` + accepted ADR-001…ADR-025. A task that conflicts with an accepted ADR is surfaced (in the PR and `/speckit-analyze`), never silently resolved.
 
 **Task IDs**: one monotonic sequence `T001…T091`, no suffixes. IDs are execution-order hints; true ordering is the Dependencies section + the Bounded PR sequence. **No forward dependencies** — every `Dep` points to a lower-numbered task.
 
@@ -501,55 +501,55 @@ Each task carries a compact block:
 
 **Independent Test**: quickstart §3 — axe clean on shell nav/switcher/dialogs; keyboard-only reaches every destination; Light/Dark token-driven; reduced-motion degrades; mobile nav is exactly `Home · Calendar · Clients · Recovery · More`.
 
-### PR-12 — Design-token pipeline
+### PR-12 — Nova token foundation + Slotnova theme/semantic reconciliation layer
 
-- [ ] T052 [P] [US3] `packages/design-tokens` generation pipeline
-  - **Dep**: T001; R8
-  - **Files**: `packages/design-tokens/` (normalized token JSON, Style Dictionary config, CSS custom-property + TS output), `pnpm tokens:generate`
-  - **Accept**: deterministic (byte-identical on unchanged input); covers color/typography/spacing/radius/elevation/motion; semantic names (no `radius-12px`); ADR-022, FR-016, FR-022, SC-007
+- [ ] T052 [P] [US3] Nova design-token foundation + Slotnova Figma semantic-alias/override reconciliation (`packages/design-tokens`)
+  - **Dep**: T001; R8; ADR-025
+  - **Files**: `packages/design-tokens/` (pin the reviewed `@nova-component/design-tokens` version; normalized Slotnova Figma-variable export; deterministic Slotnova semantic alias/override generation layered over the Nova token foundation — Style Dictionary or equivalent for the reconciliation step only; CSS custom-property + TS output), `pnpm tokens:generate`
+  - **Accept**: pins a reviewed `@nova-component/design-tokens` version; deterministic (byte-identical on unchanged input); Slotnova semantic aliases/overrides (incl. `Recovery/*` and `Appointment/*` semantics) reconcile the approved Figma variables against the Nova foundation rather than replacing it; covers color/typography/spacing/radius/elevation/motion; semantic names (no `radius-12px`); **no duplicate generic Nova token implementation**; ADR-022, ADR-025, FR-016, FR-022, SC-007
   - **Tests**: T054
-  - **Constraints**: generated artifacts reviewed, never hand-edited; interim token set flagged `INTERIM — reconcile` if Figma Variables unavailable
-  - **Out**: per-component overrides
+  - **Constraints**: generated artifacts reviewed, never hand-edited; interim token set flagged `INTERIM — reconcile` if Figma Variables unavailable; reuse a Nova value as-is wherever it faithfully matches approved Figma — do not re-author it locally
+  - **Out**: per-component overrides; a standalone/duplicate Nova-equivalent token pipeline
 
-- [ ] T053 [P] [US3] Finalize Stylelint token rules
+- [ ] T053 [P] [US3] Finalize Stylelint rules for the combined Nova + Slotnova token/theme layer
   - **Dep**: T052, T004
-  - **Files**: `tooling/stylelint/` (ban raw colors + raw motion durations/easings outside `packages/design-tokens`, documented exceptions)
+  - **Files**: `tooling/stylelint/` (ban raw colors + raw motion durations/easings outside the designated Nova-consuming + Slotnova-reconciled token/theme layer in `packages/design-tokens`, documented exceptions)
   - **Accept**: raw hex in a component SCSS module fails lint; SC-007
   - **Tests**: fixture test
   - **Constraints**: Light/Dark stays semantic-token driven
   - **Out**: n/a
 
-- [ ] T054 [P] [US3] Token pipeline determinism + theme-map test
+- [ ] T054 [P] [US3] Token pipeline determinism + Light/Dark completeness + Slotnova semantic-mapping verification
   - **Dep**: T052
   - **Files**: `packages/design-tokens/__tests__/generate.test.ts`
-  - **Accept**: regeneration identical; Light & Dark both resolve every semantic token; ADR-022
+  - **Accept**: regeneration identical; Light & Dark both resolve every semantic token; every Slotnova Figma semantic (incl. `Recovery/*`, `Appointment/*`) resolves through an alias/override to a Nova or Slotnova-owned token with no unresolved alias; ADR-022, ADR-025
   - **Tests**: this is the test task
   - **Out**: n/a
 
-### PR-13 — `packages/ui` primitives + system states + Storybook
+### PR-13 — Nova-UI consumer foundation + Slotnova composition layer + proven gaps only
 
-- [ ] T055 [US3] `packages/ui` primitives (no domain logic) + Storybook colocated
-  - **Dep**: T052
-  - **Files**: `packages/ui/src/` (button, link, field, menu, dialog, drawer, sheet, focus utilities), `packages/ui/.storybook/`
-  - **Accept**: primitives consume tokens only; Storybook runs `pnpm storybook -w packages/ui`; FR-021, AGENTS frontend baseline
+- [ ] T055 [US3] Consume `@nova-component/ui`; Slotnova composition layer (`packages/ui`) + Storybook for Slotnova-local stories only
+  - **Dep**: T052; ADR-025
+  - **Files**: `packages/ui/` (pin the reviewed `@nova-component/ui` version; consume Nova primitives Slotnova needs — Button, TextInput, Textarea, Badge, Select, Checkbox, Radio, Dialog, Toast, InlineAlert, Skeleton, Progress, Popover, Menu, Tooltip, Card, EmptyState, FormField — rather than recreating them), `packages/ui/.storybook/` (Slotnova-local stories only; no duplicate Nova Storybook)
+  - **Accept**: consumes Nova primitives rather than recreating them; no domain logic; product-specific compositions (Metric Card, Appointment Block, product navigation composition, Recovery cards) stay local to their consuming app/module, never in this shared package; FR-021, ADR-025, AGENTS frontend baseline
   - **Tests**: T057 component/a11y tests
-  - **Constraints**: no import of domain services (enforced by T005); no barrel that hides cycles; Storybook is not a deployable
-  - **Out**: product components
+  - **Constraints**: no import of domain services (enforced by T005); no barrel that hides cycles; no copying Nova source into this repo; no local `link:`/workspace linkage to `Nejo12/nova-ui`; a genuine generic-primitive gap (e.g. Toggle, Date Picker, Time Picker, Drawer, Icon Button, Avatar, Segmented control) is tracked as a separate Nova-UI issue with evidence, never copied or implemented here
+  - **Out**: product components; reimplementing any primitive Nova already publishes
 
 - [ ] T056 [US3] System-state components (empty/loading/no-results/error/offline/success/destructive-confirm/permission-restricted/partial-stale)
   - **Dep**: T055
-  - **Files**: `packages/ui/src/system-states/`, Storybook stories per state in Light + Dark
-  - **Accept**: shared presentation; status never color-only; safe exit preserved; FR-018
+  - **Files**: `packages/ui/src/system-states/` (composed over consumed Nova primitives + Slotnova tokens), Storybook stories per state in Light + Dark
+  - **Accept**: shared presentation; status never color-only; safe exit preserved; composed from Nova primitives where they fit rather than reimplemented; FR-018
   - **Tests**: T057; visual-regression stories (T088)
   - **Constraints**: motion per `docs/standards/motion.md`
   - **Out**: wiring into product routes
 
-- [ ] T057 [P] [US3] Component + accessibility tests for `packages/ui`
+- [ ] T057 [P] [US3] Component + accessibility compatibility tests for consumed Nova primitives + Slotnova compositions
   - **Dep**: T055, T056
   - **Files**: `packages/ui/src/**/__tests__/*.test.tsx`
-  - **Accept**: keyboard semantics; dialog/drawer focus trap + Escape + focus restore; axe clean; FR-019, ADR-006 layer 3/9
+  - **Accept**: keyboard semantics; dialog/drawer focus trap + Escape + focus restore; axe clean; verifies consumed Nova primitives render and behave correctly under the Slotnova theme; FR-019, ADR-006 layer 3/9
   - **Tests**: this is the test task
-  - **Constraints**: behavior not implementation detail; no exact-timing assertions
+  - **Constraints**: behavior not implementation detail; no exact-timing assertions; no tests of Nova's own internal implementation — only the Slotnova consumption/theme contract
   - **Out**: n/a
 
 ### PR-14 — `apps/web` shell
@@ -872,7 +872,7 @@ Each task carries a compact block:
 2. **Phase 2 Foundational** (PR-02…PR-05) — needs Setup; **blocks all user stories**; **includes the transactional outbox writer (T022)** as platform infrastructure
 3. **Phase 3 US1** (PR-06) — needs Setup + Foundational (runnable apps + wired CI)
 4. **Phase 4 US2** (PR-07…PR-11) — needs Foundational; **fully independently testable** via the test-nav harness (T048); invitation acceptance (T045) consumes the already-built platform outbox writer (T022) — **no forward dependency**
-5. **Phase 5 US3** (PR-12…PR-14) — needs Foundational; token pipeline can start right after Setup; T063 retargets the US2 journeys onto the real shell
+5. **Phase 5 US3** (PR-12…PR-14) — needs Foundational; the Nova token/consumer pipeline (pinning reviewed `@nova-component/design-tokens` and `@nova-component/ui` versions per ADR-025) can start right after Setup; T063 retargets the US2 journeys onto the real shell
 6. **Phase 6 US4** (PR-15) — needs Phase 2 + endpoints from US2/US3 to have schemas
 7. **Phase 7 US5** (PR-16) — needs Foundational; **consumes** the T022 outbox writer; adds worker/scheduler/retries/DLQ
 8. **Phase 8 US6** (PR-17) — needs `packages/db` (Phase 2) + R1 record
@@ -912,8 +912,8 @@ Each task carries a compact block:
 | PR-09 | Authorization policy + workspace switch + isolation & concurrency suites | T040–T044 | PR-08 |
 | PR-10 | Invitation + membership acceptance flow | T045–T047 | PR-09 |
 | PR-11 | Test-only nav harness + Playwright harness + journeys 6 & 7 | T048–T051 | PR-10 |
-| PR-12 | `packages/design-tokens` pipeline + Stylelint token rules | T052–T054 | PR-01 |
-| PR-13 | `packages/ui` primitives + system-state components + Storybook | T055–T057 | PR-12 |
+| PR-12 | Nova design-token foundation + Slotnova theme/semantic reconciliation layer (`packages/design-tokens`) + Stylelint token rules | T052–T054 | PR-01 |
+| PR-13 | Nova-UI consumer foundation (`packages/ui`) + Slotnova composition/system-state layer + Storybook (local stories only) + proven-gap tracking | T055–T057 | PR-12 |
 | PR-14 | `apps/web` shell — router/providers, desktop+mobile shells, IA, theme, placeholder routes, journey retarget | T058–T063 | PR-13, PR-08 |
 | PR-15 | API contract pipeline — schemas→OpenAPI→`packages/contracts` + drift/breaking-change checks + contract tests | T064–T067 | PR-05 (+ PR-08/PR-14 endpoints) |
 | PR-16 | `apps/worker` — outbox consumer loop + scheduler + idempotency/DLQ + concurrency tests | T068–T071 | PR-05, R3 record |
@@ -938,7 +938,7 @@ US1 → US2 (the security-critical spine — highest architectural risk, deliver
 
 ### Parallel team strategy
 
-After Foundational: one track on US2 (backend spine + test-nav harness + journeys), one on US3 (tokens → ui → shell), one on US5 (worker/outbox consumer), with US8 decision records progressing alongside. Converge at PR-14 (journey retarget) and PR-19 (heavy lane).
+After Foundational: one track on US2 (backend spine + test-nav harness + journeys), one on US3 (Nova token/consumer pipeline → Slotnova composition layer → shell), one on US5 (worker/outbox consumer), with US8 decision records progressing alongside. Converge at PR-14 (journey retarget) and PR-19 (heavy lane).
 
 ---
 
