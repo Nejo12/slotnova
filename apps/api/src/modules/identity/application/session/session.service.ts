@@ -70,31 +70,37 @@ export class SessionService {
    * and reserved for the workspace-switch/privilege-change callers T042/T045
    * add in later PRs). Returns `null`, without side effects, if the presented
    * token is not currently valid.
+   *
+   * Delegates the revoke+insert pair to
+   * {@link SessionsRepository.rotateAtomically}, which runs both in ONE
+   * transaction: if the insert fails, the revoke rolls back too, and
+   * PostgreSQL's row lock on the conditional revoke serializes concurrent
+   * rotation attempts against the same session so at most one can ever
+   * supersede it (review correction -- this was previously two separate,
+   * non-atomic pool calls).
    */
   async rotate(
     rawToken: string,
     overrides: RotateSessionOverrides = {},
   ): Promise<IssuedSession | null> {
     const hashedId = hashSessionToken(rawToken);
-    const current = await this.sessions.findActiveByHashedId(hashedId);
-    if (!current) return null;
-
-    const nextActiveWorkspaceId =
-      "activeWorkspaceId" in overrides
-        ? (overrides.activeWorkspaceId ?? null)
-        : current.activeWorkspaceId;
-
-    await this.sessions.revoke(hashedId);
     const nextRawToken = generateOpaqueSessionToken();
-    const session = await this.sessions.insert({
-      hashedId: hashSessionToken(nextRawToken),
-      userId: current.userId,
-      activeWorkspaceId: nextActiveWorkspaceId,
+    const nextHashedId = hashSessionToken(nextRawToken);
+
+    const result = await this.sessions.rotateAtomically(hashedId, (previous) => ({
+      hashedId: nextHashedId,
+      userId: previous.userId,
+      activeWorkspaceId:
+        "activeWorkspaceId" in overrides
+          ? (overrides.activeWorkspaceId ?? null)
+          : previous.activeWorkspaceId,
       expiresAt: new Date(Date.now() + SESSION_TTL_MS),
-      rotatedFrom: current.id as SessionId,
+      rotatedFrom: previous.id as SessionId,
       clientHint: {},
-    });
-    return { rawToken: nextRawToken, session };
+    }));
+    if (!result) return null;
+
+    return { rawToken: nextRawToken, session: result.next };
   }
 
   /** Idempotent: revoking an already-invalid or unknown token never throws. */

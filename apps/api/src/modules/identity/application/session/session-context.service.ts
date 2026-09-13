@@ -32,27 +32,53 @@ export class SessionContextService {
     private readonly memberships: MembershipsRepository,
   ) {}
 
-  /** `null` when the session's own user no longer resolves to a usable identity (disabled since sign-in) -- callers fail closed with `session-invalid`. */
+  /**
+   * `null` when the session itself is no longer valid and the caller must
+   * fail closed with `session-invalid` (contracts/session.contract.md: "A
+   * session is invalid once ... the user/workspace/membership becomes
+   * inactive"). This covers TWO distinct cases, both review corrections
+   * beyond the original disabled-user check:
+   *
+   *  - the user has been disabled since the session was issued;
+   *  - `session.activeWorkspaceId` is non-null but no longer resolves to an
+   *    active membership in an active workspace (the membership was
+   *    suspended, the workspace was suspended, or the membership was
+   *    removed) -- this must NOT silently degrade to `activeWorkspace: null`
+   *    with an otherwise-valid context; a session with a selected workspace
+   *    that has gone bad is itself invalid, not "valid with no workspace".
+   *
+   * `session.activeWorkspaceId === null` (no workspace ever selected) stays
+   * a legitimately valid context per the same contract.
+   */
   async build(session: SessionRecord): Promise<SessionContext | null> {
     const user = await this.users.findById(session.userId);
     if (!user || user.status === "disabled") return null;
 
     const activeMemberships = await this.memberships.listActiveMembershipsForUser(user.id);
     const workspaces = activeMemberships.map(toWorkspaceSummary);
-    const activeView = session.activeWorkspaceId
-      ? activeMemberships.find((view) => view.workspaceId === session.activeWorkspaceId)
-      : undefined;
+
+    if (session.activeWorkspaceId === null) {
+      return {
+        user: { id: user.id, displayName: user.displayName, email: user.email },
+        activeWorkspace: null,
+        workspaces,
+        sessionExpiresAt: session.expiresAt,
+      };
+    }
+
+    const activeView = activeMemberships.find(
+      (view) => view.workspaceId === session.activeWorkspaceId,
+    );
+    if (!activeView) return null;
 
     return {
       user: { id: user.id, displayName: user.displayName, email: user.email },
-      activeWorkspace: activeView
-        ? {
-            id: activeView.workspaceId,
-            name: activeView.workspaceName,
-            role: activeView.role,
-            permissions: activeView.permissions,
-          }
-        : null,
+      activeWorkspace: {
+        id: activeView.workspaceId,
+        name: activeView.workspaceName,
+        role: activeView.role,
+        permissions: activeView.permissions,
+      },
       workspaces,
       sessionExpiresAt: session.expiresAt,
     };

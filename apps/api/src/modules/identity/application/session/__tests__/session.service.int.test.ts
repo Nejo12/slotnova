@@ -3,6 +3,7 @@ import { DEFAULT_POSTGRES_IMAGE, startPostgres, type PostgresHarness } from "@sl
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import type { UserId, WorkspaceId } from "../../../domain/ids.js";
+import { generateOpaqueSessionToken, hashSessionToken } from "../../../domain/session-token.js";
 import { SessionsRepository } from "../../../infrastructure/repositories/sessions.repository.js";
 import { SessionService } from "../session.service.js";
 
@@ -138,5 +139,72 @@ describe("SessionService (real PostgreSQL)", () => {
 
   it("rotate returns null and has no side effect for an already-invalid token", async () => {
     expect(await service.rotate("never-issued-token")).toBeNull();
+  });
+
+  describe("atomic rotation (review correction: revoke + insert in one transaction)", () => {
+    it("rollback: if replacement insertion fails, the original session remains valid", async () => {
+      const repo = new SessionsRepository(pool);
+      const { rawToken } = await service.issue({
+        userId: userId as UserId,
+        activeWorkspaceId: null,
+      });
+      const hashedId = hashSessionToken(rawToken);
+      const NONEXISTENT_USER_ID = "00000000-0000-4000-8000-000000000000" as UserId;
+
+      // Force the INSERT half of the transaction to fail (FK violation on a
+      // user id that does not exist) so the ROLLBACK it triggers must also
+      // undo the revoke that already ran in the same transaction.
+      await expect(
+        repo.rotateAtomically(hashedId, (previous) => ({
+          hashedId: hashSessionToken(generateOpaqueSessionToken()),
+          userId: NONEXISTENT_USER_ID,
+          activeWorkspaceId: previous.activeWorkspaceId,
+          expiresAt: new Date(Date.now() + 60_000),
+          rotatedFrom: previous.id,
+          clientHint: {},
+        })),
+      ).rejects.toThrow();
+
+      // The original raw token must still validate -- the revoke did not
+      // survive the rollback.
+      const stillValid = await service.validate(rawToken);
+      expect(stillValid?.userId).toEqual(userId);
+    });
+
+    it("concurrent rotation: two independent connections race the same session, exactly one supersedes it", async () => {
+      const poolA = new Pool({ connectionString: harness.appUri });
+      const poolB = new Pool({ connectionString: harness.appUri });
+      try {
+        const serviceA = new SessionService(new SessionsRepository(poolA));
+        const serviceB = new SessionService(new SessionsRepository(poolB));
+
+        const { rawToken } = await service.issue({
+          userId: userId as UserId,
+          activeWorkspaceId: null,
+        });
+
+        const [resultA, resultB] = await Promise.all([
+          serviceA.rotate(rawToken),
+          serviceB.rotate(rawToken),
+        ]);
+
+        const successes = [resultA, resultB].filter((result) => result !== null);
+        // Exactly one racing attempt may successfully supersede the session --
+        // never zero (one of them must win), never two (no double-success).
+        expect(successes).toHaveLength(1);
+
+        // The old token is invalid regardless of which side won.
+        expect(await service.validate(rawToken)).toBeNull();
+
+        // The single successor is genuinely valid and chains back correctly.
+        const winner = successes[0]!;
+        const revalidated = await service.validate(winner.rawToken);
+        expect(revalidated?.userId).toEqual(userId);
+        expect(winner.session.rotatedFrom).toBeTruthy();
+      } finally {
+        await poolA.end();
+        await poolB.end();
+      }
+    });
   });
 });

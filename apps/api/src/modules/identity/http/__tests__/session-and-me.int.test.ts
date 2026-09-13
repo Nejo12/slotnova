@@ -1,4 +1,4 @@
-import { Client, runMigrations } from "@slotnova/db";
+import { Client, Pool, runMigrations } from "@slotnova/db";
 import { DEFAULT_POSTGRES_IMAGE, startPostgres, type PostgresHarness } from "@slotnova/db/testing";
 import type { NestFastifyApplication } from "@nestjs/platform-fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -6,7 +6,10 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { resolveSecurityConfig } from "../../../../config/security-config.js";
 import { createApp } from "../../../../main.js";
 import { csrfCookieName } from "../../../platform/security/csrf.js";
+import type { UserId, WorkspaceId } from "../../domain/ids.js";
 import { sessionCookieName } from "../../application/session/session-cookie.js";
+import { SessionService } from "../../application/session/session.service.js";
+import { SessionsRepository } from "../../infrastructure/repositories/sessions.repository.js";
 
 /**
  * T038 -- `POST|DELETE /v1/auth/session`, `GET /v1/me` against real
@@ -237,6 +240,190 @@ describe("session + /me endpoints (real PostgreSQL)", () => {
     it("DELETE /v1/auth/session without CSRF is 403", async () => {
       const res = await app.inject({ method: "DELETE", url: "/v1/auth/session" });
       expect(res.statusCode).toBe(403);
+    });
+  });
+
+  describe("fail-closed when the active workspace context becomes invalid (review correction)", () => {
+    // These scenarios issue sessions directly through `SessionService`
+    // rather than the dev-adapter-gated `POST /v1/auth/session` HTTP path:
+    // the dev adapter only recognizes `DEFAULT_SEEDED_USERS`' fixed emails,
+    // and what is under test here is `SessionContextService`/`GET /v1/me`
+    // fail-closed behavior, not sign-in itself (already covered above). Each
+    // scenario seeds its own uniquely-named user/workspace/membership so
+    // rows never collide with other tests in this file.
+    let directPool: Pool;
+    let directSessionService: SessionService;
+
+    beforeAll(() => {
+      directPool = new Pool({ connectionString: harness.appUri });
+      directSessionService = new SessionService(new SessionsRepository(directPool));
+    });
+
+    afterAll(async () => {
+      await directPool.end();
+    });
+
+    function cookieHeaderFor(rawToken: string): string {
+      return `${SESSION_COOKIE}=${rawToken}`;
+    }
+
+    it("1. active workspace valid -> GET /v1/me is 200 with activeWorkspace populated", async () => {
+      const workspace = await admin.query<{ id: string }>(
+        `INSERT INTO public.workspaces (name, slug) VALUES ('Valid AW WS', 'valid-aw-ws') RETURNING id`,
+      );
+      const user = await admin.query<{ id: string }>(
+        `INSERT INTO public.users (email, display_name, status) VALUES ('valid-aw@example.test', 'Valid AW', 'active') RETURNING id`,
+      );
+      await admin.query(
+        `INSERT INTO public.memberships (workspace_id, user_id, role, permissions) VALUES ($1, $2, 'owner', ARRAY['members:invite'])`,
+        [workspace.rows[0]!.id, user.rows[0]!.id],
+      );
+
+      const { rawToken } = await directSessionService.issue({
+        userId: user.rows[0]!.id as UserId,
+        activeWorkspaceId: workspace.rows[0]!.id as WorkspaceId,
+      });
+
+      const me = await app.inject({
+        method: "GET",
+        url: "/v1/me",
+        headers: { cookie: cookieHeaderFor(rawToken) },
+      });
+      expect(me.statusCode).toBe(200);
+      expect(me.json().activeWorkspace).toMatchObject({ id: workspace.rows[0]!.id });
+    });
+
+    it("2. active membership suspended after session issuance -> GET /v1/me is 401 session-invalid", async () => {
+      const workspace = await admin.query<{ id: string }>(
+        `INSERT INTO public.workspaces (name, slug) VALUES ('Suspend Membership WS', 'suspend-membership-ws') RETURNING id`,
+      );
+      const user = await admin.query<{ id: string }>(
+        `INSERT INTO public.users (email, display_name, status) VALUES ('suspend-membership@example.test', 'Suspend Membership', 'active') RETURNING id`,
+      );
+      const membership = await admin.query<{ id: string }>(
+        `INSERT INTO public.memberships (workspace_id, user_id, role) VALUES ($1, $2, 'owner') RETURNING id`,
+        [workspace.rows[0]!.id, user.rows[0]!.id],
+      );
+
+      const { rawToken } = await directSessionService.issue({
+        userId: user.rows[0]!.id as UserId,
+        activeWorkspaceId: workspace.rows[0]!.id as WorkspaceId,
+      });
+
+      const before = await app.inject({
+        method: "GET",
+        url: "/v1/me",
+        headers: { cookie: cookieHeaderFor(rawToken) },
+      });
+      expect(before.statusCode).toBe(200);
+      expect(before.json().activeWorkspace).toMatchObject({ id: workspace.rows[0]!.id });
+
+      await admin.query(`UPDATE public.memberships SET status = 'suspended' WHERE id = $1`, [
+        membership.rows[0]!.id,
+      ]);
+
+      const after = await app.inject({
+        method: "GET",
+        url: "/v1/me",
+        headers: { cookie: cookieHeaderFor(rawToken) },
+      });
+      expect(after.statusCode).toBe(401);
+      expect(after.json().type).toContain("/problems/session-invalid");
+    });
+
+    it("3. active workspace suspended after session issuance -> GET /v1/me is 401 session-invalid", async () => {
+      const workspace = await admin.query<{ id: string }>(
+        `INSERT INTO public.workspaces (name, slug) VALUES ('Suspend WS', 'suspend-ws') RETURNING id`,
+      );
+      const user = await admin.query<{ id: string }>(
+        `INSERT INTO public.users (email, display_name, status) VALUES ('suspend-ws-user@example.test', 'Suspend WS User', 'active') RETURNING id`,
+      );
+      await admin.query(
+        `INSERT INTO public.memberships (workspace_id, user_id, role) VALUES ($1, $2, 'owner')`,
+        [workspace.rows[0]!.id, user.rows[0]!.id],
+      );
+
+      const { rawToken } = await directSessionService.issue({
+        userId: user.rows[0]!.id as UserId,
+        activeWorkspaceId: workspace.rows[0]!.id as WorkspaceId,
+      });
+
+      const before = await app.inject({
+        method: "GET",
+        url: "/v1/me",
+        headers: { cookie: cookieHeaderFor(rawToken) },
+      });
+      expect(before.statusCode).toBe(200);
+
+      await admin.query(`UPDATE public.workspaces SET status = 'suspended' WHERE id = $1`, [
+        workspace.rows[0]!.id,
+      ]);
+
+      const after = await app.inject({
+        method: "GET",
+        url: "/v1/me",
+        headers: { cookie: cookieHeaderFor(rawToken) },
+      });
+      expect(after.statusCode).toBe(401);
+      expect(after.json().type).toContain("/problems/session-invalid");
+    });
+
+    it("4. user disabled after session issuance -> GET /v1/me retains 401 session-invalid", async () => {
+      const workspace = await admin.query<{ id: string }>(
+        `INSERT INTO public.workspaces (name, slug) VALUES ('Disable Later WS', 'disable-later-ws') RETURNING id`,
+      );
+      const user = await admin.query<{ id: string }>(
+        `INSERT INTO public.users (email, display_name, status) VALUES ('disable-later@example.test', 'Disable Later', 'active') RETURNING id`,
+      );
+      await admin.query(
+        `INSERT INTO public.memberships (workspace_id, user_id, role) VALUES ($1, $2, 'owner')`,
+        [workspace.rows[0]!.id, user.rows[0]!.id],
+      );
+
+      const { rawToken } = await directSessionService.issue({
+        userId: user.rows[0]!.id as UserId,
+        activeWorkspaceId: workspace.rows[0]!.id as WorkspaceId,
+      });
+
+      const before = await app.inject({
+        method: "GET",
+        url: "/v1/me",
+        headers: { cookie: cookieHeaderFor(rawToken) },
+      });
+      expect(before.statusCode).toBe(200);
+
+      await admin.query(`UPDATE public.users SET status = 'disabled' WHERE id = $1`, [
+        user.rows[0]!.id,
+      ]);
+
+      const after = await app.inject({
+        method: "GET",
+        url: "/v1/me",
+        headers: { cookie: cookieHeaderFor(rawToken) },
+      });
+      expect(after.statusCode).toBe(401);
+      expect(after.json().type).toContain("/problems/session-invalid");
+    });
+
+    it("5. session with a null activeWorkspaceId remains a valid context (200, activeWorkspace: null)", async () => {
+      const user = await admin.query<{ id: string }>(
+        `INSERT INTO public.users (email, display_name, status) VALUES ('no-workspace@example.test', 'No Workspace', 'active') RETURNING id`,
+      );
+      // No membership at all -- a legitimately valid session with no
+      // workspace ever selected.
+
+      const { rawToken } = await directSessionService.issue({
+        userId: user.rows[0]!.id as UserId,
+        activeWorkspaceId: null,
+      });
+
+      const me = await app.inject({
+        method: "GET",
+        url: "/v1/me",
+        headers: { cookie: cookieHeaderFor(rawToken) },
+      });
+      expect(me.statusCode).toBe(200);
+      expect(me.json().activeWorkspace).toBeNull();
     });
   });
 });

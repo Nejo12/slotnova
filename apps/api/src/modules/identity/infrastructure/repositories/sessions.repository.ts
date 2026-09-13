@@ -107,4 +107,75 @@ export class SessionsRepository {
       [hashedId],
     );
   }
+
+  /**
+   * Atomically supersedes an active session with a freshly issued one
+   * (review correction: `SessionService.rotate` previously revoked and
+   * inserted through two separate pool calls, which was not one transaction
+   * and could leave a revoked session with no successor). Both writes run on
+   * ONE client inside ONE `BEGIN`/`COMMIT` — if the insert fails, the
+   * `ROLLBACK` undoes the revoke too, so the original session is left valid.
+   *
+   * The conditional `UPDATE ... WHERE revoked_at IS NULL AND expires_at >
+   * now()` is itself the serialization point: PostgreSQL takes a row lock for
+   * the duration of an `UPDATE`, so two concurrent callers rotating the SAME
+   * session serialize on that row — whichever commits first leaves
+   * `revoked_at` set, so the loser's `WHERE` clause matches zero rows on its
+   * turn and it gets `null` back, never a second successor. No explicit
+   * `SELECT ... FOR UPDATE` or application-level lock is needed.
+   *
+   * `buildNext` receives the just-revoked (previous) session so the caller
+   * can carry forward `userId`/`activeWorkspaceId` (or override the latter)
+   * and set `rotatedFrom` — all decided from data read inside this same
+   * transaction, not a separate round trip.
+   */
+  async rotateAtomically(
+    currentHashedId: string,
+    buildNext: (previous: SessionRecord) => InsertSessionInput,
+  ): Promise<{ readonly previous: SessionRecord; readonly next: SessionRecord } | null> {
+    const client = await this.pool.connect();
+    try {
+      await client.query("BEGIN");
+
+      const revoked = await client.query<SessionRow>(
+        `UPDATE public.sessions
+            SET revoked_at = now()
+          WHERE id = $1 AND revoked_at IS NULL AND expires_at > now()
+        RETURNING ${SELECT_COLUMNS}`,
+        [currentHashedId],
+      );
+      if (revoked.rowCount === 0) {
+        // Nothing to roll back -- the UPDATE matched no row, so this
+        // transaction made no change. Still end it explicitly rather than
+        // leaving the connection mid-transaction when it returns to the pool.
+        await client.query("ROLLBACK");
+        return null;
+      }
+
+      const previous = toRecord(revoked.rows[0] as SessionRow);
+      const next = buildNext(previous);
+
+      const inserted = await client.query<SessionRow>(
+        `INSERT INTO public.sessions (id, user_id, active_workspace_id, expires_at, rotated_from, client_hint)
+         VALUES ($1, $2, $3, $4, $5, $6::jsonb)
+         RETURNING ${SELECT_COLUMNS}`,
+        [
+          next.hashedId,
+          next.userId,
+          next.activeWorkspaceId,
+          next.expiresAt.toISOString(),
+          next.rotatedFrom,
+          JSON.stringify(next.clientHint),
+        ],
+      );
+
+      await client.query("COMMIT");
+      return { previous, next: toRecord(inserted.rows[0] as SessionRow) };
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
 }
