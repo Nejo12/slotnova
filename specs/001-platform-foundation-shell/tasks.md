@@ -391,7 +391,7 @@ Each task carries a compact block:
 
 ### PR-09 — Authorization policy layer + workspace switch + isolation suites
 
-- [ ] T040 [US2] Cross-tenant isolation test suite (real PostgreSQL)
+- [x] T040 [US2] Cross-tenant isolation test suite (real PostgreSQL)
   - **Dep**: T031, T034, T021
   - **Files**: `apps/api/src/test/isolation/*.int.test.ts` (parameterized over every tenant-owned table + every identity data path)
   - **Accept**: workspace-A session cannot read/mutate workspace-B rows even with `workspace_id` filter omitted; RLS coverage asserted; FR-033, SC-004
@@ -399,7 +399,7 @@ Each task carries a compact block:
   - **Constraints**: independent connections; no mocks
   - **Out**: concurrency cases (T044)
 
-- [ ] T041 [US2] Authorization policy layer (server-authoritative)
+- [x] T041 [US2] Authorization policy layer (server-authoritative)
   - **Dep**: T034
   - **Files**: `apps/api/src/modules/identity/domain/policy/*.ts` (policy fns over user + active workspace + membership + permissions), Nest guard/decorator
   - **Accept**: protected ops decided server-side; missing capability → 403 `problem+json` with `requiredCapability`; FR-031, ADR-009
@@ -407,7 +407,7 @@ Each task carries a compact block:
   - **Constraints**: UI permission state never substitutes for this
   - **Out**: custom roles
 
-- [ ] T042 [US2] Workspace select/switch endpoint + cache-clear contract
+- [x] T042 [US2] Workspace select/switch endpoint + cache-clear contract
   - **Dep**: T036, T041, T020
   - **Files**: `apps/api/src/modules/identity/http/workspace-context.controller.ts` + schema; `POST /v1/auth/session/workspace`
   - **Accept**: matches `contracts/workspace-context.contract.md`; rotates session; 403 `not-a-member` with no existence disclosure; 409 on suspended; FR-033c
@@ -415,7 +415,7 @@ Each task carries a compact block:
   - **Constraints**: response signals the web client to clear server-state cache (enforced in T058/T061 for the real shell, and in the test-nav harness T048)
   - **Out**: n/a
 
-- [ ] T043 [P] [US2] Authorization matrix tests
+- [x] T043 [P] [US2] Authorization matrix tests
   - **Dep**: T041
   - **Files**: `apps/api/src/modules/identity/domain/policy/__tests__/policy.test.ts`, `policy.int.test.ts`
   - **Accept**: every (role × protected-foundation-action) pair asserted allow/deny; ADR-009
@@ -423,7 +423,7 @@ Each task carries a compact block:
   - **Constraints**: property/table-driven; not mock-call assertions
   - **Out**: n/a
 
-- [ ] T044 [P] [US2] Concurrency isolation tests (independent connections)
+- [x] T044 [P] [US2] Concurrency isolation tests (independent connections)
   - **Dep**: T040, T042
   - **Files**: `apps/api/src/test/isolation/concurrency.int.test.ts`
   - **Accept**: concurrent sessions in different workspaces never cross-read; `SET LOCAL` context never leaks across pooled connections; FR-046, SC-004
