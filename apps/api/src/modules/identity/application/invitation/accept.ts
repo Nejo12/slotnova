@@ -33,6 +33,18 @@ export class AcceptInvitationUseCase {
 
     return this.transactions.run(async (tx) => {
       await this.transactions.setTokenLookup(tx, tokenHash);
+      // PostgreSQL row locking also requires the UPDATE RLS policy. Resolve
+      // only the token-bound workspace first, then enter its tenant context
+      // before acquiring the single-use row lock and re-reading all state.
+      const tokenBoundInvitation = await this.invitations.findByTokenHash(tx, tokenHash, false);
+      if (!tokenBoundInvitation) {
+        throw new ProblemException("invitation-expired");
+      }
+      await this.transactions.setWorkspace(tx, {
+        workspaceId: tokenBoundInvitation.workspaceId,
+        userId: input.userId,
+        requestId,
+      });
       const invitation = await this.invitations.findByTokenHash(tx, tokenHash, true);
       if (
         !invitation ||
@@ -47,11 +59,6 @@ export class AcceptInvitationUseCase {
         throw new ProblemException("email-mismatch");
       }
 
-      await this.transactions.setWorkspace(tx, {
-        workspaceId: invitation.workspaceId,
-        userId: input.userId,
-        requestId,
-      });
       const workspaceName = await this.invitations.findWorkspaceName(tx, invitation.workspaceId);
       // Serialize against any concurrent membership insertion for this user;
       // the memberships FK also locks this parent row during inserts.
