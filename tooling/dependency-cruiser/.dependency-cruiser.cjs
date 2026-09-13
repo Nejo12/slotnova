@@ -132,7 +132,11 @@ module.exports = {
     tsPreCompilationDeps: true,
     enhancedResolveOptions: {
       exportsFields: ["exports"],
-      conditionNames: ["import", "require", "node", "default", "types"],
+      // Workspace packages expose a non-runtime `source` condition for static
+      // architecture analysis. Selecting it here lets a clean CI checkout
+      // resolve workspace edges before `dist/` exists, while normal Node/package
+      // consumers continue to use the `types`/`default` dist exports.
+      conditionNames: ["source", "import", "require", "node", "default", "types"],
       extensions: [".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".json"],
     },
   },
