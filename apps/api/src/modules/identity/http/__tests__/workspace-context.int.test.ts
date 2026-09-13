@@ -37,7 +37,11 @@ describe("POST /v1/auth/session/workspace (real PostgreSQL)", () => {
   async function switchWorkspace(
     sessionCookie: string,
     workspaceId: unknown,
-  ): Promise<{ statusCode: number; body: Record<string, unknown>; res: Awaited<ReturnType<typeof app.inject>> }> {
+  ): Promise<{
+    statusCode: number;
+    body: Record<string, unknown>;
+    res: Awaited<ReturnType<typeof app.inject>>;
+  }> {
     const { cookieHeader, token } = await getCsrfToken();
     const res = await app.inject({
       method: "POST",
@@ -235,7 +239,10 @@ describe("POST /v1/auth/session/workspace (real PostgreSQL)", () => {
       userId: userId as UserId,
       activeWorkspaceId: null,
     });
-    const { statusCode, body } = await switchWorkspace(`${SESSION_COOKIE}=${rawToken}`, workspaceId);
+    const { statusCode, body } = await switchWorkspace(
+      `${SESSION_COOKIE}=${rawToken}`,
+      workspaceId,
+    );
     expect(statusCode).toBe(409);
     expect(body["type"]).toContain("/problems/workspace-unavailable");
   });
@@ -246,7 +253,10 @@ describe("POST /v1/auth/session/workspace (real PostgreSQL)", () => {
       userId: userId as UserId,
       activeWorkspaceId: null,
     });
-    const { statusCode, body } = await switchWorkspace(`${SESSION_COOKIE}=${rawToken}`, workspaceId);
+    const { statusCode, body } = await switchWorkspace(
+      `${SESSION_COOKIE}=${rawToken}`,
+      workspaceId,
+    );
     expect(statusCode).toBe(409);
     expect(body["type"]).toContain("/problems/workspace-unavailable");
   });

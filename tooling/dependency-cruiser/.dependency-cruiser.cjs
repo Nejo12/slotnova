@@ -99,7 +99,19 @@ module.exports = {
         "Import a workspace package through its public entry point, not a deep internal path " +
         "(overview 'no deep imports across bounded contexts'; no barrel/deep-path layers).",
       severity: "error",
-      from: { path: "^(apps|packages)/([^/]+)/", pathNot: "/(__tests__|__fixtures__)/" },
+      from: {
+        path: "^(apps|packages)/([^/]+)/",
+        pathNot: [
+          "/(__tests__|__fixtures__)/",
+          // `apps/api/src/test/**` (no `__tests__` segment) is the cross-module
+          // isolation/concurrency suite location `specs/001-platform-foundation-shell/
+          // tasks.md` T040/T044 deliberately specify, outside the per-module
+          // `__tests__` convention (see `apps/api/vitest.integration.config.ts`) —
+          // equally test-only and equally entitled to import a package's
+          // `/testing` entry point.
+          "^apps/api/src/test/",
+        ].join("|"),
+      },
       to: {
         path: "^packages/([^/]+)/src/.+",
         pathNot: [

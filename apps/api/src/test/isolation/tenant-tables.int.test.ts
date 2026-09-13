@@ -7,7 +7,12 @@
  * No mocks; real PostgreSQL throughout.
  */
 import { Client, Pool, type PoolClient } from "@slotnova/db";
-import { DEFAULT_POSTGRES_IMAGE, assertRlsCoverage, startPostgres, type PostgresHarness } from "@slotnova/db/testing";
+import {
+  DEFAULT_POSTGRES_IMAGE,
+  assertRlsCoverage,
+  startPostgres,
+  type PostgresHarness,
+} from "@slotnova/db/testing";
 import { runMigrations } from "@slotnova/db";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -121,7 +126,12 @@ describe("cross-tenant table isolation (real PostgreSQL, T040)", () => {
     const invitation = await admin.query<{ id: string }>(
       `INSERT INTO public.invitations (workspace_id, email, role, token_hash, expires_at, invited_by)
        VALUES ($1, $2, 'staff', $3, now() + interval '7 days', $4) RETURNING id`,
-      [workspaceId, `invitee-${label}@example.test`, `hash-${label}-${Date.now()}`, membership.rows[0]!.id],
+      [
+        workspaceId,
+        `invitee-${label}@example.test`,
+        `hash-${label}-${Date.now()}`,
+        membership.rows[0]!.id,
+      ],
     );
 
     const auditRecord = await admin.query<{ id: string }>(

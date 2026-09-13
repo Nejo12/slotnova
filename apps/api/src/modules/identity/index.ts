@@ -45,4 +45,7 @@ export {
   type Capability,
 } from "./domain/policy/capabilities.js";
 export { CapabilityGuard } from "./domain/policy/capability.guard.js";
-export { RequireCapability, REQUIRE_CAPABILITY_KEY } from "./domain/policy/require-capability.decorator.js";
+export {
+  RequireCapability,
+  REQUIRE_CAPABILITY_KEY,
+} from "./domain/policy/require-capability.decorator.js";

@@ -56,7 +56,11 @@ export class CapabilityGuard implements CanActivate {
     }
 
     const authorized = authorize(
-      { membershipStatus: "active", workspaceStatus: "active", permissions: sessionContext.activeWorkspace.permissions },
+      {
+        membershipStatus: "active",
+        workspaceStatus: "active",
+        permissions: sessionContext.activeWorkspace.permissions,
+      },
       requiredCapability,
     );
     if (!authorized) {

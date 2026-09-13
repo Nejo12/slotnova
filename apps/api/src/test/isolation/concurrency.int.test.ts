@@ -7,7 +7,12 @@
  * `SET LOCAL` never survives across pooled reuse. No sleeps.
  */
 import { Client, Pool, runMigrations } from "@slotnova/db";
-import { DEFAULT_POSTGRES_IMAGE, openIndependentConnections, startPostgres, type PostgresHarness } from "@slotnova/db/testing";
+import {
+  DEFAULT_POSTGRES_IMAGE,
+  openIndependentConnections,
+  startPostgres,
+  type PostgresHarness,
+} from "@slotnova/db/testing";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { withWorkspaceContext } from "../../modules/platform/tenancy/with-workspace-context.js";
