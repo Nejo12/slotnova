@@ -10,8 +10,10 @@
  * `no-cross-module-internals`).
  *
  * No repository, service, or schema table is exported here. Repositories
- * (T034), the credential adapter and session service (T035/T036), and
- * authorization policy (T041) are later PRs.
+ * (T034) and the credential adapter/session service (T035/T036) stay
+ * module-internal; the authorization policy surface (T041) below is the
+ * one exception, since other modules gating a route need `CapabilityGuard`
+ * and `RequireCapability` directly.
  */
 export {
   asInvitationId,
@@ -34,3 +36,16 @@ export {
   assertValidIanaTimeZone,
   isValidIanaTimeZone,
 } from "./domain/timezone.js";
+
+export { authorize, type AuthorizationSubject } from "./domain/policy/authorize.js";
+export {
+  MEMBERS_INVITE,
+  MEMBERS_MANAGE,
+  PROTECTED_FOUNDATION_CAPABILITIES,
+  type Capability,
+} from "./domain/policy/capabilities.js";
+export { CapabilityGuard } from "./domain/policy/capability.guard.js";
+export {
+  RequireCapability,
+  REQUIRE_CAPABILITY_KEY,
+} from "./domain/policy/require-capability.decorator.js";

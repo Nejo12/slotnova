@@ -9,8 +9,10 @@ import { UsersRepository } from "./infrastructure/repositories/users.repository.
 import { SessionContextService } from "./application/session/session-context.service.js";
 import { SessionService } from "./application/session/session.service.js";
 import { SignInUseCase } from "./application/session/sign-in.use-case.js";
+import { CapabilityGuard } from "./domain/policy/capability.guard.js";
 import { MeController } from "./http/me.controller.js";
 import { SessionController } from "./http/session.controller.js";
+import { WorkspaceContextController } from "./http/workspace-context.controller.js";
 
 /**
  * `identity` module HTTP + application wiring (T034-T038). Phase 1 wires
@@ -19,7 +21,7 @@ import { SessionController } from "./http/session.controller.js";
  * `CREDENTIAL_ADAPTER` port, not on `DevCredentialAdapter` directly.
  */
 @Module({
-  controllers: [SessionController, MeController],
+  controllers: [SessionController, MeController, WorkspaceContextController],
   providers: [
     UsersRepository,
     SessionsRepository,
@@ -27,6 +29,7 @@ import { SessionController } from "./http/session.controller.js";
     SessionService,
     SessionContextService,
     SignInUseCase,
+    CapabilityGuard,
     { provide: CREDENTIAL_ADAPTER, useValue: new DevCredentialAdapter(DEFAULT_SEEDED_USERS) },
   ],
 })

@@ -2,7 +2,7 @@ import { Client, Pool, runMigrations } from "@slotnova/db";
 import { DEFAULT_POSTGRES_IMAGE, startPostgres, type PostgresHarness } from "@slotnova/db/testing";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import type { UserId } from "../../../domain/ids.js";
+import type { UserId, WorkspaceId } from "../../../domain/ids.js";
 import { MembershipsRepository } from "../memberships.repository.js";
 import { SessionsRepository } from "../sessions.repository.js";
 import { UsersRepository } from "../users.repository.js";
@@ -123,6 +123,48 @@ describe("identity repositories (real PostgreSQL)", () => {
       ]);
       expect(forA.length).toBeGreaterThan(0);
       expect(forB).toEqual([]);
+    });
+  });
+
+  describe("MembershipsRepository.findOwnMembershipInWorkspace", () => {
+    it("returns the caller's own membership + workspace status for a workspace they belong to", async () => {
+      const view = await new MembershipsRepository(pool).findOwnMembershipInWorkspace(
+        userAId as UserId,
+        workspaceOneId as WorkspaceId,
+      );
+      expect(view).toMatchObject({
+        workspaceId: workspaceOneId,
+        role: "owner",
+        membershipStatus: "active",
+        workspaceStatus: "active",
+      });
+    });
+
+    it("returns null for a workspace the user does not belong to -- no existence disclosure", async () => {
+      // workspaceOneId is real and belongs to userA in this fixture set;
+      // userB has no membership there, proving the "workspace exists, but
+      // I'm not a member" case returns null with no distinguishing detail.
+      const view = await new MembershipsRepository(pool).findOwnMembershipInWorkspace(
+        userBId as UserId,
+        workspaceOneId as WorkspaceId,
+      );
+      expect(view).toBeNull();
+    });
+
+    it("returns null for a workspace id that does not exist at all -- identical null, no oracle", async () => {
+      const view = await new MembershipsRepository(pool).findOwnMembershipInWorkspace(
+        userAId as UserId,
+        "00000000-0000-4000-8000-000000000000" as WorkspaceId,
+      );
+      expect(view).toBeNull();
+    });
+
+    it("never returns another user's membership even for the same workspace", async () => {
+      const forB = await new MembershipsRepository(pool).findOwnMembershipInWorkspace(
+        userBId as UserId,
+        workspaceOneId as WorkspaceId,
+      );
+      expect(forB).toBeNull();
     });
   });
 
