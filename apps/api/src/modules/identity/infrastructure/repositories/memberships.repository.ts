@@ -41,6 +41,24 @@ interface ActiveMembershipRow {
   permissions: string[];
 }
 
+export interface OwnMembershipInWorkspace {
+  readonly membershipId: MembershipId;
+  readonly workspaceId: WorkspaceId;
+  readonly role: MembershipRole;
+  readonly permissions: readonly string[];
+  readonly membershipStatus: "active" | "suspended";
+  readonly workspaceStatus: "active" | "suspended";
+}
+
+interface OwnMembershipRow {
+  membership_id: string;
+  workspace_id: string;
+  role: MembershipRole;
+  permissions: string[];
+  membership_status: "active" | "suspended";
+  workspace_status: "active" | "suspended";
+}
+
 @Injectable()
 export class MembershipsRepository {
   constructor(@Inject(DB_POOL) private readonly pool: Pool) {}
@@ -66,6 +84,54 @@ export class MembershipsRepository {
         role: row.role,
         permissions: row.permissions,
       }));
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * The T042 workspace-switch lookup: unlike {@link listActiveMembershipsForUser}
+   * (active-only, cross-workspace), this needs to distinguish "no membership",
+   * "suspended membership" and "suspended workspace" for ONE specific target
+   * workspace, so it does not filter on status. Same narrow exception as
+   * `listActiveMembershipsForUser`: runs under the additive
+   * `memberships_self_lookup` SELECT-only policy (`app.user_id` only, never
+   * `app.workspace_id`, never client-controlled) -- a nonexistent workspace and
+   * a workspace the user does not belong to both resolve to `null`, so this
+   * layer discloses nothing about workspace existence either (contracts/
+   * workspace-context.contract.md: "reveals nothing about whether the
+   * workspace exists").
+   */
+  async findOwnMembershipInWorkspace(
+    userId: UserId,
+    workspaceId: WorkspaceId,
+  ): Promise<OwnMembershipInWorkspace | null> {
+    const client = await this.pool.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query("SELECT set_config('app.user_id', $1, true)", [userId]);
+      const { rows } = await client.query<OwnMembershipRow>(
+        `SELECT m.id AS membership_id, m.workspace_id, m.role, m.permissions,
+                m.status AS membership_status, w.status AS workspace_status
+           FROM public.memberships m
+           JOIN public.workspaces w ON w.id = m.workspace_id
+          WHERE m.user_id = $1 AND m.workspace_id = $2`,
+        [userId, workspaceId],
+      );
+      await client.query("COMMIT");
+      const row = rows[0];
+      if (!row) return null;
+      return {
+        membershipId: row.membership_id as MembershipId,
+        workspaceId: row.workspace_id as WorkspaceId,
+        role: row.role,
+        permissions: row.permissions,
+        membershipStatus: row.membership_status,
+        workspaceStatus: row.workspace_status,
+      };
     } catch (error) {
       await client.query("ROLLBACK");
       throw error;

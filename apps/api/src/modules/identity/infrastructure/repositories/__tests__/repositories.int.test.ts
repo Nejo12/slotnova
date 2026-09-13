@@ -126,6 +126,48 @@ describe("identity repositories (real PostgreSQL)", () => {
     });
   });
 
+  describe("MembershipsRepository.findOwnMembershipInWorkspace", () => {
+    it("returns the caller's own membership + workspace status for a workspace they belong to", async () => {
+      const view = await new MembershipsRepository(pool).findOwnMembershipInWorkspace(
+        userAId as UserId,
+        workspaceOneId as any,
+      );
+      expect(view).toMatchObject({
+        workspaceId: workspaceOneId,
+        role: "owner",
+        membershipStatus: "active",
+        workspaceStatus: "active",
+      });
+    });
+
+    it("returns null for a workspace the user does not belong to -- no existence disclosure", async () => {
+      // workspaceOneId is real and belongs to userA in this fixture set;
+      // userB has no membership there, proving the "workspace exists, but
+      // I'm not a member" case returns null with no distinguishing detail.
+      const view = await new MembershipsRepository(pool).findOwnMembershipInWorkspace(
+        userBId as UserId,
+        workspaceOneId as any,
+      );
+      expect(view).toBeNull();
+    });
+
+    it("returns null for a workspace id that does not exist at all -- identical null, no oracle", async () => {
+      const view = await new MembershipsRepository(pool).findOwnMembershipInWorkspace(
+        userAId as UserId,
+        "00000000-0000-4000-8000-000000000000" as any,
+      );
+      expect(view).toBeNull();
+    });
+
+    it("never returns another user's membership even for the same workspace", async () => {
+      const forB = await new MembershipsRepository(pool).findOwnMembershipInWorkspace(
+        userBId as UserId,
+        workspaceOneId as any,
+      );
+      expect(forB).toBeNull();
+    });
+  });
+
   describe("SessionsRepository", () => {
     it("inserts, finds active, and fails closed once revoked", async () => {
       const repo = new SessionsRepository(pool);
