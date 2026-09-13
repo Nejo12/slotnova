@@ -5,6 +5,13 @@
     "declaration": false,
     "declarationMap": false,
     "sourceMap": false,
+    // This aggregate tsconfig type-checks every workspace unit — including
+    // `apps/web` (React/DOM) — in one `tsc` run, so it needs jsx + DOM lib on
+    // top of the node.json base. Each package's own tsconfig (used by its
+    // `typecheck`/`build` script and by editors) still extends the correctly
+    // scoped `@slotnova/tsconfig/{node,react}` flavour.
+    "jsx": "react-jsx",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
     // Root typecheck runs before workspace builds in the fast lane. Prefer each
     // workspace package's `source` export so clean CI can resolve TypeScript
     // sources without requiring prebuilt dist declarations. Package-specific
@@ -24,6 +31,7 @@
     "packages/*/src/**/*.ts",
     "packages/*/*.config.ts",
     "apps/*/src/**/*.ts",
+    "apps/*/src/**/*.tsx",
     "apps/*/*.config.ts"
   ],
   "exclude": ["node_modules", "**/dist/**", "**/__fixtures__/**"]

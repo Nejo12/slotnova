@@ -30,6 +30,7 @@ export default defineConfig({
       "tooling/**/__tests__/**/*.test.ts",
       "packages/**/__tests__/**/*.test.ts",
       "apps/**/__tests__/**/*.test.ts",
+      "apps/**/__tests__/**/*.test.tsx",
     ],
     exclude: [
       "**/node_modules/**",

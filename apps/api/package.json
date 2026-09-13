@@ -9,6 +9,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "dev": "tsx watch src/main.ts",
     "start": "node dist/main.js",
     "test:integration": "vitest run --config vitest.integration.config.ts"
   },

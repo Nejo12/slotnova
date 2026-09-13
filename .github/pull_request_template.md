@@ -39,6 +39,11 @@ Closes #
 
 <!-- Add concise evidence for UI changes. -->
 
+## Scope discipline
+
+- [ ] This PR introduces no product-domain behavior beyond what the linked issue/task authorizes
+- [ ] No forward work from a later task/PR was implemented early
+
 ## Merge policy
 
 - [ ] Auto-merge is disabled
