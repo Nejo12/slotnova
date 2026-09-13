@@ -299,7 +299,7 @@ Each task carries a compact block:
 
 ### PR-07 — Identity + audit schema, RLS migrations
 
-- [ ] T029 [P] [US2] `identity` module scaffold + Drizzle schema (users, workspaces, locations)
+- [x] T029 [P] [US2] `identity` module scaffold + Drizzle schema (users, workspaces, locations)
   - **Dep**: T009, T021
   - **Files**: `apps/api/src/modules/identity/infrastructure/schema/{user,workspace,location}.ts`, module `index.ts` (ports only)
   - **Accept**: schema matches `data-model.md`; branded ids; IANA-zone validation on `locations.timezone` (data only); ADR-010
@@ -307,7 +307,7 @@ Each task carries a compact block:
   - **Constraints**: per-module schema ownership (ADR-004); no cross-module import
   - **Out**: memberships/invitations/sessions (T030)
 
-- [ ] T030 [P] [US2] `identity` schema: memberships, invitations, sessions
+- [x] T030 [P] [US2] `identity` schema: memberships, invitations, sessions
   - **Dep**: T029
   - **Files**: `apps/api/src/modules/identity/infrastructure/schema/{membership,invitation,session}.ts`
   - **Accept**: unique `(workspace_id,user_id)` membership; partial-unique pending invitation per `(workspace_id,email)`; token stored hashed; session fields per `data-model.md`
@@ -315,7 +315,7 @@ Each task carries a compact block:
   - **Constraints**: `sessions` keyed by user (no RLS); `memberships`/`invitations` tenant-owned
   - **Out**: repositories (T034)
 
-- [ ] T031 [US2] Identity + audit migrations with RLS enable/FORCE + policies
+- [x] T031 [US2] Identity + audit migrations with RLS enable/FORCE + policies
   - **Dep**: T029, T030, T010, T012
   - **Files**: `packages/db/migrations/00xx_identity.sql`, `00xx_audit.sql` (RLS `ENABLE`+`FORCE` on `locations`,`memberships`,`invitations`,`audit_records`; workspace-predicate policies; audit role grants `INSERT`+`SELECT` only)
   - **Accept**: clean apply + forward apply pass; RLS-coverage assertion passes for 100% tenant-owned tables; FR-024, FR-029, FR-032, SC-003, SC-011
@@ -323,7 +323,7 @@ Each task carries a compact block:
   - **Constraints**: expand-style additive; reviewed SQL; ADR-008, ADR-020
   - **Out**: product tables
 
-- [ ] T032 [P] [US2] `audit` module: append-only write port + schema
+- [x] T032 [P] [US2] `audit` module: append-only write port + schema
   - **Dep**: T031, T021
   - **Files**: `apps/api/src/modules/audit/` (write port `recordAudit(...)`, infra writer)
   - **Accept**: audit rows carry actor/workspace/action/entity/timestamp/request-id; app role cannot UPDATE/DELETE (proven); FR-032
@@ -331,7 +331,7 @@ Each task carries a compact block:
   - **Constraints**: other modules call the port, never the table (constitution III)
   - **Out**: audit read UI (roadmap Phase 6)
 
-- [ ] T033 [P] [US2] Identity/audit schema + migration + RLS tests (real PostgreSQL)
+- [x] T033 [P] [US2] Identity/audit schema + migration + RLS tests (real PostgreSQL)
   - **Dep**: T031, T032
   - **Files**: `apps/api/src/modules/identity/**/__tests__/schema.int.test.ts`, `apps/api/src/modules/audit/**/__tests__/append-only.int.test.ts`
   - **Accept**: migrations clean+forward; RLS coverage; audit immutability; FR-048
