@@ -6,8 +6,25 @@
  * a new invitation once a prior one is no longer pending — is expressed in the
  * SQL migration (T031); Drizzle's `uniqueIndex(...).where(...)` mirrors it here
  * for type-level documentation.
+ *
+ * `invited_by` is enforced by a COMPOSITE foreign key —
+ * `(workspace_id, invited_by) REFERENCES memberships (workspace_id, id)` —
+ * rather than a simple `invited_by -> memberships.id` FK. A simple FK only
+ * proves the referenced membership row exists somewhere; it does not prove
+ * that membership belongs to THIS invitation's workspace, which would let a
+ * caller who knows any membership UUID from another workspace attribute an
+ * invitation to it. The composite FK makes that a database-level
+ * impossibility (independent review finding, PR-07 correction).
  */
-import { pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import {
+  foreignKey,
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
 import type { InvitationId, MembershipId, UserId, WorkspaceId } from "../../domain/ids.js";
@@ -37,10 +54,9 @@ export const invitations = pgTable(
     tokenHash: text("token_hash").notNull(),
     status: invitationStatusEnum("status").notNull().default("pending"),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
-    invitedBy: uuid("invited_by")
-      .notNull()
-      .references(() => memberships.id)
-      .$type<MembershipId>(),
+    // No column-level `.references()` here — the FK is the composite
+    // table-level constraint below (workspace_id, invited_by).
+    invitedBy: uuid("invited_by").notNull().$type<MembershipId>(),
     acceptedByUserId: uuid("accepted_by_user_id")
       .references(() => users.id)
       .$type<UserId>(),
@@ -51,6 +67,11 @@ export const invitations = pgTable(
     uniqueIndex("invitations_pending_workspace_id_email_key")
       .on(table.workspaceId, table.email)
       .where(sql`${table.status} = 'pending'`),
+    foreignKey({
+      name: "invitations_invited_by_workspace_fkey",
+      columns: [table.workspaceId, table.invitedBy],
+      foreignColumns: [memberships.workspaceId, memberships.id],
+    }),
   ],
 );
 

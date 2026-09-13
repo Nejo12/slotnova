@@ -228,6 +228,122 @@ describe("identity constraints (real PostgreSQL)", () => {
   });
 });
 
+describe("invitations.invited_by composite tenant FK (real PostgreSQL)", () => {
+  /**
+   * Independent-review correction (PR-07): a bare `invited_by ->
+   * memberships.id` FK only proves the referenced membership row exists
+   * somewhere — not that it belongs to the invitation's own workspace. These
+   * tests prove the composite FK `(workspace_id, invited_by) REFERENCES
+   * memberships (workspace_id, id)` makes a cross-workspace `invited_by` a
+   * database-level referential-integrity violation, even when the caller
+   * supplies a real, valid membership UUID from a different workspace.
+   */
+  let harness: PostgresHarness;
+  let admin: Client;
+  let workspaceA: string;
+  let workspaceB: string;
+  let membershipInA: string;
+  let membershipInB: string;
+
+  beforeAll(async () => {
+    harness = await startPostgres({ image: DEFAULT_POSTGRES_IMAGE });
+    await runMigrations({ connectionString: harness.adminUri });
+
+    admin = new Client({ connectionString: harness.adminUri });
+    await admin.connect();
+
+    const a = await admin.query<{ id: string }>(
+      `INSERT INTO public.workspaces (name, slug) VALUES ('Workspace A', 'ws-a-fk-t031') RETURNING id`,
+    );
+    workspaceA = a.rows[0]!.id;
+    const b = await admin.query<{ id: string }>(
+      `INSERT INTO public.workspaces (name, slug) VALUES ('Workspace B', 'ws-b-fk-t031') RETURNING id`,
+    );
+    workspaceB = b.rows[0]!.id;
+
+    const userA = await admin.query<{ id: string }>(
+      `INSERT INTO public.users (email, display_name) VALUES ('owner-a@example.test', 'Owner A') RETURNING id`,
+    );
+    const userB = await admin.query<{ id: string }>(
+      `INSERT INTO public.users (email, display_name) VALUES ('owner-b@example.test', 'Owner B') RETURNING id`,
+    );
+
+    const memA = await admin.query<{ id: string }>(
+      `INSERT INTO public.memberships (workspace_id, user_id, role) VALUES ($1, $2, 'owner') RETURNING id`,
+      [workspaceA, userA.rows[0]!.id],
+    );
+    membershipInA = memA.rows[0]!.id;
+    const memB = await admin.query<{ id: string }>(
+      `INSERT INTO public.memberships (workspace_id, user_id, role) VALUES ($1, $2, 'owner') RETURNING id`,
+      [workspaceB, userB.rows[0]!.id],
+    );
+    membershipInB = memB.rows[0]!.id;
+  }, 180_000);
+
+  afterAll(async () => {
+    await admin.end();
+    await harness.stop();
+  });
+
+  it("succeeds when invited_by is a membership belonging to the invitation's own workspace", async () => {
+    await expect(
+      admin.query(
+        `INSERT INTO public.invitations (workspace_id, email, role, token_hash, expires_at, invited_by)
+         VALUES ($1, 'same-workspace-invitee@example.test', 'staff', 'hash-same-ws', now() + interval '7 days', $2)
+         RETURNING id`,
+        [workspaceA, membershipInA],
+      ),
+    ).resolves.toMatchObject({ rowCount: 1 });
+  });
+
+  it("is rejected by PostgreSQL when invited_by is a real membership from a DIFFERENT workspace", async () => {
+    // membershipInB genuinely exists — this is not a "row not found" FK
+    // failure, it is the composite (workspace_id, invited_by) mismatch.
+    await expect(
+      admin.query(
+        `INSERT INTO public.invitations (workspace_id, email, role, token_hash, expires_at, invited_by)
+         VALUES ($1, 'cross-workspace-invitee@example.test', 'staff', 'hash-cross-ws', now() + interval '7 days', $2)`,
+        [workspaceA, membershipInB],
+      ),
+    ).rejects.toThrow(/violates foreign key constraint "invitations_invited_by_workspace_fkey"/);
+  });
+
+  it("remains rejected even when the caller knows the exact workspace-B membership UUID and target workspace-B correctly", async () => {
+    // Sanity check: membershipInB IS valid when workspace_id matches it —
+    // proving the rejection above is specifically about the workspace
+    // mismatch, not a bad/nonexistent membership id.
+    await expect(
+      admin.query(
+        `INSERT INTO public.invitations (workspace_id, email, role, token_hash, expires_at, invited_by)
+         VALUES ($1, 'legit-b-invitee@example.test', 'staff', 'hash-legit-b', now() + interval '7 days', $2)
+         RETURNING id`,
+        [workspaceB, membershipInB],
+      ),
+    ).resolves.toMatchObject({ rowCount: 1 });
+
+    // And attributing a workspace-A invitation to that same, real,
+    // known-good-elsewhere UUID is still refused.
+    await expect(
+      admin.query(
+        `INSERT INTO public.invitations (workspace_id, email, role, token_hash, expires_at, invited_by)
+         VALUES ($1, 'still-cross-workspace@example.test', 'staff', 'hash-still-cross', now() + interval '7 days', $2)`,
+        [workspaceA, membershipInB],
+      ),
+    ).rejects.toThrow(/violates foreign key constraint "invitations_invited_by_workspace_fkey"/);
+  });
+
+  it("has the referenced unique key on memberships (workspace_id, id)", async () => {
+    const { rows } = await admin.query<{ conname: string; contype: string }>(
+      `SELECT conname, contype
+         FROM pg_constraint
+        WHERE conrelid = 'public.memberships'::regclass
+          AND conname = 'memberships_workspace_id_id_key'`,
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.contype).toBe("u"); // unique constraint, not merely an index
+  });
+});
+
 describe("identity RLS isolation (real PostgreSQL)", () => {
   let harness: PostgresHarness;
   let admin: Client;

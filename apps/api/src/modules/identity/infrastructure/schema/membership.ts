@@ -4,7 +4,7 @@
  * The "at least one owner per workspace" invariant is an application-layer
  * rule (later PR, T041/T045) — not expressible as a single-table constraint.
  */
-import { pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { pgEnum, pgTable, text, timestamp, unique, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
 import type { MembershipId, UserId, WorkspaceId } from "../../domain/ids.js";
@@ -38,6 +38,12 @@ export const memberships = pgTable(
   },
   (table) => [
     uniqueIndex("memberships_workspace_id_user_id_key").on(table.workspaceId, table.userId),
+    // Referenced key for invitations' composite FK (workspace_id, invited_by)
+    // -> memberships(workspace_id, id): PostgreSQL requires an actual unique
+    // constraint (not just a unique index) on the exact referenced columns.
+    // This lets the database itself refuse an invitation whose invited_by
+    // membership belongs to a different workspace than the invitation does.
+    unique("memberships_workspace_id_id_key").on(table.workspaceId, table.id),
   ],
 );
 

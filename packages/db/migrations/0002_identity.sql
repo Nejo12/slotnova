@@ -108,7 +108,11 @@ CREATE TABLE IF NOT EXISTS public.memberships (
   permissions   text[]              NOT NULL DEFAULT ARRAY[]::text[],
   status        membership_status   NOT NULL DEFAULT 'active',
   created_at    timestamptz         NOT NULL DEFAULT now(),
-  updated_at    timestamptz         NOT NULL DEFAULT now()
+  updated_at    timestamptz         NOT NULL DEFAULT now(),
+  -- Referenced key for invitations' composite FK below: PostgreSQL requires
+  -- an actual UNIQUE CONSTRAINT (not merely a unique index) on the exact
+  -- column list a foreign key references.
+  CONSTRAINT memberships_workspace_id_id_key UNIQUE (workspace_id, id)
 );
 
 -- A user has at most one membership per workspace (data-model.md).
@@ -139,12 +143,21 @@ CREATE TABLE IF NOT EXISTS public.invitations (
   token_hash           text                NOT NULL,
   status               invitation_status   NOT NULL DEFAULT 'pending',
   expires_at           timestamptz         NOT NULL,
-  invited_by           uuid                NOT NULL REFERENCES public.memberships (id),
+  -- No simple `REFERENCES memberships (id)` here -- a bare FK only proves the
+  -- referenced membership row exists somewhere, not that it belongs to THIS
+  -- invitation's workspace. The composite FK below closes that gap at the
+  -- database level (independent review finding, PR-07 correction): it makes
+  -- a cross-workspace invited_by a referential-integrity violation, not
+  -- merely an application bug, even if the caller supplies a real
+  -- membership UUID from another workspace.
+  invited_by           uuid                NOT NULL,
   accepted_by_user_id  uuid                NULL REFERENCES public.users (id),
   created_at           timestamptz         NOT NULL DEFAULT now(),
   updated_at           timestamptz         NOT NULL DEFAULT now(),
   CONSTRAINT invitations_email_not_blank CHECK (btrim(email::text) <> ''),
-  CONSTRAINT invitations_token_hash_not_blank CHECK (btrim(token_hash) <> '')
+  CONSTRAINT invitations_token_hash_not_blank CHECK (btrim(token_hash) <> ''),
+  CONSTRAINT invitations_invited_by_workspace_fkey
+    FOREIGN KEY (workspace_id, invited_by) REFERENCES public.memberships (workspace_id, id)
 );
 
 -- Single-use: only one *pending* invitation per (workspace_id, email) may
