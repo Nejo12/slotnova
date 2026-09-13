@@ -1,8 +1,8 @@
 /**
  * `identity.memberships` access (T034). `memberships` IS tenant-owned
  * (data-model.md), so ordinary access goes through `WorkspaceContextService`
- * (workspace-scoped by construction, FR-030). This repository has exactly one
- * method, and it is the documented FR-030 exception: "unscoped reads are
+ * (workspace-scoped by construction, FR-030). This repository has exactly two
+ * methods, and both are the documented FR-030 exception: "unscoped reads are
  * forbidden outside narrowly reviewed platform/admin tooling."
  *
  * `listActiveMembershipsForUser` answers "every active workspace this
@@ -16,6 +16,11 @@
  * transaction as the read. RLS is never bypassed (no `BYPASSRLS`, no
  * superuser, `app.workspace_id` is deliberately left unset so the ordinary
  * workspace-scoped policy contributes zero rows here).
+ *
+ * `findOwnMembershipInWorkspace` answers "the caller's membership in a specific
+ * workspace, including both membership and workspace status" -- needed for
+ * workspace-switch context loading (T042). It also runs under the same
+ * `memberships_self_lookup` RLS policy with identical scoping guarantees.
  */
 import { Inject, Injectable } from "@nestjs/common";
 import type { Pool } from "@slotnova/db";

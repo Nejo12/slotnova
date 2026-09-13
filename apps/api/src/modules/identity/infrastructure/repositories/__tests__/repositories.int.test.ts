@@ -2,7 +2,7 @@ import { Client, Pool, runMigrations } from "@slotnova/db";
 import { DEFAULT_POSTGRES_IMAGE, startPostgres, type PostgresHarness } from "@slotnova/db/testing";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import type { UserId } from "../../../domain/ids.js";
+import type { UserId, WorkspaceId } from "../../../domain/ids.js";
 import { MembershipsRepository } from "../memberships.repository.js";
 import { SessionsRepository } from "../sessions.repository.js";
 import { UsersRepository } from "../users.repository.js";
@@ -130,7 +130,7 @@ describe("identity repositories (real PostgreSQL)", () => {
     it("returns the caller's own membership + workspace status for a workspace they belong to", async () => {
       const view = await new MembershipsRepository(pool).findOwnMembershipInWorkspace(
         userAId as UserId,
-        workspaceOneId as any,
+        workspaceOneId as WorkspaceId,
       );
       expect(view).toMatchObject({
         workspaceId: workspaceOneId,
@@ -146,7 +146,7 @@ describe("identity repositories (real PostgreSQL)", () => {
       // I'm not a member" case returns null with no distinguishing detail.
       const view = await new MembershipsRepository(pool).findOwnMembershipInWorkspace(
         userBId as UserId,
-        workspaceOneId as any,
+        workspaceOneId as WorkspaceId,
       );
       expect(view).toBeNull();
     });
@@ -154,7 +154,7 @@ describe("identity repositories (real PostgreSQL)", () => {
     it("returns null for a workspace id that does not exist at all -- identical null, no oracle", async () => {
       const view = await new MembershipsRepository(pool).findOwnMembershipInWorkspace(
         userAId as UserId,
-        "00000000-0000-4000-8000-000000000000" as any,
+        "00000000-0000-4000-8000-000000000000" as WorkspaceId,
       );
       expect(view).toBeNull();
     });
@@ -162,7 +162,7 @@ describe("identity repositories (real PostgreSQL)", () => {
     it("never returns another user's membership even for the same workspace", async () => {
       const forB = await new MembershipsRepository(pool).findOwnMembershipInWorkspace(
         userBId as UserId,
-        workspaceOneId as any,
+        workspaceOneId as WorkspaceId,
       );
       expect(forB).toBeNull();
     });
