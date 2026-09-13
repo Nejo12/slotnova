@@ -9,30 +9,37 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
+      "source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
     "./property": {
+      "source": "./src/property/index.ts",
       "types": "./dist/property/index.d.ts",
       "default": "./dist/property/index.js"
     },
     "./builders": {
+      "source": "./src/builders/index.ts",
       "types": "./dist/builders/index.d.ts",
       "default": "./dist/builders/index.js"
     },
     "./telemetry": {
+      "source": "./src/telemetry.ts",
       "types": "./dist/telemetry.d.ts",
       "default": "./dist/telemetry.js"
     },
     "./msw": {
+      "source": "./src/msw/handlers.ts",
       "types": "./dist/msw/handlers.d.ts",
       "default": "./dist/msw/handlers.js"
     },
     "./msw/node": {
+      "source": "./src/msw/node.ts",
       "types": "./dist/msw/node.d.ts",
       "default": "./dist/msw/node.js"
     },
     "./msw/browser": {
+      "source": "./src/msw/browser.ts",
       "types": "./dist/msw/browser.d.ts",
       "default": "./dist/msw/browser.js"
     }

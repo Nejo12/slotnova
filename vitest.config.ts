@@ -22,6 +22,16 @@ export default defineConfig({
           new URL("./packages/observability-server/src/index.ts", import.meta.url),
         ),
       },
+      {
+        find: "@slotnova/testing/builders",
+        replacement: fileURLToPath(
+          new URL("./packages/testing/src/builders/index.ts", import.meta.url),
+        ),
+      },
+      {
+        find: "@slotnova/testing",
+        replacement: fileURLToPath(new URL("./packages/testing/src/index.ts", import.meta.url)),
+      },
     ],
   },
   test: {

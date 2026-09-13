@@ -341,7 +341,7 @@ Each task carries a compact block:
 
 ### PR-08 — Session spine, credential adapter, CSRF, sign-in/out, `/me`
 
-- [ ] T034 [US2] Tenant-scoped identity repositories
+- [x] T034 [US2] Tenant-scoped identity repositories
   - **Dep**: T030, T021
   - **Files**: `apps/api/src/modules/identity/infrastructure/repositories/*.ts` (workspace-scoped by construction — require a context object)
   - **Accept**: no unscoped `find()` on tenant data; users/workspaces via a narrowly-reviewed platform-scoped repo; FR-030
@@ -349,7 +349,7 @@ Each task carries a compact block:
   - **Constraints**: repositories never exported outside the module
   - **Out**: n/a
 
-- [ ] T035 [US2] Credential adapter port + development credential adapter
+- [x] T035 [US2] Credential adapter port + development credential adapter
   - **Dep**: T029; R5 (port shape)
   - **Files**: `apps/api/src/modules/identity/infrastructure/credential-adapter/{port.ts,dev-adapter.ts}`, seeded-user fixtures (via `packages/testing` builders)
   - **Accept**: dev adapter verifies seeded users and returns an `external_ref`/user match; **no** password infra; FR-027, FR-033d
@@ -357,7 +357,7 @@ Each task carries a compact block:
   - **Constraints**: adapter returns identity only — never issues sessions or authorization; provider role claims ignored (FR-027)
   - **Out**: production provider (conditional R5)
 
-- [ ] T036 [US2] Session service: issue / rotate / revoke / validate
+- [x] T036 [US2] Session service: issue / rotate / revoke / validate
   - **Dep**: T034, T035, T013
   - **Files**: `apps/api/src/modules/identity/application/session/*.ts`, opaque cookie mapping (hashed session id)
   - **Accept**: server-authoritative expiry; rotate on sign-in/switch/priv-change; revoke on sign-out; fails closed on invalid; ADR-007, FR-025, FR-033a/c, research R7
@@ -365,7 +365,7 @@ Each task carries a compact block:
   - **Constraints**: no JWT in `localStorage`; cookie `HttpOnly`/`Secure`/`SameSite=Lax`/`__Host-` where topology permits
   - **Out**: SSO/MFA
 
-- [ ] T037 [US2] CSRF protection (double-submit token + Origin/Sec-Fetch check)
+- [x] T037 [US2] CSRF protection (double-submit token + Origin/Sec-Fetch check)
   - **Dep**: T019, T036; R6
   - **Files**: `apps/api/src/modules/platform/security/csrf.ts` (Fastify plugin), CSRF-token bootstrap route
   - **Accept**: state-changing cookie-auth requests without/with-bad token → 403 `problem+json`; safe methods exempt & side-effect-free; FR-026, research R6
@@ -373,7 +373,7 @@ Each task carries a compact block:
   - **Constraints**: no state-changing GET (hard prohibition)
   - **Out**: rate limiting (T073)
 
-- [ ] T038 [US2] Sign-in / sign-out / `GET /me` endpoints
+- [x] T038 [US2] Sign-in / sign-out / `GET /me` endpoints
   - **Dep**: T036, T037, T020
   - **Files**: `apps/api/src/modules/identity/http/{session.controller.ts,me.controller.ts}` + boundary schemas
   - **Accept**: matches `contracts/session.contract.md` + `contracts/workspace-context.contract.md` (`/me`); auto-selects sole workspace; SC-016 path
@@ -381,7 +381,7 @@ Each task carries a compact block:
   - **Constraints**: boundary schemas are the contract source (T064)
   - **Out**: workspace switch (T042), invitations (PR-10)
 
-- [ ] T039 [P] [US2] Credential-adapter parity test
+- [x] T039 [P] [US2] Credential-adapter parity test
   - **Dep**: T035, T036
   - **Files**: `apps/api/src/modules/identity/**/__tests__/adapter-parity.int.test.ts` (same session/context/authz/RLS assertions run against dev adapter + a production-shaped double)
   - **Accept**: identical isolation/authorization outcomes; no path skips workspace context or RLS; FR-033d, SC-016
