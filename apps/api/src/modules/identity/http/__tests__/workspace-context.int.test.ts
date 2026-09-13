@@ -13,7 +13,7 @@ import { createApp } from "../../../../main.js";
 import { csrfCookieName } from "../../../platform/security/csrf.js";
 import { sessionCookieName } from "../../application/session/session-cookie.js";
 import { SessionService } from "../../application/session/session.service.js";
-import type { UserId, WorkspaceId } from "../../domain/ids.js";
+import type { UserId } from "../../domain/ids.js";
 import { SessionsRepository } from "../../infrastructure/repositories/sessions.repository.js";
 
 describe("POST /v1/auth/session/workspace (real PostgreSQL)", () => {
@@ -186,7 +186,9 @@ describe("POST /v1/auth/session/workspace (real PostgreSQL)", () => {
       userId: userId as UserId,
       activeWorkspaceId: null,
     });
-    await switchWorkspace(`${SESSION_COOKIE}=${rawToken}`, workspaceId);
+    const switchResult = await switchWorkspace(`${SESSION_COOKIE}=${rawToken}`, workspaceId);
+    expect(switchResult.statusCode).toBe(200);
+    expect(switchResult.body["activeWorkspace"]).toMatchObject({ id: workspaceId });
 
     const client = await directPool.connect();
     try {
