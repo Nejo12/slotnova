@@ -1,5 +1,7 @@
 import { Module } from "@nestjs/common";
 
+import { TenancyModule } from "../platform/tenancy/tenancy.module.js";
+
 import { DEFAULT_SEEDED_USERS } from "./infrastructure/credential-adapter/default-seeded-users.js";
 import { CREDENTIAL_ADAPTER } from "./infrastructure/credential-adapter/credential-adapter.tokens.js";
 import { DevCredentialAdapter } from "./infrastructure/credential-adapter/dev-adapter.js";
@@ -13,6 +15,16 @@ import { CapabilityGuard } from "./domain/policy/capability.guard.js";
 import { MeController } from "./http/me.controller.js";
 import { SessionController } from "./http/session.controller.js";
 import { WorkspaceContextController } from "./http/workspace-context.controller.js";
+import { AcceptInvitationUseCase } from "./application/invitation/accept.js";
+import { IssueInvitationUseCase } from "./application/invitation/issue.js";
+import { PreviewInvitationUseCase } from "./application/invitation/preview.js";
+import { RevokeInvitationUseCase } from "./application/invitation/revoke.js";
+import { InvitationsController } from "./http/invitations.controller.js";
+import { InvitationPreviewRateLimiter } from "./http/invitation-preview-rate-limiter.js";
+import {
+  InvitationsRepository,
+  InvitationTransactions,
+} from "./infrastructure/repositories/invitations.repository.js";
 
 /**
  * `identity` module HTTP + application wiring (T034-T038). Phase 1 wires
@@ -21,7 +33,8 @@ import { WorkspaceContextController } from "./http/workspace-context.controller.
  * `CREDENTIAL_ADAPTER` port, not on `DevCredentialAdapter` directly.
  */
 @Module({
-  controllers: [SessionController, MeController, WorkspaceContextController],
+  imports: [TenancyModule],
+  controllers: [SessionController, MeController, WorkspaceContextController, InvitationsController],
   providers: [
     UsersRepository,
     SessionsRepository,
@@ -30,6 +43,13 @@ import { WorkspaceContextController } from "./http/workspace-context.controller.
     SessionContextService,
     SignInUseCase,
     CapabilityGuard,
+    InvitationsRepository,
+    InvitationTransactions,
+    IssueInvitationUseCase,
+    PreviewInvitationUseCase,
+    AcceptInvitationUseCase,
+    RevokeInvitationUseCase,
+    InvitationPreviewRateLimiter,
     { provide: CREDENTIAL_ADAPTER, useValue: new DevCredentialAdapter(DEFAULT_SEEDED_USERS) },
   ],
 })

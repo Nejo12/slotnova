@@ -10,22 +10,13 @@ import { describe, expect, it } from "vitest";
 
 import { authorize, type AuthorizationSubject } from "../authorize.js";
 import { MEMBERS_INVITE, MEMBERS_MANAGE } from "../capabilities.js";
-
-type MembershipRole = "owner" | "admin" | "manager" | "staff";
+import { DEFAULT_ROLE_PERMISSIONS, type MembershipRole } from "../default-role-permissions.js";
 
 /**
- * Representative Phase-1 permission sets per baseline role (data-model.md:
- * "role ... drives the default permission set"). TEST FIXTURE DATA ONLY --
- * `authorize()` never reads `role`; only the explicit `permissions` a
- * membership carries is authoritative (T043 requirement).
+ * Canonical Phase-1 permission sets used for membership creation.
+ * `authorize()` still never reads `role`; only the explicit permissions
+ * persisted on the membership are authoritative (T043 requirement).
  */
-const ROLE_PERMISSIONS: Record<MembershipRole, readonly string[]> = {
-  owner: [MEMBERS_INVITE, MEMBERS_MANAGE],
-  admin: [MEMBERS_INVITE, MEMBERS_MANAGE],
-  manager: [],
-  staff: [],
-};
-
 const ROLES: readonly MembershipRole[] = ["owner", "admin", "manager", "staff"];
 const ACTIONS = [MEMBERS_INVITE, MEMBERS_MANAGE] as const;
 
@@ -36,7 +27,7 @@ function subjectFor(
   return {
     membershipStatus: "active",
     workspaceStatus: "active",
-    permissions: ROLE_PERMISSIONS[role],
+    permissions: DEFAULT_ROLE_PERMISSIONS[role],
     ...overrides,
   };
 }
@@ -44,7 +35,7 @@ function subjectFor(
 describe("authorize() -- role x protected-foundation-action matrix (T043)", () => {
   for (const role of ROLES) {
     for (const action of ACTIONS) {
-      const expected = ROLE_PERMISSIONS[role].includes(action);
+      const expected = DEFAULT_ROLE_PERMISSIONS[role].includes(action);
       it(`${role} ${expected ? "is allowed" : "is denied"} '${action}'`, () => {
         expect(authorize(subjectFor(role), action)).toBe(expected);
       });

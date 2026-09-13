@@ -11,6 +11,20 @@ export interface WorkspaceContext {
   readonly requestId?: string;
 }
 
+/** Apply tenant context to an already-open transaction. */
+export async function setWorkspaceContext(
+  tx: PoolClient,
+  context: WorkspaceContext,
+): Promise<void> {
+  await tx.query("SELECT set_config('app.workspace_id', $1, true)", [context.workspaceId]);
+  if (context.userId !== undefined) {
+    await tx.query("SELECT set_config('app.user_id', $1, true)", [context.userId]);
+  }
+  if (context.requestId !== undefined) {
+    await tx.query("SELECT set_config('app.request_id', $1, true)", [context.requestId]);
+  }
+}
+
 /**
  * Run `fn` inside a single transaction with `app.workspace_id` (and, when
  * supplied, `app.user_id` / `app.request_id`) set via `SET LOCAL` semantics
@@ -44,13 +58,7 @@ export async function withWorkspaceContext<T>(
   try {
     await client.query("BEGIN");
     try {
-      await client.query("SELECT set_config('app.workspace_id', $1, true)", [context.workspaceId]);
-      if (context.userId !== undefined) {
-        await client.query("SELECT set_config('app.user_id', $1, true)", [context.userId]);
-      }
-      if (context.requestId !== undefined) {
-        await client.query("SELECT set_config('app.request_id', $1, true)", [context.requestId]);
-      }
+      await setWorkspaceContext(client, context);
 
       const result = await fn(client);
       await client.query("COMMIT");
