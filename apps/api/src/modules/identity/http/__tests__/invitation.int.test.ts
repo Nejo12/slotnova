@@ -333,6 +333,7 @@ describe("invitation issuance, preview, acceptance, and revoke (real PostgreSQL)
       );
       expect(audit.rows.map((row) => row.action)).toEqual([
         "invitation.accepted",
+        "invitation.issued",
         "membership.created",
       ]);
       const outbox = await admin.query(
@@ -486,7 +487,7 @@ describe("invitation issuance, preview, acceptance, and revoke (real PostgreSQL)
       ).toHaveLength(0);
       expect(
         (
-          await admin.query("SELECT 1 FROM public.audit_records WHERE entity_id = $1", [
+          await admin.query("SELECT action FROM public.audit_records WHERE entity_id = $1", [
             invitation.id,
           ])
         ).rows.map((row) => row.action),
