@@ -29,7 +29,9 @@ export class PreviewInvitationUseCase {
       if (invitation.status !== "pending" || invitation.expiresAt.getTime() <= Date.now()) {
         throw new ProblemException("invitation-expired");
       }
-      return invitation;
+      await this.transactions.setWorkspace(tx, { workspaceId: invitation.workspaceId });
+      const workspaceName = await this.invitations.findWorkspaceName(tx, invitation.workspaceId);
+      return { ...invitation, workspaceName };
     });
   }
 }

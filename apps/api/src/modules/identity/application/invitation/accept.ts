@@ -52,6 +52,7 @@ export class AcceptInvitationUseCase {
         userId: input.userId,
         requestId,
       });
+      const workspaceName = await this.invitations.findWorkspaceName(tx, invitation.workspaceId);
       // Serialize against any concurrent membership insertion for this user;
       // the memberships FK also locks this parent row during inserts.
       await this.invitations.lockUserById(tx, input.userId);
@@ -98,7 +99,7 @@ export class AcceptInvitationUseCase {
         eventVersion: 1,
         payload: { requestId, membershipId, role: invitation.role },
       });
-      return { ...invitation, status: "accepted" };
+      return { ...invitation, workspaceName, status: "accepted" };
     });
   }
 }

@@ -29,9 +29,8 @@ interface InvitationRow {
 }
 
 const INVITATION_SELECT = `
-  SELECT i.id, i.workspace_id, w.name AS workspace_name, i.email, i.role, i.status, i.expires_at
-    FROM public.invitations i
-    JOIN public.workspaces w ON w.id = i.workspace_id`;
+  SELECT i.id, i.workspace_id, ''::text AS workspace_name, i.email, i.role, i.status, i.expires_at
+    FROM public.invitations i`;
 
 function toInvitation(row: InvitationRow): InvitationRecord {
   return {
@@ -91,6 +90,15 @@ export class InvitationsRepository {
     );
     const row = rows[0] as InvitationRow | undefined;
     return row ? toInvitation(row) : null;
+  }
+
+  async findWorkspaceName(tx: Queryable, workspaceId: WorkspaceId): Promise<string> {
+    const { rows } = await tx.query("SELECT name FROM public.workspaces WHERE id = $1", [
+      workspaceId,
+    ]);
+    const row = rows[0] as { name: string } | undefined;
+    if (!row) throw new Error("invitation workspace is unavailable in its tenant context");
+    return row.name;
   }
 
   async lockUserByEmail(tx: Queryable, email: string): Promise<UserId | null> {
