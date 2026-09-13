@@ -1,12 +1,17 @@
 import "reflect-metadata";
 
+import fastifyCookie from "@fastify/cookie";
 import fastifyHelmet from "@fastify/helmet";
 import { NestFactory } from "@nestjs/core";
 import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fastify";
 
 import { AppModule } from "./app.module.js";
 import { resolveSecurityConfig } from "./config/security-config.js";
-import { registerCorrelationHook } from "./http/correlation/register-correlation.js";
+import {
+  REQUEST_ID_HEADER,
+  registerCorrelationHook,
+} from "./http/correlation/register-correlation.js";
+import { CSRF_HEADER_NAME, registerCsrfProtection } from "./modules/platform/security/csrf.js";
 
 /**
  * Build (but do not start listening on) the Nest + Fastify app. Split from
@@ -26,6 +31,19 @@ export async function createApp(): Promise<NestFastifyApplication> {
   // downstream hook/guard/interceptor/handler executes inside its ALS context.
   registerCorrelationHook(instance);
 
+  // Needed before CSRF verification: it reads/writes cookies via
+  // `request.cookies`/`reply.setCookie` (T037).
+  await app.register(fastifyCookie);
+
+  // Centralized CSRF enforcement (ADR-007, research R6) — registered once
+  // here rather than per-route, so no state-changing route can ever be added
+  // without it. Runs after correlation (rejections carry the request id) and
+  // after the cookie plugin (needs `request.cookies`).
+  registerCsrfProtection(instance, {
+    allowedOrigins: security.corsOrigins,
+    secureCookies: security.secureCookies,
+  });
+
   await app.register(fastifyHelmet, {
     contentSecurityPolicy: {
       // No product UI is served by this API; deny everything by default.
@@ -42,11 +60,15 @@ export async function createApp(): Promise<NestFastifyApplication> {
     crossOriginResourcePolicy: { policy: "same-origin" },
   });
 
-  // Strict, explicit allowlist — no permissive "*", no implicit credentials.
+  // Strict, explicit allowlist — no permissive "*". `credentials: true` is
+  // required for the SPA's session cookie to flow on cross-origin requests
+  // (T037/T038); safe only alongside a non-wildcard, explicit allowlist,
+  // which `security.corsOrigins` already guarantees (never "*").
   app.enableCors({
     origin: security.corsOrigins.length > 0 ? [...security.corsOrigins] : false,
-    credentials: false,
+    credentials: security.corsOrigins.length > 0,
     methods: ["GET", "POST", "PATCH", "DELETE"],
+    allowedHeaders: ["Content-Type", CSRF_HEADER_NAME, REQUEST_ID_HEADER],
   });
 
   return app;

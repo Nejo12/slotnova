@@ -27,4 +27,14 @@ describe("resolveSecurityConfig", () => {
     expect(resolveSecurityConfig({ API_ENABLE_HSTS: "FALSE" }).enableHsts).toBe(false);
     expect(resolveSecurityConfig({ API_ENABLE_HSTS: "true" }).enableHsts).toBe(true);
   });
+
+  it("defaults secure cookies on (Secure + __Host- eligible)", () => {
+    expect(resolveSecurityConfig({}).secureCookies).toBe(true);
+  });
+
+  it("disables secure cookies only when explicitly set to 'false' (local dev over http)", () => {
+    expect(resolveSecurityConfig({ API_SECURE_COOKIES: "false" }).secureCookies).toBe(false);
+    expect(resolveSecurityConfig({ API_SECURE_COOKIES: "FALSE" }).secureCookies).toBe(false);
+    expect(resolveSecurityConfig({ API_SECURE_COOKIES: "true" }).secureCookies).toBe(true);
+  });
 });
