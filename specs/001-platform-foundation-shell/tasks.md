@@ -433,7 +433,7 @@ Each task carries a compact block:
 
 ### PR-10 — Invitation & membership acceptance
 
-- [ ] T045 [US2] Invitation issuance + acceptance use cases
+- [x] T045 [US2] Invitation issuance + acceptance use cases
   - **Dep**: T034, T041, T032, T022
   - **Files**: `apps/api/src/modules/identity/application/invitation/{issue,accept,revoke}.ts`, high-entropy token gen + hash
   - **Accept**: matches `contracts/invitations.contract.md`; acceptance is one transaction (invitation→accepted + membership create + audit + **outbox write via the T022 platform writer**); expired/used/revoked refused; last-owner rule respected; FR-033b, SC-018
@@ -441,7 +441,7 @@ Each task carries a compact block:
   - **Constraints**: token single-use; short server-set TTL; only hash stored; `SET LOCAL` = invitation workspace; uses the existing platform outbox writer (T022) — no new outbox implementation
   - **Out**: real delivery channel (roadmap Phase 3 Notifications)
 
-- [ ] T046 [US2] Invitation endpoints (issue / preview / accept / revoke)
+- [x] T046 [US2] Invitation endpoints (issue / preview / accept / revoke)
   - **Dep**: T045, T020
   - **Files**: `apps/api/src/modules/identity/http/invitations.controller.ts` + boundary schemas (incl. `PATCH /v1/invitations/{id}` revoke)
   - **Accept**: `GET /v1/invitations/{token}` is read-only & prefetch-safe; accept is POST; PII-light preview; matches contract
@@ -449,7 +449,7 @@ Each task carries a compact block:
   - **Constraints**: no state change on GET; rate-limited per token/IP
   - **Out**: n/a
 
-- [ ] T047 [P] [US2] Invitation flow tests (real PostgreSQL)
+- [x] T047 [P] [US2] Invitation flow tests (real PostgreSQL)
   - **Dep**: T046
   - **Files**: `apps/api/src/modules/identity/**/__tests__/invitation.int.test.ts`
   - **Accept**: valid token → exact role membership + audit + outbox, session rotated; expired/used/revoked → refused, no membership change; replay → no second/elevated membership; SC-018
