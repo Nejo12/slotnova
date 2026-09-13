@@ -1,6 +1,12 @@
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
+  resolve: {
+    // The fast lane runs tests before workspace package builds. Resolve local
+    // workspace packages through their explicit `source` export condition so
+    // clean CI does not depend on stale/pre-existing dist output.
+    conditions: ["source"],
+  },
   test: {
     environment: "node",
     include: [
