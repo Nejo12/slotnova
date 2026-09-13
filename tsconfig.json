@@ -4,13 +4,27 @@
     "noEmit": true,
     "declaration": false,
     "declarationMap": false,
-    "sourceMap": false
+    "sourceMap": false,
+    // Root typecheck runs before workspace builds in the fast lane. Prefer each
+    // workspace package's `source` export so clean CI can resolve TypeScript
+    // sources without requiring prebuilt dist declarations. Package-specific
+    // build tsconfigs do NOT inherit this override, so production builds keep
+    // resolving normal `types`/`default` dist exports.
+    "customConditions": ["source"],
+    // NestJS (apps/api, ADR-004) requires the legacy decorator + metadata-reflection
+    // pair for constructor-based DI; no other workspace unit uses decorators, so
+    // enabling this repo-wide is additive, not a strictness relaxation.
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "useDefineForClassFields": false
   },
   "include": [
     "tooling/**/__tests__/**/*.ts",
     "vitest.config.ts",
     "packages/*/src/**/*.ts",
-    "packages/*/*.config.ts"
+    "packages/*/*.config.ts",
+    "apps/*/src/**/*.ts",
+    "apps/*/*.config.ts"
   ],
   "exclude": ["node_modules", "**/dist/**", "**/__fixtures__/**"]
 }
