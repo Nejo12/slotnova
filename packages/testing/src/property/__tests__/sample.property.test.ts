@@ -7,6 +7,16 @@ import { fc, describeReproduction, propertyParameters } from "../index.js";
  * lane and that seeds are deterministic. Real Slotnova arbitraries are out of
  * scope for this PR (task T015).
  */
+/** JSON has no negative-zero literal, so `-0` (anywhere in the structure) legitimately round-trips to `+0`. */
+function containsNegativeZero(value: unknown): boolean {
+  if (Object.is(value, -0)) return true;
+  if (Array.isArray(value)) return value.some(containsNegativeZero);
+  if (value !== null && typeof value === "object") {
+    return Object.values(value).some(containsNegativeZero);
+  }
+  return false;
+}
+
 describe("property-testing wiring", () => {
   it("runs a simple invariant property in the fast lane", () => {
     fc.assert(
@@ -20,9 +30,12 @@ describe("property-testing wiring", () => {
 
   it("holds a round-trip invariant (JSON encode/decode)", () => {
     fc.assert(
-      fc.property(fc.jsonValue(), (value) => {
-        expect(JSON.parse(JSON.stringify(value))).toEqual(value);
-      }),
+      fc.property(
+        fc.jsonValue().filter((value) => !containsNegativeZero(value)),
+        (value) => {
+          expect(JSON.parse(JSON.stringify(value))).toEqual(value);
+        },
+      ),
       propertyParameters({ numRuns: 25 }),
     );
   });

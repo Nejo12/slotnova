@@ -34,6 +34,14 @@ pnpm test             # Vitest (unit / property)
 pnpm format:check     # Prettier
 ```
 
+Run the three apps (minimal runnable skeletons, PR-06):
+
+```bash
+pnpm dev:api      # NestJS + Fastify on :3001 — GET /healthz
+pnpm dev:web      # Vite SPA on :3000 — renders "Slotnova" + the API health ping
+pnpm dev:worker   # minimal worker skeleton — one structured ready log, stays running
+```
+
 CI runs the same gates in the `fast` workflow (target: under 3 minutes on a warm cache). No auto-merge — the founder performs the final merge.
 
 Full setup, troubleshooting and the toolchain-pin rationale: [`docs/runbooks/local-dev.md`](docs/runbooks/local-dev.md).

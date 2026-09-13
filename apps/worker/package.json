@@ -1,0 +1,21 @@
+{
+  "name": "@slotnova/worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "UNLICENSED",
+  "description": "Slotnova worker: minimal runnable skeleton. No outbox consumer, scheduler, retries, or product handlers in Phase 1 (T025).",
+  "main": "./dist/main.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "dev": "tsx watch src/main.ts",
+    "start": "node dist/main.js"
+  },
+  "dependencies": {
+    "@slotnova/observability-server": "workspace:*"
+  },
+  "devDependencies": {
+    "@slotnova/tsconfig": "workspace:*"
+  }
+}

@@ -17,7 +17,10 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:integration": "turbo run test:integration",
-    "db:migrate": "turbo run db:migrate"
+    "db:migrate": "turbo run db:migrate",
+    "dev:web": "turbo run dev --filter=@slotnova/web",
+    "dev:api": "turbo run dev --filter=@slotnova/api",
+    "dev:worker": "turbo run dev --filter=@slotnova/worker"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -29,10 +32,12 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-import-x": "^4.17.1",
     "globals": "^17.12.0",
+    "jsdom": "^30.0.1",
     "prettier": "^3.9.6",
     "stylelint": "^17.15.0",
     "stylelint-config-standard-scss": "^17.0.0",
     "stylelint-declaration-strict-value": "^1.12.1",
+    "tsx": "^4.23.13",
     "turbo": "^2.10.12",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.70.0",

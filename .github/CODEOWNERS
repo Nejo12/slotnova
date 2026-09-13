@@ -1,0 +1,8 @@
+# Slotnova code ownership.
+#
+# The founder is the final merger for every PR (AGENTS.md "Merge policy";
+# docs/standards/ci-quality-gates.md). This file exists to satisfy GitHub's
+# required-reviewer wiring for branch protection — it does not imply a review
+# team that does not exist yet. Auto-merge stays disabled at the repository
+# level regardless of review status.
+* @Nejo12

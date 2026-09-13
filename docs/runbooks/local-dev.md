@@ -1,7 +1,9 @@
 # Local Development Runbook
 
 Covers the Slotnova monorepo bootstrap delivered in PR-01 (tasks T001–T008 of
-`specs/001-platform-foundation-shell/tasks.md`). Later PRs extend this.
+`specs/001-platform-foundation-shell/tasks.md`), extended by PR-06 (T025–T028)
+with runnable `apps/web` / `apps/worker` skeletons and fast-lane hardening.
+Later PRs extend this further.
 
 ## Prerequisites
 
@@ -31,7 +33,36 @@ required from PR-02 onward for real-PostgreSQL tests.
 | `pnpm lint:styles` | Stylelint (`stylelint.config.cjs` → `tooling/stylelint/`). Raw-value ban is scaffolded, enabled in PR-12. |
 | `pnpm lint:boundaries` | dependency-cruiser architecture-boundary rules over `apps/` + `packages/`. |
 | `pnpm test` | Vitest (unit / property). |
+| `pnpm test:integration` | Real-PostgreSQL integration tests (`packages/db`, `apps/api`) via Testcontainers — requires a container runtime. |
 | `pnpm format` / `pnpm format:check` | Prettier write / check. |
+| `pnpm db:migrate` | Runs the gated migration runner (standalone step, never app-startup). |
+| `pnpm dev:api` | `apps/api` — NestJS + Fastify on `:3001` (watch mode via `tsx`). |
+| `pnpm dev:web` | `apps/web` — Vite SPA on `:3000`. |
+| `pnpm dev:worker` | `apps/worker` — minimal skeleton worker (watch mode via `tsx`). |
+
+## Running the three apps (PR-06, T025)
+
+```bash
+# apps/api needs a reachable Postgres connection string and an explicit CORS
+# allowlist that includes the web dev origin. The DatabaseModule's pool is
+# constructed lazily, so /healthz works even before a real database exists;
+# /readyz requires one.
+DATABASE_URL="postgres://app:app@127.0.0.1:5432/slotnova" \
+API_CORS_ALLOWED_ORIGINS="http://localhost:3000" \
+pnpm dev:api      # -> http://localhost:3001/healthz  { "status": "ok", ... }
+
+pnpm dev:web        # -> http://localhost:3000 renders "Slotnova" + the API health ping
+pnpm dev:worker     # -> emits one structured `worker.ready` log line and stays running
+```
+
+Each is a **minimal runnable skeleton** (FR-010, SC-001 step 2): no product
+routes, no shell, no outbox consumer/scheduler. `apps/web` performs only the
+approved minimal `GET /healthz` ping and renders the resulting healthy/error
+state; `apps/worker` is a no-op keep-alive that exits cleanly on `SIGTERM` /
+`SIGINT`. Real database-backed local dev (`pnpm dev:db` / Docker Compose) is
+introduced in a later PR — `dev:api`/`dev:worker` work today against any
+reachable Postgres instance you provide via `DATABASE_URL`, or degrade to
+`/healthz`-only if none is reachable.
 
 ## Architecture-boundary enforcement
 
@@ -91,3 +122,65 @@ level; the founder performs the final merge.
 
 Optional Turborepo remote cache: set the repo/org secret `TURBO_TOKEN` and the
 variable `TURBO_TEAM`.
+
+### Reproducing the fast lane locally from a clean checkout
+
+Before opening a PR, reproduce the exact `.github/workflows/fast.yml` command
+sequence locally, in order, from an unbuilt state — package resolution must
+never depend on stale local `dist` output (PR-05 lesson):
+
+```bash
+rm -rf apps/*/dist packages/*/dist
+pnpm install --frozen-lockfile
+pnpm format:check
+pnpm lint
+pnpm lint:styles
+pnpm lint:boundaries
+pnpm typecheck
+pnpm test
+pnpm build
+```
+
+All eight steps must pass, in this order, before pushing. A second `pnpm
+build` run afterward should show `>>> FULL TURBO` (every task cache-hit) —
+proof that unchanged packages are cache-reused (FR-008).
+
+## Branch protection & merge policy
+
+- Auto-merge is disabled at the **repository** level
+  (`allow_auto_merge: false` — confirmed via `gh api repos/<org>/slotnova`).
+  This is enforced by GitHub regardless of branch protection configuration.
+- The `fast` workflow is a required status check on `main`. This repository's
+  current plan does not expose the branch-protection API
+  (`GET /repos/{owner}/{repo}/branches/{branch}/protection` returns 403 —
+  "Upgrade to GitHub Pro or make this repository public"), so the exact
+  required-checks list cannot be read back and verified from tooling. This is
+  a plan-tier limitation to flag to the founder, not something to work around
+  or infer a replacement for.
+- `.github/CODEOWNERS` names the founder (`@Nejo12`) as owner of the whole
+  tree — this satisfies GitHub's required-reviewer wiring; it does not imply
+  a review team that does not exist.
+- The founder performs the final merge on every PR. Agents never merge, never
+  enable auto-merge, and never bypass a required check.
+
+## Contributor onboarding verification (T028)
+
+`docs/runbooks/local-dev.md` plus the README quickstart are intended to get a
+new contributor from a clean clone to all three apps running in under 30
+minutes (SC-001), using only:
+
+```bash
+corepack enable
+nvm install && nvm use   # or any Node 24.20.0–<25 toolchain
+pnpm install
+pnpm build && pnpm typecheck && pnpm lint && pnpm lint:styles && pnpm lint:boundaries && pnpm test
+pnpm dev:api    # separate terminal
+pnpm dev:web    # separate terminal
+pnpm dev:worker # separate terminal
+```
+
+**Status: pending founder/manual second-person verification.** No second
+person has run this sequence independently as part of this PR — an AI agent
+running its own instructions is not a substitute for an independent human dry
+run. Do not treat this checklist item as satisfied until a second person
+records the result in the PR.

@@ -26,6 +26,15 @@
       "dependsOn": ["build"],
       "outputs": [],
       "cache": false
+    },
+    "dev": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "persistent": true,
+      // Local-dev env vars (never secrets — see docs/runbooks/local-dev.md).
+      // Turbo's default strict env mode otherwise drops these before they
+      // reach `tsx watch` / `vite`.
+      "env": ["DATABASE_URL", "API_*", "VITE_*"]
     }
   }
 }
