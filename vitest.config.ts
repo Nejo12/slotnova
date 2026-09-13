@@ -1,11 +1,28 @@
+import { fileURLToPath } from "node:url";
+
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   resolve: {
-    // The fast lane runs tests before workspace package builds. Resolve local
-    // workspace packages through their explicit `source` export condition so
-    // clean CI does not depend on stale/pre-existing dist output.
-    conditions: ["source"],
+    // Root fast-lane tests run before workspace packages are built. Resolve
+    // local workspace imports directly to their source entry points so the
+    // test runner never depends on stale/pre-existing dist output.
+    alias: [
+      {
+        find: "@slotnova/db/testing",
+        replacement: fileURLToPath(new URL("./packages/db/src/testing/index.ts", import.meta.url)),
+      },
+      {
+        find: "@slotnova/db",
+        replacement: fileURLToPath(new URL("./packages/db/src/index.ts", import.meta.url)),
+      },
+      {
+        find: "@slotnova/observability-server",
+        replacement: fileURLToPath(
+          new URL("./packages/observability-server/src/index.ts", import.meta.url),
+        ),
+      },
+    ],
   },
   test: {
     environment: "node",
