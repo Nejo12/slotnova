@@ -122,6 +122,20 @@ describe("POST /v1/auth/session/workspace (real PostgreSQL)", () => {
     expect(body["type"]).toContain("/problems/validation");
   });
 
+  it("rejects with 400 validation when workspaceId is not UUID-shaped", async () => {
+    const { userId } = await seedWorkspaceMembership("owner");
+    const { rawToken } = await directSessionService.issue({
+      userId: userId as UserId,
+      activeWorkspaceId: null,
+    });
+    const { statusCode, body } = await switchWorkspace(
+      `${SESSION_COOKIE}=${rawToken}`,
+      "not-a-uuid",
+    );
+    expect(statusCode).toBe(400);
+    expect(body["type"]).toContain("/problems/validation");
+  });
+
   it("rejects with 401 session-invalid when there is no session cookie", async () => {
     const { cookieHeader, token } = await getCsrfToken();
     const res = await app.inject({

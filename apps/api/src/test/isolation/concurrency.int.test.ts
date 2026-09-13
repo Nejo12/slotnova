@@ -90,7 +90,9 @@ describe("concurrent tenant isolation (real PostgreSQL, T044)", () => {
         clientB.query<{ workspace_id: string }>("SELECT workspace_id FROM public.locations"),
       ]);
 
+      expect(resultA.rows.length).toBeGreaterThan(0);
       expect(resultA.rows.every((r) => r.workspace_id === workspaceAId)).toBe(true);
+      expect(resultB.rows.length).toBeGreaterThan(0);
       expect(resultB.rows.every((r) => r.workspace_id === workspaceBId)).toBe(true);
 
       await Promise.all([clientA.query("COMMIT"), clientB.query("COMMIT")]);
@@ -106,6 +108,7 @@ describe("concurrent tenant isolation (real PostgreSQL, T044)", () => {
       const seenByA = await withWorkspaceContext(pool, { workspaceId: workspaceAId }, (tx) =>
         tx.query<{ workspace_id: string }>("SELECT workspace_id FROM public.locations"),
       );
+      expect(seenByA.rows.length).toBeGreaterThan(0);
       expect(seenByA.rows.every((r) => r.workspace_id === workspaceAId)).toBe(true);
 
       // Same physical connection (max: 1), immediately reused for workspace B
@@ -114,6 +117,7 @@ describe("concurrent tenant isolation (real PostgreSQL, T044)", () => {
       const seenByB = await withWorkspaceContext(pool, { workspaceId: workspaceBId }, (tx) =>
         tx.query<{ workspace_id: string }>("SELECT workspace_id FROM public.locations"),
       );
+      expect(seenByB.rows.length).toBeGreaterThan(0);
       expect(seenByB.rows.every((r) => r.workspace_id === workspaceBId)).toBe(true);
       expect(seenByB.rows.some((r) => r.workspace_id === workspaceAId)).toBe(false);
 
