@@ -33,19 +33,15 @@ Every outbox row carries:
 - Internal in-process events that never cross a module boundary are **not**
   listed here and may evolve freely with their module.
 
-## Phase 1 (PR-05) status
+## Phase 1 identity events
 
-**No event names are catalogued yet.** This PR (T019–T024) ships only the
-platform outbox table and the transactional writer
-(`writeOutboxRecord`) — the minimal, generic persistence primitive later
-feature code writes through. It has no producer of its own: the writer's
-integration test (`apps/api/src/modules/platform/outbox/__tests__/writer.int.test.ts`)
-exercises atomicity with an inert, test-only `platform.widget_created`
-event name against a test-only fixture table, and that name is **not** a
-real catalogue entry — it must never be emitted by application code.
+| Event | Version | PII-minimized payload |
+|---|---:|---|
+| `invitation.issued` | 1 | `requestId`, `invitationId`, `role` |
+| `invitation.accepted` | 1 | `requestId`, `invitationId`, `membershipId` |
+| `membership.created` | 1 | `requestId`, `membershipId`, `role` |
 
-Real producers arrive with the identity module (PR-07/PR-10, e.g.
-`invitation.accepted`, `membership.created`) and are added to this table
-when they ship, each using the existing writer from this PR — no new outbox
-implementation. The first real consumer is the outbox worker (PR-16,
-ADR-014).
+These producers use the existing PR-05 `writeOutboxRecord` transaction
+writer. No delivery, retry, scheduler, or consumer behavior is implied here;
+the first real consumer remains PR-16. The writer integration test's inert
+`platform.widget_created` name is test-only and is not a catalogue event.
