@@ -636,7 +636,7 @@ Each task carries a compact block:
   - **Constraints**: deterministic ordering
   - **Out**: n/a
 
-- [ ] T067 [P] [US4] Contract tests for all Phase 1 endpoints + `problem+json`
+- [x] T067 [P] [US4] Contract tests for all Phase 1 endpoints + `problem+json`
   - **Dep**: T064, T023, T038, T042, T046
   - **Files**: `apps/api/src/**/http/__tests__/*.contract.test.ts`
   - **Accept**: every endpoint's success + representative error validate against the generated schema; every forced error is valid `problem+json` with stable `type`; FR-037, contract catalogue

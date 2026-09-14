@@ -72,6 +72,9 @@ export default defineConfig({
       // Real-PostgreSQL integration tests run in the heavy lane via each
       // package's own `test:integration` script, not in `pnpm test`.
       "**/*.int.test.ts",
+      // T067 contract tests (`*.contract.test.ts`) boot the real app against
+      // real PostgreSQL, same as `*.int.test.ts` -- heavy lane only.
+      "**/*.contract.test.ts",
     ],
   },
 });
