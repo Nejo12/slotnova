@@ -33,5 +33,12 @@
   "devDependencies": {
     "@slotnova/testing": "workspace:*",
     "@slotnova/tsconfig": "workspace:*"
+  },
+  "exports": {
+    "./identity-maintenance": {
+      "source": "./src/modules/identity/application/maintenance.ts",
+      "types": "./dist/modules/identity/application/maintenance.d.ts",
+      "default": "./dist/modules/identity/application/maintenance.js"
+    }
   }
 }

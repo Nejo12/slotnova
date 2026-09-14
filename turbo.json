@@ -42,7 +42,18 @@
       // Local-dev env vars (never secrets — see docs/runbooks/local-dev.md).
       // Turbo's default strict env mode otherwise drops these before they
       // reach `tsx watch` / `vite`.
-      "env": ["DATABASE_URL", "API_*", "VITE_*"]
+      "env": [
+        "DATABASE_URL",
+        "WORKER_*",
+        "DATABASE_SSL",
+        "DATABASE_POOL_MAX",
+        "DATABASE_CONNECT_TIMEOUT_MS",
+        "DATABASE_IDLE_TIMEOUT_MS",
+        "DATABASE_STATEMENT_TIMEOUT_MS",
+        "DATABASE_APP_NAME",
+        "API_*",
+        "VITE_*"
+      ]
     }
   }
 }

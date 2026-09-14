@@ -654,7 +654,7 @@ Each task carries a compact block:
 
 **Independent Test**: quickstart §7 — atomicity (T024, done earlier), crash/restart exactly-once effective, two-worker no-double-process, delayed job runs once + survives restart, repeated-failure → DLQ.
 
-- [ ] T068 [US5] `apps/worker` outbox consumer loop
+- [x] T068 [US5] `apps/worker` outbox consumer loop
   - **Dep**: T022, T013
   - **Files**: `apps/worker/src/outbox/{claim.ts,dispatch.ts,handlers/*}`
   - **Accept**: claim via `FOR UPDATE SKIP LOCKED`; idempotent handlers; bounded attempts → `dead_lettered_at`; correlation propagated; FR-041, FR-043, FR-054
@@ -662,7 +662,7 @@ Each task carries a compact block:
   - **Constraints**: consumes the existing platform outbox table/writer (T022) — no new outbox implementation; no product handlers, only identity foundation events
   - **Out**: notification delivery
 
-- [ ] T069 [US5] Scheduler integration (selected library) + foundation jobs
+- [x] T069 [US5] Scheduler integration (selected library) + foundation jobs
   - **Dep**: T068; **R3 decision record** (`docs/decisions/0003-...`)
   - **Files**: `apps/worker/src/scheduler/{runner.ts,jobs/{expired-sessions,expired-invitations,outbox-retention}.ts}`
   - **Accept**: delayed + recurring jobs; server-authoritative time; bounded retry/backoff; explicit parked/DLQ outcome + alert; separate storage from the outbox; FR-042, FR-043, FR-044, ADR-014
@@ -670,7 +670,7 @@ Each task carries a compact block:
   - **Constraints**: Postgres-backed only; no Redis/Kafka; the scheduler and the outbox stay distinct components
   - **Out**: Recovery expiry jobs (roadmap Phase 4)
 
-- [ ] T070 [P] [US5] Outbox consumer integration tests (at-least-once, crash/restart, idempotency)
+- [x] T070 [P] [US5] Outbox consumer integration tests (at-least-once, crash/restart, idempotency)
   - **Dep**: T068
   - **Files**: `apps/worker/src/outbox/__tests__/consumer.int.test.ts`
   - **Accept**: kill worker mid-batch + restart → no lost/duplicate effect; redelivery is a no-op; bounded attempts land in `dead_lettered_at`; SC-009 (consumer half — writer atomicity is T024)
@@ -678,7 +678,7 @@ Each task carries a compact block:
   - **Constraints**: Testcontainers; real process kill/restart
   - **Out**: n/a
 
-- [ ] T071 [P] [US5] Concurrency tests — two workers, scheduled jobs
+- [x] T071 [P] [US5] Concurrency tests — two workers, scheduled jobs
   - **Dep**: T068, T069
   - **Files**: `apps/worker/src/**/__tests__/concurrency.int.test.ts`
   - **Accept**: two concurrent workers process no record/job twice; delayed job runs exactly once + survives restart; repeated-failure job → DLQ within bound; SC-009, SC-010, FR-046

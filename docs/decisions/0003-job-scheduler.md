@@ -1,6 +1,6 @@
 # 0003 — Postgres-Backed Job Scheduler (R3)
 
-Status: **PROPOSED** — not Founder-approved. This is the output of the T069 prerequisite compatibility/behavior spike (PR-16 Stage A, issue #46). It records evidence for a decision; it is not itself authorization to implement T069.
+Status: **Founder-approved** — approved for PR-16 Stage B. Select and pin `pg-boss@12.31.1`; retain the separate Slotnova transactional outbox (ADR-005).
 
 ## Context
 
@@ -183,10 +183,10 @@ Version-specific findings surfaced only by actually using each library (not from
 
 All spike code lived in a disposable scratch sandbox (`/private/tmp/.../scratchpad/r3-spike/{graphile,pg-boss}/*.mjs`), entirely outside this repository — no production code path was touched, modified, or referenced by the spike itself. The Docker container used (`postgres:18-alpine`, port 5433) was stopped and removed at the end of the spike; no processes or containers were left running. The spike files themselves are not retained in this repository (matching the same disposal convention used by the prior R4 spike, `docs/decisions/0004-validation-contract-integration.md`) — this record is the durable artifact.
 
-## Verification required before this record can be Founder-approved
+## Implementation verification required after Founder approval
 
-- Founder review of the recommendation above, specifically the overturn of research.md's provisional pre-spike lean and the transaction-integration reasoning in Proof 9.
+- Founder approval received for pg-boss 12.31.1, including the transaction-integration reasoning and overturn of the provisional research.md lean.
 - Re-run the restart-durability and concurrency proofs against Slotnova's actual `apps/worker` process shape at T069 implementation time (this spike used standalone scratch scripts, not the real `createWorker()` skeleton).
-- Confirm the exact pg-boss patch version to pin at T069 implementation time (this record's version was current as of the spike date above; pg-boss releases at a brisk cadence).
+- Exact approved implementation pin: `pg-boss@12.31.1`.
 - Verify retention/cleanup options end-to-end (Known Risk 3) before relying on them operationally.
 - Decide the self-migration-vs-Drizzle-migration-pipeline ordering question (Known Risk 5) as part of T069's design.

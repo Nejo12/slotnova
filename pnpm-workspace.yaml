@@ -57,6 +57,7 @@ allowBuilds:
 # pnpm-lock.yaml and revisited in T080 (docs/decisions/0002-version-pins.md).
 # zod@4.6.5 (task T064, docs/decisions/0004-validation-contract-integration.md)
 # is the exact patch pinned per the decision record's Risk 5 guidance.
+# pg-boss@12.31.1 is the exact Founder-approved R3 scheduler pin.
 # The cooldown stays active for every other dependency.
 minimumReleaseAgeExclude:
   - "@typescript-eslint/eslint-plugin@8.70.0"
@@ -71,3 +72,4 @@ minimumReleaseAgeExclude:
   - "@typescript-eslint/visitor-keys@8.70.0"
   - typescript-eslint@8.70.0
   - zod@4.6.5
+  - pg-boss@12.31.1
