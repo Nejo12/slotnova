@@ -1,0 +1,719 @@
+{
+  "$schema": "./slotnova-tokens.schema.json",
+  "schemaVersion": 1,
+  "source": {
+    "figmaFile": "https://www.figma.com/design/WDH7Ku5JXhUQeJ054GFLPd",
+    "figmaVariablesAccess": "unavailable",
+    "note": "INTERIM — reconcile against Figma Variables. Full Figma Variables (the file's Variables panel) could not be read in this session: generic file metadata exposed only '00 — Cover', and get_variable_defs requires a live Figma-desktop selection that is unavailable in this non-interactive environment. Targeted Plugin-API node reads DID succeed for concrete prototype frames (18 — Prototypes, node 3:21) and returned real bound CSS custom properties and literal colors, which is the actual provenance for every entry below marked provenance:'figma'. Entries marked provenance:'interim' (dark mode, Recovery/*, Appointment/*, typography, motion) have no reachable Figma Variable evidence in this session and are derived from docs/product-handoff.md plus the confirmed light-mode palette; they must be reconciled against real Figma Variables once that access is available."
+  },
+  "primitive": {
+    "note": "No Slotnova-owned primitive scale. Nova's primitive layer (color.*, space.*, radius.*, shadow.*, duration.*, easing.*, z.*, control.*) is reused as-is per ADR-022/025 — not reproduced here to avoid a duplicate generic scale.",
+    "reused": ["color", "space", "radius", "shadow", "duration", "easing", "z", "control"]
+  },
+  "semantic": {
+    "light": {
+      "surface": {
+        "bgPage": {
+          "value": "{nova.color.bgPage}",
+          "source": "nova",
+          "provenance": "nova-default"
+        },
+        "bgSurface": {
+          "value": "#fffdf8",
+          "source": "slotnova",
+          "provenance": "figma",
+          "figmaVar": "color-bg-surface",
+          "figmaNode": "372:18"
+        },
+        "bgSubtle": {
+          "value": "#f1ebe1",
+          "source": "slotnova",
+          "provenance": "figma",
+          "figmaVar": "color-bg-subtle",
+          "figmaNode": "340:586"
+        },
+        "bgRaised": {
+          "value": "#fffdf8",
+          "source": "slotnova",
+          "provenance": "figma",
+          "figmaVar": "surface-raised",
+          "figmaNode": "372:18"
+        },
+        "bgInverse": {
+          "value": "{nova.color.bgInverse}",
+          "source": "nova",
+          "provenance": "nova-default"
+        }
+      },
+      "text": {
+        "primary": {
+          "value": "#211a1b",
+          "source": "slotnova",
+          "provenance": "figma",
+          "figmaVar": "color-text-primary",
+          "figmaNode": "372:18"
+        },
+        "secondary": {
+          "value": "#4e4547",
+          "source": "slotnova",
+          "provenance": "figma",
+          "figmaVar": "color-text-secondary",
+          "figmaNode": "372:18"
+        },
+        "disabled": {
+          "value": "{nova.color.textDisabled}",
+          "source": "nova",
+          "provenance": "nova-default"
+        },
+        "inverse": {
+          "value": "{nova.color.textInverse}",
+          "source": "nova",
+          "provenance": "nova-default"
+        },
+        "link": {
+          "value": "#6f1d2c",
+          "source": "slotnova",
+          "provenance": "figma",
+          "figmaVar": "color-text-link",
+          "figmaNode": "340:586"
+        }
+      },
+      "border": {
+        "default": {
+          "value": "#d8d0c5",
+          "source": "slotnova",
+          "provenance": "figma",
+          "figmaVar": "color-border-default",
+          "figmaNode": "372:18"
+        },
+        "strong": {
+          "value": "{nova.color.borderStrong}",
+          "source": "nova",
+          "provenance": "nova-default"
+        }
+      },
+      "action": {
+        "primary": {
+          "value": "#6f1d2c",
+          "source": "slotnova",
+          "provenance": "figma",
+          "figmaVar": "color-action-primary",
+          "figmaNode": "340:586"
+        },
+        "primaryText": {
+          "value": "#ffffff",
+          "source": "slotnova",
+          "provenance": "figma",
+          "figmaVar": "color-action-primary-text",
+          "figmaNode": "340:586"
+        },
+        "secondary": {
+          "value": "#f2e4e7",
+          "source": "slotnova",
+          "provenance": "figma",
+          "figmaVar": "action-secondary",
+          "figmaNode": "340:586"
+        },
+        "secondaryText": {
+          "value": "#211a1b",
+          "source": "slotnova",
+          "provenance": "figma",
+          "figmaVar": "action-secondary-text",
+          "figmaNode": "340:586"
+        },
+        "subtle": {
+          "value": "#f2e4e7",
+          "source": "slotnova",
+          "provenance": "figma",
+          "figmaVar": "color-action-subtle",
+          "figmaNode": "340:586"
+        }
+      },
+      "interaction": {
+        "focusRing": {
+          "value": "{nova.color.focusRing}",
+          "source": "nova",
+          "provenance": "nova-default"
+        },
+        "skeleton": {
+          "value": "{nova.color.skeleton}",
+          "source": "nova",
+          "provenance": "nova-default"
+        }
+      },
+      "status": {
+        "success": {
+          "value": "{nova.color.statusSuccess}",
+          "source": "nova",
+          "provenance": "nova-default"
+        },
+        "successSurface": {
+          "value": "{nova.color.statusSuccessSurface}",
+          "source": "nova",
+          "provenance": "nova-default"
+        },
+        "successBorder": {
+          "value": "{nova.color.statusSuccessBorder}",
+          "source": "nova",
+          "provenance": "nova-default"
+        },
+        "successText": {
+          "value": "{nova.color.statusSuccessText}",
+          "source": "nova",
+          "provenance": "nova-default"
+        },
+        "danger": {
+          "value": "{nova.color.statusDanger}",
+          "source": "nova",
+          "provenance": "nova-default"
+        },
+        "dangerSurface": {
+          "value": "{nova.color.statusDangerSurface}",
+          "source": "nova",
+          "provenance": "nova-default"
+        },
+        "dangerBorder": {
+          "value": "{nova.color.statusDangerBorder}",
+          "source": "nova",
+          "provenance": "nova-default"
+        },
+        "dangerText": {
+          "value": "{nova.color.statusDangerText}",
+          "source": "nova",
+          "provenance": "nova-default"
+        },
+        "warning": {
+          "value": "{nova.color.statusWarning}",
+          "source": "nova",
+          "provenance": "nova-default"
+        },
+        "warningSurface": {
+          "value": "{nova.color.statusWarningSurface}",
+          "source": "nova",
+          "provenance": "nova-default"
+        },
+        "warningBorder": {
+          "value": "{nova.color.statusWarningBorder}",
+          "source": "nova",
+          "provenance": "nova-default"
+        },
+        "warningText": {
+          "value": "{nova.color.statusWarningText}",
+          "source": "nova",
+          "provenance": "nova-default"
+        },
+        "info": {
+          "value": "{nova.color.statusInfo}",
+          "source": "nova",
+          "provenance": "nova-default"
+        },
+        "infoSurface": {
+          "value": "{nova.color.statusInfoSurface}",
+          "source": "nova",
+          "provenance": "nova-default"
+        },
+        "infoBorder": {
+          "value": "{nova.color.statusInfoBorder}",
+          "source": "nova",
+          "provenance": "nova-default"
+        },
+        "infoText": {
+          "value": "{nova.color.statusInfoText}",
+          "source": "nova",
+          "provenance": "nova-default"
+        }
+      },
+      "elevation": {
+        "surface": {
+          "value": "{nova.elevation.surface}",
+          "source": "nova",
+          "provenance": "nova-default"
+        },
+        "overlay": {
+          "value": "{nova.elevation.overlay}",
+          "source": "nova",
+          "provenance": "nova-default"
+        },
+        "modal": {
+          "value": "{nova.elevation.modal}",
+          "source": "nova",
+          "provenance": "nova-default"
+        }
+      },
+      "recovery": {
+        "vacancySurface": {
+          "value": "#fffcf7",
+          "source": "slotnova",
+          "provenance": "interim",
+          "note": "Recovery Run / Vacancy Summary card fill, node 340:620"
+        },
+        "vacancyBorder": {
+          "value": "#d9d1c7",
+          "source": "slotnova",
+          "provenance": "interim",
+          "note": "Recovery Run card border, node 340:620"
+        },
+        "candidateSurface": {
+          "value": "#f5f0e5",
+          "source": "slotnova",
+          "provenance": "interim",
+          "note": "Recovery Candidate row fill, node 340:631"
+        },
+        "fitExcellentText": {
+          "value": "#404a36",
+          "source": "slotnova",
+          "provenance": "interim",
+          "note": "'Excellent fit' label color, node 340:635; olive-green distinct from Nova's generic statusSuccess"
+        },
+        "offerPrimary": {
+          "value": "{semantic.light.action.primary}",
+          "source": "slotnova",
+          "provenance": "interim"
+        },
+        "offerPreviewSurface": {
+          "value": "#f5f0e5",
+          "source": "slotnova",
+          "provenance": "interim",
+          "note": "Offer Preview panel fill, node 340:678"
+        },
+        "atRiskText": {
+          "value": "{semantic.light.text.primary}",
+          "source": "slotnova",
+          "provenance": "interim"
+        }
+      },
+      "appointment": {
+        "cardSurface": {
+          "value": "{semantic.light.surface.bgSurface}",
+          "source": "slotnova",
+          "provenance": "interim"
+        },
+        "cardBorder": {
+          "value": "{semantic.light.border.default}",
+          "source": "slotnova",
+          "provenance": "interim"
+        },
+        "statusConfirmed": {
+          "value": "{semantic.light.status.success}",
+          "source": "slotnova",
+          "provenance": "interim"
+        },
+        "statusPending": {
+          "value": "{semantic.light.status.warning}",
+          "source": "slotnova",
+          "provenance": "interim"
+        },
+        "statusCancelled": {
+          "value": "{semantic.light.status.danger}",
+          "source": "slotnova",
+          "provenance": "interim"
+        },
+        "statusNoShow": {
+          "value": "{semantic.light.status.danger}",
+          "source": "slotnova",
+          "provenance": "interim"
+        }
+      }
+    },
+    "dark": {
+      "surface": {
+        "bgPage": {
+          "value": "{nova.color.bgPage}",
+          "source": "nova",
+          "provenance": "nova-default"
+        },
+        "bgSurface": {
+          "value": "#1c1516",
+          "source": "slotnova",
+          "provenance": "interim",
+          "note": "Dark mirror of light bgSurface #fffdf8 (paper-cream -> near-black oxblood-tinted neutral), no Figma dark frame exists to verify"
+        },
+        "bgSubtle": {
+          "value": "#241b1c",
+          "source": "slotnova",
+          "provenance": "interim",
+          "note": "Dark mirror of light bgSubtle #f1ebe1"
+        },
+        "bgRaised": { "value": "#1c1516", "source": "slotnova", "provenance": "interim" },
+        "bgInverse": {
+          "value": "{nova.color.bgInverse}",
+          "source": "nova",
+          "provenance": "nova-default"
+        }
+      },
+      "text": {
+        "primary": {
+          "value": "#f5efe9",
+          "source": "slotnova",
+          "provenance": "interim",
+          "note": "Dark mirror of light textPrimary #211a1b"
+        },
+        "secondary": {
+          "value": "#c9bdb7",
+          "source": "slotnova",
+          "provenance": "interim",
+          "note": "Dark mirror of light textSecondary #4e4547"
+        },
+        "disabled": {
+          "value": "{nova.color.textDisabled}",
+          "source": "nova",
+          "provenance": "nova-default"
+        },
+        "inverse": {
+          "value": "{nova.color.textInverse}",
+          "source": "nova",
+          "provenance": "nova-default"
+        },
+        "link": {
+          "value": "#c98a97",
+          "source": "slotnova",
+          "provenance": "interim",
+          "note": "Lightened oxblood for dark-mode contrast; mirrors light textLink #6f1d2c"
+        }
+      },
+      "border": {
+        "default": {
+          "value": "#3a2f30",
+          "source": "slotnova",
+          "provenance": "interim",
+          "note": "Dark mirror of light borderDefault #d8d0c5"
+        },
+        "strong": {
+          "value": "{nova.color.borderStrong}",
+          "source": "nova",
+          "provenance": "nova-default"
+        }
+      },
+      "action": {
+        "primary": {
+          "value": "#c98a97",
+          "source": "slotnova",
+          "provenance": "interim",
+          "note": "Lightened oxblood for dark-mode contrast (WCAG-aware substitute); mirrors light actionPrimary #6f1d2c"
+        },
+        "primaryText": { "value": "#1c1516", "source": "slotnova", "provenance": "interim" },
+        "secondary": {
+          "value": "#3a2a2d",
+          "source": "slotnova",
+          "provenance": "interim",
+          "note": "Dark mirror of light actionSecondary #f2e4e7"
+        },
+        "secondaryText": { "value": "#f5efe9", "source": "slotnova", "provenance": "interim" },
+        "subtle": { "value": "#3a2a2d", "source": "slotnova", "provenance": "interim" }
+      },
+      "interaction": {
+        "focusRing": {
+          "value": "{nova.color.focusRing}",
+          "source": "nova",
+          "provenance": "nova-default"
+        },
+        "skeleton": {
+          "value": "{nova.color.skeleton}",
+          "source": "nova",
+          "provenance": "nova-default"
+        }
+      },
+      "status": {
+        "success": {
+          "value": "{nova.color.statusSuccess}",
+          "source": "nova",
+          "provenance": "nova-default"
+        },
+        "successSurface": {
+          "value": "{nova.color.statusSuccessSurface}",
+          "source": "nova",
+          "provenance": "nova-default"
+        },
+        "successBorder": {
+          "value": "{nova.color.statusSuccessBorder}",
+          "source": "nova",
+          "provenance": "nova-default"
+        },
+        "successText": {
+          "value": "{nova.color.statusSuccessText}",
+          "source": "nova",
+          "provenance": "nova-default"
+        },
+        "danger": {
+          "value": "{nova.color.statusDanger}",
+          "source": "nova",
+          "provenance": "nova-default"
+        },
+        "dangerSurface": {
+          "value": "{nova.color.statusDangerSurface}",
+          "source": "nova",
+          "provenance": "nova-default"
+        },
+        "dangerBorder": {
+          "value": "{nova.color.statusDangerBorder}",
+          "source": "nova",
+          "provenance": "nova-default"
+        },
+        "dangerText": {
+          "value": "{nova.color.statusDangerText}",
+          "source": "nova",
+          "provenance": "nova-default"
+        },
+        "warning": {
+          "value": "{nova.color.statusWarning}",
+          "source": "nova",
+          "provenance": "nova-default"
+        },
+        "warningSurface": {
+          "value": "{nova.color.statusWarningSurface}",
+          "source": "nova",
+          "provenance": "nova-default"
+        },
+        "warningBorder": {
+          "value": "{nova.color.statusWarningBorder}",
+          "source": "nova",
+          "provenance": "nova-default"
+        },
+        "warningText": {
+          "value": "{nova.color.statusWarningText}",
+          "source": "nova",
+          "provenance": "nova-default"
+        },
+        "info": {
+          "value": "{nova.color.statusInfo}",
+          "source": "nova",
+          "provenance": "nova-default"
+        },
+        "infoSurface": {
+          "value": "{nova.color.statusInfoSurface}",
+          "source": "nova",
+          "provenance": "nova-default"
+        },
+        "infoBorder": {
+          "value": "{nova.color.statusInfoBorder}",
+          "source": "nova",
+          "provenance": "nova-default"
+        },
+        "infoText": {
+          "value": "{nova.color.statusInfoText}",
+          "source": "nova",
+          "provenance": "nova-default"
+        }
+      },
+      "elevation": {
+        "surface": {
+          "value": "{nova.elevation.surface}",
+          "source": "nova",
+          "provenance": "nova-default"
+        },
+        "overlay": {
+          "value": "{nova.elevation.overlay}",
+          "source": "nova",
+          "provenance": "nova-default"
+        },
+        "modal": {
+          "value": "{nova.elevation.modal}",
+          "source": "nova",
+          "provenance": "nova-default"
+        }
+      },
+      "recovery": {
+        "vacancySurface": {
+          "value": "#241b1c",
+          "source": "slotnova",
+          "provenance": "interim",
+          "note": "Dark mirror of light recovery.vacancySurface #fffcf7"
+        },
+        "vacancyBorder": { "value": "#3a2f30", "source": "slotnova", "provenance": "interim" },
+        "candidateSurface": {
+          "value": "#2b2122",
+          "source": "slotnova",
+          "provenance": "interim",
+          "note": "Dark mirror of light recovery.candidateSurface #f5f0e5"
+        },
+        "fitExcellentText": {
+          "value": "#8fae7a",
+          "source": "slotnova",
+          "provenance": "interim",
+          "note": "Lightened olive-green for dark-mode contrast; mirrors light fitExcellentText #404a36"
+        },
+        "offerPrimary": {
+          "value": "{semantic.dark.action.primary}",
+          "source": "slotnova",
+          "provenance": "interim"
+        },
+        "offerPreviewSurface": {
+          "value": "#2b2122",
+          "source": "slotnova",
+          "provenance": "interim"
+        },
+        "atRiskText": {
+          "value": "{semantic.dark.text.primary}",
+          "source": "slotnova",
+          "provenance": "interim"
+        }
+      },
+      "appointment": {
+        "cardSurface": {
+          "value": "{semantic.dark.surface.bgSurface}",
+          "source": "slotnova",
+          "provenance": "interim"
+        },
+        "cardBorder": {
+          "value": "{semantic.dark.border.default}",
+          "source": "slotnova",
+          "provenance": "interim"
+        },
+        "statusConfirmed": {
+          "value": "{semantic.dark.status.success}",
+          "source": "slotnova",
+          "provenance": "interim"
+        },
+        "statusPending": {
+          "value": "{semantic.dark.status.warning}",
+          "source": "slotnova",
+          "provenance": "interim"
+        },
+        "statusCancelled": {
+          "value": "{semantic.dark.status.danger}",
+          "source": "slotnova",
+          "provenance": "interim"
+        },
+        "statusNoShow": {
+          "value": "{semantic.dark.status.danger}",
+          "source": "slotnova",
+          "provenance": "interim"
+        }
+      }
+    }
+  },
+  "typography": {
+    "note": "Nova publishes no typography tokens (confirmed: dist/tokens.json has no font-family/size/weight keys). Slotnova-owned addition, not a Nova duplicate. Font families observed in Figma frames: Inter (headings/labels), SF Pro (body/data/UI text).",
+    "fontFamily": {
+      "heading": {
+        "value": "\"Inter\", system-ui, sans-serif",
+        "source": "slotnova",
+        "provenance": "figma",
+        "note": "Section/card titles use Inter Semi Bold, e.g. node 372:19"
+      },
+      "body": {
+        "value": "\"SF Pro\", -apple-system, system-ui, sans-serif",
+        "source": "slotnova",
+        "provenance": "figma",
+        "note": "Body/data/button text uses SF Pro, e.g. node 340:622"
+      }
+    },
+    "fontSize": {
+      "xs": {
+        "value": "0.6875rem",
+        "source": "slotnova",
+        "provenance": "figma",
+        "note": "11px meta text, node 340:591"
+      },
+      "sm": {
+        "value": "0.75rem",
+        "source": "slotnova",
+        "provenance": "figma",
+        "note": "12px secondary text, node 372:118"
+      },
+      "md": {
+        "value": "0.8125rem",
+        "source": "slotnova",
+        "provenance": "figma",
+        "note": "13px body text, node 372:118"
+      },
+      "lg": {
+        "value": "0.875rem",
+        "source": "slotnova",
+        "provenance": "figma",
+        "note": "14px UI/label text, node 340:613"
+      },
+      "xl": {
+        "value": "1rem",
+        "source": "slotnova",
+        "provenance": "figma",
+        "note": "16px card titles, node 372:117"
+      },
+      "2xl": {
+        "value": "1.125rem",
+        "source": "slotnova",
+        "provenance": "figma",
+        "note": "18px section titles, node 340:664"
+      },
+      "3xl": {
+        "value": "2rem",
+        "source": "slotnova",
+        "provenance": "figma",
+        "note": "32px page heading, node 340:617"
+      },
+      "4xl": {
+        "value": "2.125rem",
+        "source": "slotnova",
+        "provenance": "figma",
+        "note": "34px handoff title, node 372:20"
+      }
+    },
+    "fontWeight": {
+      "regular": {
+        "value": "400",
+        "source": "slotnova",
+        "provenance": "interim",
+        "note": "Standard CSS 'regular' weight; no specific Figma node cited (unlike medium/semibold below, which are sourced from bound text styles)"
+      },
+      "medium": {
+        "value": "510",
+        "source": "slotnova",
+        "provenance": "figma",
+        "note": "SF Pro Medium variable weight, e.g. node 340:622"
+      },
+      "semibold": {
+        "value": "600",
+        "source": "slotnova",
+        "provenance": "figma",
+        "note": "Inter Semi Bold, e.g. node 372:19"
+      }
+    },
+    "lineHeight": {
+      "tight": { "value": "1.2", "source": "slotnova", "provenance": "interim" },
+      "normal": {
+        "value": "normal",
+        "source": "slotnova",
+        "provenance": "figma",
+        "note": "leading-[normal] used throughout Figma frames"
+      }
+    }
+  },
+  "motion": {
+    "note": "Reconciled over Nova's duration.*/easing.* primitives into the semantic names docs/standards/motion.md requires (motion.duration.*, motion.easing.*, motion.spring.*). No Figma prototype-transition evidence was reachable in this session; naming/mapping is interim pending direct verification, but values are Nova's own primitives, not invented durations.",
+    "duration": {
+      "fast": { "value": "{nova.duration.fast}", "source": "nova", "provenance": "nova-default" },
+      "normal": {
+        "value": "{nova.duration.standard}",
+        "source": "nova",
+        "provenance": "nova-default"
+      },
+      "slow": {
+        "value": "{nova.duration.deliberate}",
+        "source": "nova",
+        "provenance": "nova-default"
+      }
+    },
+    "easing": {
+      "standard": {
+        "value": "{nova.easing.standard}",
+        "source": "nova",
+        "provenance": "nova-default"
+      },
+      "enter": { "value": "{nova.easing.standard}", "source": "slotnova", "provenance": "interim" },
+      "exit": { "value": "{nova.easing.emphasized}", "source": "slotnova", "provenance": "interim" }
+    },
+    "spring": {
+      "snappy": {
+        "value": "{nova.duration.fast}",
+        "source": "slotnova",
+        "provenance": "interim",
+        "note": "Nova has no spring/physics tokens; approximated via fast duration + standard easing until Motion-for-React spring presets are defined in PR-14 (T061)"
+      },
+      "gentle": {
+        "value": "{nova.duration.deliberate}",
+        "source": "slotnova",
+        "provenance": "interim"
+      }
+    }
+  }
+}

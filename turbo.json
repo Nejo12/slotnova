@@ -22,6 +22,10 @@
       "outputs": [],
       "cache": false
     },
+    "tokens:generate": {
+      "outputs": [],
+      "cache": false
+    },
     "db:migrate": {
       "dependsOn": ["build"],
       "outputs": [],

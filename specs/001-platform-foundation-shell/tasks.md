@@ -503,7 +503,7 @@ Each task carries a compact block:
 
 ### PR-12 — Nova token foundation + Slotnova theme/semantic reconciliation layer
 
-- [ ] T052 [P] [US3] Nova design-token foundation + Slotnova Figma semantic-alias/override reconciliation (`packages/design-tokens`)
+- [x] T052 [P] [US3] Nova design-token foundation + Slotnova Figma semantic-alias/override reconciliation (`packages/design-tokens`)
   - **Dep**: T001; R8; ADR-025
   - **Files**: `packages/design-tokens/` (pin the reviewed `@nova-component/design-tokens` version; normalized Slotnova Figma-variable export; deterministic Slotnova semantic alias/override generation layered over the Nova token foundation — Style Dictionary or equivalent for the reconciliation step only; CSS custom-property + TS output), `pnpm tokens:generate`
   - **Accept**: pins a reviewed `@nova-component/design-tokens` version; deterministic (byte-identical on unchanged input); Slotnova semantic aliases/overrides (incl. `Recovery/*` and `Appointment/*` semantics) reconcile the approved Figma variables against the Nova foundation rather than replacing it; covers color/typography/spacing/radius/elevation/motion; semantic names (no `radius-12px`); **no duplicate generic Nova token implementation**; ADR-022, ADR-025, FR-016, FR-022, SC-007
@@ -511,7 +511,7 @@ Each task carries a compact block:
   - **Constraints**: generated artifacts reviewed, never hand-edited; interim token set flagged `INTERIM — reconcile` if Figma Variables unavailable; reuse a Nova value as-is wherever it faithfully matches approved Figma — do not re-author it locally
   - **Out**: per-component overrides; a standalone/duplicate Nova-equivalent token pipeline
 
-- [ ] T053 [P] [US3] Finalize Stylelint rules for the combined Nova + Slotnova token/theme layer
+- [x] T053 [P] [US3] Finalize Stylelint rules for the combined Nova + Slotnova token/theme layer
   - **Dep**: T052, T004
   - **Files**: `tooling/stylelint/` (ban raw colors + raw motion durations/easings outside the designated Nova-consuming + Slotnova-reconciled token/theme layer in `packages/design-tokens`, documented exceptions)
   - **Accept**: raw hex in a component SCSS module fails lint; SC-007
@@ -519,9 +519,9 @@ Each task carries a compact block:
   - **Constraints**: Light/Dark stays semantic-token driven
   - **Out**: n/a
 
-- [ ] T054 [P] [US3] Token pipeline determinism + Light/Dark completeness + Slotnova semantic-mapping verification
+- [x] T054 [P] [US3] Token pipeline determinism + Light/Dark completeness + Slotnova semantic-mapping verification
   - **Dep**: T052
-  - **Files**: `packages/design-tokens/__tests__/generate.test.ts`
+  - **Files**: `packages/design-tokens/src/__tests__/generate.test.ts` (nested under `src/` to match this repo's established per-package test convention, not the literal path above)
   - **Accept**: regeneration identical; Light & Dark both resolve every semantic token; every Slotnova Figma semantic (incl. `Recovery/*`, `Appointment/*`) resolves through an alias/override to a Nova or Slotnova-owned token with no unresolved alias; ADR-022, ADR-025
   - **Tests**: this is the test task
   - **Out**: n/a
