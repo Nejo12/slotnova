@@ -26,6 +26,10 @@
       "outputs": [],
       "cache": false
     },
+    "contracts:generate": {
+      "outputs": [],
+      "cache": false
+    },
     "db:migrate": {
       "dependsOn": ["build"],
       "outputs": [],

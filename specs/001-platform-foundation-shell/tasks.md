@@ -612,7 +612,7 @@ Each task carries a compact block:
 
 **Independent Test**: quickstart §6 — `contracts:generate` byte-identical on unchanged input; hand-edit fails `contracts:check`; SPA calls generated client with full types; forced errors are valid `problem+json`.
 
-- [ ] T064 [US4] Choose + wire runtime-schema → OpenAPI integration
+- [x] T064 [US4] Choose + wire runtime-schema → OpenAPI integration
   - **Dep**: T019, T020; **R4 decision record** (`docs/decisions/0004-...`)
   - **Files**: `apps/api/src/**/http/*.schema.ts` convention, OpenAPI emitter config, `pnpm openapi:generate` (deterministic)
   - **Accept**: one boundary schema per request/response is the single source (no decorator duplication); deterministic document; FR-034, FR-036, ADR-013
@@ -620,7 +620,7 @@ Each task carries a compact block:
   - **Constraints**: frontend never imports backend entities (FR-035); generation deterministic
   - **Out**: product endpoints
 
-- [ ] T065 [US4] `packages/contracts` generation: client + types + MSW handlers
+- [x] T065 [US4] `packages/contracts` generation: client + types + MSW handlers
   - **Dep**: T064, T016
   - **Files**: `packages/contracts/` (generated-only: `openapi.json`, typed client, types, MSW handlers), `pnpm contracts:generate`
   - **Accept**: artifacts generated-only, committed, never hand-edited; SPA imports from here; MSW handlers consumed by `packages/testing` (T016); FR-035
@@ -628,7 +628,7 @@ Each task carries a compact block:
   - **Constraints**: dependency-cruiser (T005) forbids `apps/web` → `apps/api` internals
   - **Out**: n/a
 
-- [ ] T066 [US4] CI drift check + breaking-change detection
+- [x] T066 [US4] CI drift check + breaking-change detection
   - **Dep**: T065, T007
   - **Files**: `.github/workflows/fast.yml` (`contracts:check`), OpenAPI breaking-change diff step, `turbo.json` wiring
   - **Accept**: stale committed artifact fails CI 100%; regeneration byte-identical; a breaking schema change is flagged for explicit review; SC-008, FR-036, FR-038
@@ -636,7 +636,7 @@ Each task carries a compact block:
   - **Constraints**: deterministic ordering
   - **Out**: n/a
 
-- [ ] T067 [P] [US4] Contract tests for all Phase 1 endpoints + `problem+json`
+- [x] T067 [P] [US4] Contract tests for all Phase 1 endpoints + `problem+json`
   - **Dep**: T064, T023, T038, T042, T046
   - **Files**: `apps/api/src/**/http/__tests__/*.contract.test.ts`
   - **Accept**: every endpoint's success + representative error validate against the generated schema; every forced error is valid `problem+json` with stable `type`; FR-037, contract catalogue

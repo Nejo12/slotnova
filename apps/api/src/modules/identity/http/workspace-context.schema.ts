@@ -1,37 +1,17 @@
 /**
- * Boundary request parsing for `POST /v1/auth/session/workspace` (T042,
- * contracts/workspace-context.contract.md). Same hand-rolled-validation
- * posture as `session.schema.ts` (R4 undecided until T064).
+ * Boundary request shape for `POST /v1/auth/session/workspace` (T042,
+ * contracts/workspace-context.contract.md).
+ *
+ * Zod-based since T064 (`docs/decisions/0004-validation-contract-integration.md`)
+ * -- same posture as `session.schema.ts`: `createZodDto()` wraps the schema
+ * below as a DTO usable for both runtime validation
+ * (`./zod-validation.js`'s `ZodValidationPipe`) and OpenAPI generation.
  */
-import { ProblemException } from "../../../http/problem/problem.exception.js";
+import { createZodDto } from "nestjs-zod";
+import { z } from "zod";
 
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-export interface WorkspaceSwitchRequestBody {
-  readonly workspaceId: string;
-}
-
-export function parseWorkspaceSwitchRequestBody(body: unknown): WorkspaceSwitchRequestBody {
-  if (typeof body !== "object" || body === null || Array.isArray(body)) {
-    throw new ProblemException("validation", {
-      errors: [{ path: "", message: "request body must be a JSON object" }],
-    });
-  }
-  if (!("workspaceId" in body)) {
-    throw new ProblemException("validation", {
-      errors: [{ path: "workspaceId", message: "workspaceId is required" }],
-    });
-  }
-  const { workspaceId } = body as { workspaceId: unknown };
-  if (typeof workspaceId !== "string" || workspaceId.trim() === "") {
-    throw new ProblemException("validation", {
-      errors: [{ path: "workspaceId", message: "workspaceId must be a non-empty string" }],
-    });
-  }
-  if (!UUID_PATTERN.test(workspaceId)) {
-    throw new ProblemException("validation", {
-      errors: [{ path: "workspaceId", message: "workspaceId must be a valid UUID" }],
-    });
-  }
-  return { workspaceId };
-}
+export const workspaceSwitchRequestSchema = z.object({
+  workspaceId: z.uuid(),
+});
+export class WorkspaceSwitchRequestDto extends createZodDto(workspaceSwitchRequestSchema) {}
+export type WorkspaceSwitchRequestBody = z.infer<typeof workspaceSwitchRequestSchema>;

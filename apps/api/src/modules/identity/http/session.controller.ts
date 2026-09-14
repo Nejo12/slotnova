@@ -3,6 +3,18 @@
  * (T038, contracts/session.contract.md). CSRF is already enforced for both
  * (any non-safe method) by the global hook registered in `main.ts` -- neither
  * handler re-checks it.
+ *
+ * CSRF-missing/-mismatch (403 `forbidden`) is deliberately NOT documented via
+ * a per-route `@ApiResponse` here: it is produced by a raw Fastify
+ * `onRequest` hook (`registerCsrfProtection`, `../../platform/security/csrf.ts`)
+ * that runs before Nest's routing/controller pipeline ever engages, for every
+ * non-safe-method route uniformly -- there is no controller-method-level
+ * metadata for `@nestjs/swagger` to introspect it from, so decorating it here
+ * would not reflect how the response is actually produced (T067's contract
+ * test for this still exists and passes: `session.contract.test.ts`'s
+ * "missing CSRF token -> 403" case; it is simply not part of the generated
+ * OpenAPI document, the same as any other framework/infrastructure-level
+ * cross-cutting concern).
  */
 import {
   Body,
@@ -14,11 +26,15 @@ import {
   Post,
   Req,
   Res,
+  UsePipes,
 } from "@nestjs/common";
+import { ApiBody, ApiResponse, getSchemaPath } from "@nestjs/swagger";
+import { ZodResponse } from "nestjs-zod";
 import type { FastifyReply, FastifyRequest } from "fastify";
 
 import type { SecurityConfig } from "../../../config/security-config.js";
 import { SECURITY_CONFIG } from "../../../config/security-config.tokens.js";
+import { ProblemDetailsDto } from "../../../http/problem/problem-details.schema.js";
 import { ProblemException } from "../../../http/problem/problem.exception.js";
 import { issueCsrfCookie } from "../../platform/security/csrf.js";
 import { SignInUseCase } from "../application/session/sign-in.use-case.js";
@@ -28,7 +44,17 @@ import {
   sessionCookieName,
 } from "../application/session/session-cookie.js";
 import { SessionService } from "../application/session/session.service.js";
-import { parseSignInRequestBody, type SignInResponseBody } from "./session.schema.js";
+import {
+  SignInRequestDto,
+  SignInResponseDto,
+  type SignInRequestBody,
+  type SignInResponseBody,
+} from "./session.schema.js";
+import { ZodValidationPipe } from "./zod-validation.js";
+
+const PROBLEM_JSON_CONTENT = {
+  "application/problem+json": { schema: { $ref: getSchemaPath(ProblemDetailsDto) } },
+};
 
 @Controller("v1/auth/session")
 export class SessionController {
@@ -40,11 +66,29 @@ export class SessionController {
 
   @Post()
   @HttpCode(HttpStatus.OK)
+  @UsePipes(new ZodValidationPipe(SignInRequestDto))
+  @ApiBody({ type: SignInRequestDto })
+  @ZodResponse({ status: 200, type: SignInResponseDto })
+  @ApiResponse({
+    status: 400,
+    description: "Malformed body (`validation`).",
+    content: PROBLEM_JSON_CONTENT,
+  })
+  @ApiResponse({
+    status: 401,
+    description: "Adapter rejected the credential (`invalid-credentials`).",
+    content: PROBLEM_JSON_CONTENT,
+  })
+  @ApiResponse({
+    status: 403,
+    description: "User exists but is disabled (`user-disabled`).",
+    content: PROBLEM_JSON_CONTENT,
+  })
   async signIn(
-    @Body() body: unknown,
+    @Body() body: SignInRequestBody,
     @Res({ passthrough: true }) reply: FastifyReply,
   ): Promise<SignInResponseBody> {
-    const { credential } = parseSignInRequestBody(body);
+    const { credential } = body;
     const result = await this.signInUseCase.execute(credential);
 
     if (result.outcome === "invalid-credentials") {

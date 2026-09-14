@@ -12,11 +12,21 @@ import { defineConfig } from "vitest/config";
  * concurrency suite location `specs/001-platform-foundation-shell/tasks.md`
  * T040/T044 specify -- included alongside the ordinary per-module
  * `__tests__` convention.
+ *
+ * `*.contract.test.ts` (T067, under each module's `http/__tests__`
+ * directory per the task's own file pattern) also boots the real app
+ * against real PostgreSQL -- same heavy lane as `*.int.test.ts`, just named
+ * to signal contract-catalogue validation rather than general integration
+ * coverage.
  */
 export default defineConfig({
   test: {
     environment: "node",
-    include: ["src/**/__tests__/**/*.int.test.ts", "src/test/**/*.int.test.ts"],
+    include: [
+      "src/**/__tests__/**/*.int.test.ts",
+      "src/**/__tests__/**/*.contract.test.ts",
+      "src/test/**/*.int.test.ts",
+    ],
     testTimeout: 120_000,
     hookTimeout: 180_000,
     // Containers are heavy; do not run integration files in parallel.

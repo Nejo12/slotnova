@@ -1,0 +1,44 @@
+{
+  "name": "@slotnova/contracts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "UNLICENSED",
+  "description": "Slotnova generated API contract package: types, typed fetch client and typed MSW handlers derived from the API's committed OpenAPI document (`apps/api/openapi/openapi.json`, task T064). Everything under `src/generated` and the thin `src/index.ts`/`src/msw/index.ts` adapters is produced by `contracts:generate` and never hand-edited (ADR-013, task T065).",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./msw": {
+      "source": "./src/msw/index.ts",
+      "types": "./dist/msw/index.d.ts",
+      "default": "./dist/msw/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src/generated"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "contracts:generate": "tsx src/generate.ts"
+  },
+  "dependencies": {
+    "msw": "^2.15.0",
+    "openapi-fetch": "0.17.0",
+    "openapi-msw": "2.0.0"
+  },
+  "devDependencies": {
+    "@slotnova/tsconfig": "workspace:*",
+    "openapi-typescript": "7.13.0",
+    "prettier": "^3.9.6",
+    "tsx": "^4.23.13",
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.0"
+  }
+}

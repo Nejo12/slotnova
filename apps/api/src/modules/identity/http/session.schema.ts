@@ -1,50 +1,48 @@
 /**
  * Boundary request/response shapes for `POST|DELETE /v1/auth/session`
- * (T038, contracts/session.contract.md). Hand-rolled validation deliberately
- * -- R4 (runtime-validation -> OpenAPI integration) is undecided until T064
- * (PR-15); these shapes are written so that decision can adopt them later
- * without rework, but nothing here wires OpenAPI generation.
+ * (T038, contracts/session.contract.md).
+ *
+ * Zod-based since T064 (`docs/decisions/0004-validation-contract-integration.md`):
+ * `nestjs-zod`'s `createZodDto()` wraps each schema below as a DTO class,
+ * used both for runtime validation (via this module's
+ * `ZodValidationPipe`, `./zod-validation.js`) and for the OpenAPI document
+ * (via `@ApiBody`/`@ZodResponse` referencing the DTO) -- a single schema
+ * declaration, no duplicated `@ApiProperty` decorators.
  */
-import { ProblemException } from "../../../http/problem/problem.exception.js";
+import { createZodDto } from "nestjs-zod";
+import { z } from "zod";
 
-export interface SignInRequestBody {
-  readonly credential: unknown;
-}
+/**
+ * `credential` is intentionally opaque here -- its concrete shape is
+ * adapter-specific (dev adapter today, a real IdP credential later) and is
+ * validated downstream by `CredentialAdapter.verify()`, not at this
+ * boundary. The only HTTP-level requirement is "a JSON object", matching the
+ * previous hand-rolled check.
+ */
+export const signInRequestSchema = z.object({
+  credential: z.record(z.string(), z.unknown()),
+});
+export class SignInRequestDto extends createZodDto(signInRequestSchema) {}
+export type SignInRequestBody = z.infer<typeof signInRequestSchema>;
 
-export function parseSignInRequestBody(body: unknown): SignInRequestBody {
-  if (typeof body !== "object" || body === null || Array.isArray(body)) {
-    throw new ProblemException("validation", {
-      errors: [{ path: "", message: "request body must be a JSON object" }],
-    });
-  }
-  if (!("credential" in body)) {
-    throw new ProblemException("validation", {
-      errors: [{ path: "credential", message: "credential is required" }],
-    });
-  }
-  const { credential } = body as { credential: unknown };
-  if (typeof credential !== "object" || credential === null || Array.isArray(credential)) {
-    throw new ProblemException("validation", {
-      errors: [{ path: "credential", message: "credential must be an object" }],
-    });
-  }
-  return { credential };
-}
+export const userResponseSchema = z.object({
+  id: z.string(),
+  displayName: z.string(),
+  email: z.string(),
+});
+export class UserResponseDto extends createZodDto(userResponseSchema) {}
 
-export interface UserResponseDto {
-  readonly id: string;
-  readonly displayName: string;
-  readonly email: string;
-}
+export const workspaceSummarySchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  role: z.string(),
+});
+export class WorkspaceSummaryDto extends createZodDto(workspaceSummarySchema) {}
 
-export interface WorkspaceSummaryDto {
-  readonly id: string;
-  readonly name: string;
-  readonly role: string;
-}
-
-export interface SignInResponseBody {
-  readonly user: UserResponseDto;
-  readonly activeWorkspace: WorkspaceSummaryDto | null;
-  readonly workspaces: readonly WorkspaceSummaryDto[];
-}
+export const signInResponseSchema = z.object({
+  user: userResponseSchema,
+  activeWorkspace: workspaceSummarySchema.nullable(),
+  workspaces: z.array(workspaceSummarySchema).readonly(),
+});
+export class SignInResponseDto extends createZodDto(signInResponseSchema) {}
+export type SignInResponseBody = z.infer<typeof signInResponseSchema>;

@@ -15,6 +15,7 @@
   "dependencies": {
     "@nova-component/design-tokens": "0.1.1",
     "@nova-component/ui": "0.3.0",
+    "@slotnova/contracts": "workspace:*",
     "@slotnova/design-tokens": "workspace:*",
     "@slotnova/ui": "workspace:*",
     "@tanstack/react-query": "^5.102.8",

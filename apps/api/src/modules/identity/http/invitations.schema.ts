@@ -1,53 +1,55 @@
-import { ProblemException } from "../../../http/problem/problem.exception.js";
+/**
+ * Boundary request/response shapes for `/v1/invitations*`
+ * (T044-T047, contracts/invitation.contract.md).
+ *
+ * Zod-based since T064 (`docs/decisions/0004-validation-contract-integration.md`)
+ * -- `createZodDto()` wraps each schema below as a DTO usable for both
+ * runtime validation (`./zod-validation.js`'s `ZodValidationPipe`) and
+ * OpenAPI generation (`@ApiBody`/`@ApiParam`/`@ZodResponse`).
+ */
+import { createZodDto } from "nestjs-zod";
+import { z } from "zod";
+
 import type { InvitableRole } from "../domain/policy/default-role-permissions.js";
 
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const INVITABLE_ROLES = new Set<InvitableRole>(["admin", "manager", "staff"]);
+const INVITABLE_ROLES = ["admin", "manager", "staff"] as const satisfies readonly InvitableRole[];
 
-function objectBody(body: unknown): Record<string, unknown> {
-  if (typeof body !== "object" || body === null || Array.isArray(body)) {
-    throw new ProblemException("validation", {
-      errors: [{ path: "", message: "request body must be a JSON object" }],
-    });
-  }
-  return body as Record<string, unknown>;
-}
+export const issueInvitationRequestSchema = z.object({
+  email: z.string().trim().toLowerCase().max(320).email(),
+  role: z.enum(INVITABLE_ROLES),
+});
+export class IssueInvitationRequestDto extends createZodDto(issueInvitationRequestSchema) {}
+export type IssueInvitationRequestBody = z.infer<typeof issueInvitationRequestSchema>;
 
-export function parseIssueInvitationBody(body: unknown): {
-  email: string;
-  role: InvitableRole;
-} {
-  const value = objectBody(body);
-  const email = typeof value["email"] === "string" ? value["email"].trim().toLowerCase() : "";
-  if (!EMAIL_PATTERN.test(email) || email.length > 320) {
-    throw new ProblemException("validation", {
-      errors: [{ path: "email", message: "email must be a valid address" }],
-    });
-  }
-  const role = value["role"];
-  if (typeof role !== "string" || !INVITABLE_ROLES.has(role as InvitableRole)) {
-    throw new ProblemException("validation", {
-      errors: [{ path: "role", message: "role must be admin, manager, or staff" }],
-    });
-  }
-  return { email, role: role as InvitableRole };
-}
+export const revokeInvitationRequestSchema = z.object({
+  status: z.literal("revoked"),
+});
+export class RevokeInvitationRequestDto extends createZodDto(revokeInvitationRequestSchema) {}
 
-export function parseRevokeInvitationBody(body: unknown): void {
-  const value = objectBody(body);
-  if (value["status"] !== "revoked") {
-    throw new ProblemException("validation", {
-      errors: [{ path: "status", message: "status must be revoked" }],
-    });
-  }
-}
+/**
+ * A bare string schema (not object-shaped), so it is passed directly to
+ * `ZodValidationPipe` as a schema rather than wrapped in `createZodDto` --
+ * `nestjs-zod`'s DTO classes require an object-returning schema.
+ */
+export const invitationIdParamSchema = z.uuid();
 
-export function parseInvitationId(id: string): string {
-  if (!UUID_PATTERN.test(id)) {
-    throw new ProblemException("validation", {
-      errors: [{ path: "id", message: "id must be a valid UUID" }],
-    });
-  }
-  return id;
-}
+export const issueInvitationResponseSchema = z.object({
+  invitation: z.object({
+    id: z.string(),
+    email: z.string(),
+    role: z.string(),
+    status: z.string(),
+    expiresAt: z.string(),
+  }),
+  token: z.string().optional(),
+});
+export class IssueInvitationResponseDto extends createZodDto(issueInvitationResponseSchema) {}
+
+export const invitationPreviewResponseSchema = z.object({
+  workspaceName: z.string(),
+  role: z.string(),
+  email: z.string(),
+  status: z.string(),
+  expiresAt: z.string(),
+});
+export class InvitationPreviewResponseDto extends createZodDto(invitationPreviewResponseSchema) {}

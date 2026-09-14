@@ -4,12 +4,30 @@
  * registered in `main.ts` (same as `SessionController`) -- this handler does
  * not re-check it, only rotates the CSRF cookie alongside the session, same
  * as sign-in.
+ *
+ * CSRF-missing/-mismatch (403 `forbidden`) is not documented via a per-route
+ * `@ApiResponse` here for the same reason as `SessionController` -- it comes
+ * from a Fastify-level hook outside Nest's/`@nestjs/swagger`'s introspection
+ * (see that controller's file comment for the full explanation).
  */
-import { Body, Controller, HttpCode, HttpStatus, Inject, Post, Req, Res } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  HttpCode,
+  HttpStatus,
+  Inject,
+  Post,
+  Req,
+  Res,
+  UsePipes,
+} from "@nestjs/common";
+import { ApiBody, ApiResponse, getSchemaPath } from "@nestjs/swagger";
+import { ZodResponse } from "nestjs-zod";
 import type { FastifyReply, FastifyRequest } from "fastify";
 
 import type { SecurityConfig } from "../../../config/security-config.js";
 import { SECURITY_CONFIG } from "../../../config/security-config.tokens.js";
+import { ProblemDetailsDto } from "../../../http/problem/problem-details.schema.js";
 import { ProblemException } from "../../../http/problem/problem.exception.js";
 import { issueCsrfCookie } from "../../platform/security/csrf.js";
 import {
@@ -20,8 +38,16 @@ import { SessionContextService } from "../application/session/session-context.se
 import { SessionService } from "../application/session/session.service.js";
 import { asWorkspaceId } from "../domain/ids.js";
 import { MembershipsRepository } from "../infrastructure/repositories/memberships.repository.js";
-import type { MeResponseBody } from "./me.schema.js";
-import { parseWorkspaceSwitchRequestBody } from "./workspace-context.schema.js";
+import { MeResponseDto, type MeResponseBody } from "./me.schema.js";
+import {
+  WorkspaceSwitchRequestDto,
+  type WorkspaceSwitchRequestBody,
+} from "./workspace-context.schema.js";
+import { ZodValidationPipe } from "./zod-validation.js";
+
+const PROBLEM_JSON_CONTENT = {
+  "application/problem+json": { schema: { $ref: getSchemaPath(ProblemDetailsDto) } },
+};
 
 @Controller("v1/auth/session")
 export class WorkspaceContextController {
@@ -34,12 +60,35 @@ export class WorkspaceContextController {
 
   @Post("workspace")
   @HttpCode(HttpStatus.OK)
+  @UsePipes(new ZodValidationPipe(WorkspaceSwitchRequestDto))
+  @ApiBody({ type: WorkspaceSwitchRequestDto })
+  @ZodResponse({ status: 200, type: MeResponseDto })
+  @ApiResponse({
+    status: 400,
+    description: "Malformed body (`validation`).",
+    content: PROBLEM_JSON_CONTENT,
+  })
+  @ApiResponse({
+    status: 401,
+    description: "No/invalid session (`session-invalid`).",
+    content: PROBLEM_JSON_CONTENT,
+  })
+  @ApiResponse({
+    status: 403,
+    description: "No active membership in the target workspace (`not-a-member`).",
+    content: PROBLEM_JSON_CONTENT,
+  })
+  @ApiResponse({
+    status: 409,
+    description: "Target workspace or membership is suspended (`workspace-unavailable`).",
+    content: PROBLEM_JSON_CONTENT,
+  })
   async switchWorkspace(
-    @Body() body: unknown,
+    @Body() body: WorkspaceSwitchRequestBody,
     @Req() request: FastifyRequest,
     @Res({ passthrough: true }) reply: FastifyReply,
   ): Promise<MeResponseBody> {
-    const { workspaceId } = parseWorkspaceSwitchRequestBody(body);
+    const { workspaceId } = body;
 
     const cookieName = sessionCookieName(this.security.secureCookies);
     const rawToken = request.cookies[cookieName];
