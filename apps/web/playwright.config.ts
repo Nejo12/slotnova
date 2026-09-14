@@ -23,7 +23,7 @@ export default defineConfig({
       timeout: 180_000,
     },
     {
-      command: "pnpm dev -- --host 127.0.0.1",
+      command: "pnpm dev --host 127.0.0.1",
       url: "http://127.0.0.1:3000",
       reuseExistingServer: false,
       timeout: 60_000,
