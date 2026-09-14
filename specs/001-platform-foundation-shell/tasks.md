@@ -628,7 +628,7 @@ Each task carries a compact block:
   - **Constraints**: dependency-cruiser (T005) forbids `apps/web` → `apps/api` internals
   - **Out**: n/a
 
-- [ ] T066 [US4] CI drift check + breaking-change detection
+- [x] T066 [US4] CI drift check + breaking-change detection
   - **Dep**: T065, T007
   - **Files**: `.github/workflows/fast.yml` (`contracts:check`), OpenAPI breaking-change diff step, `turbo.json` wiring
   - **Accept**: stale committed artifact fails CI 100%; regeneration byte-identical; a breaking schema change is flagged for explicit review; SC-008, FR-036, FR-038

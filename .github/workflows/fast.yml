@@ -32,6 +32,15 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          # T066: the breaking-change check below needs the merge-base commit
+          # with the PR's target branch to read the OpenAPI document as it
+          # existed before this branch's changes (`git merge-base` / `git
+          # show`) -- the default shallow (depth-1) checkout has no such
+          # history. `fetch-depth: 0` is the standard fix; this job is the
+          # fast lane's only checkout and stays well under its 3-minute
+          # budget with a full fetch on this repo's current size.
+          fetch-depth: 0
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -65,3 +74,20 @@ jobs:
 
       - name: Build / type-generation smoke
         run: pnpm build
+
+      # T066 (specs/001-platform-foundation-shell/tasks.md, FR-036, FR-038,
+      # SC-008; docs/decisions/0004-validation-contract-integration.md). Runs
+      # after `pnpm build` -- `contracts:check` regenerates
+      # `apps/api/openapi/openapi.json` via the API's compiled
+      # `openapi:generate` script, which requires `dist/` to exist.
+      - name: Contract drift check
+        run: pnpm contracts:check
+
+      # Non-blocking by design -- see the reasoning comment at the top of
+      # tooling/contracts/check-breaking-changes.ts. Runs after the drift
+      # check so a breaking-change report is only ever compared against a
+      # document already proven (above) to match current source.
+      - name: OpenAPI breaking-change check
+        run: pnpm contracts:check:breaking
+        env:
+          GITHUB_BASE_REF: ${{ github.base_ref }}
