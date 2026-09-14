@@ -1,0 +1,35 @@
+{
+  "name": "@slotnova/design-tokens",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "UNLICENSED",
+  "description": "Slotnova design-token reconciliation layer: pins @nova-component/design-tokens as the shared foundation and deterministically reconciles it with the approved Slotnova Figma semantics (incl. Recovery/* and Appointment/* theme aliases) into generated CSS custom properties + TypeScript. Generated output is reviewed, never hand-edited.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./tokens.css": "./src/generated/tokens.css"
+  },
+  "files": [
+    "dist",
+    "src/generated"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "tokens:generate": "tsx src/generate.ts"
+  },
+  "dependencies": {
+    "@nova-component/design-tokens": "0.1.1"
+  },
+  "devDependencies": {
+    "@slotnova/tsconfig": "workspace:*",
+    "prettier": "^3.9.6",
+    "tsx": "^4.23.13"
+  }
+}
