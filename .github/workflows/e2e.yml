@@ -34,7 +34,7 @@ jobs:
         run: pnpm test:integration
 
       - name: Install Playwright Chromium
-        run: pnpm exec playwright install --with-deps chromium
+        run: pnpm --filter @slotnova/web exec playwright install --with-deps chromium
 
       - name: Playwright smoke and journeys 6/7
         run: pnpm e2e
