@@ -15,7 +15,10 @@ import type { NestFastifyApplication } from "@nestjs/platform-fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { resolveSecurityConfig } from "../../../../config/security-config.js";
-import { expectProblemJson } from "../../../../http/problem/__tests__/expect-problem-json.js";
+import {
+  expectGeneratedProblemResponse,
+  expectProblemJson,
+} from "../../../../http/problem/__tests__/expect-problem-json.js";
 import { createApp } from "../../../../main.js";
 import { csrfCookieName } from "../../../platform/security/csrf.js";
 import { sessionCookieName } from "../../application/session/session-cookie.js";
@@ -113,6 +116,14 @@ describe("POST /v1/auth/session/workspace contract (real PostgreSQL)", () => {
     });
     const response = await switchWorkspace(`${SESSION_COOKIE}=${rawToken}`, { not: "a string" });
     expectProblemJson(response, { status: 400, slug: "validation" });
+    // Second assertion (PR-15 review fix): proves this response also
+    // matches the GENERATED OpenAPI contract, not just the hand-written
+    // helper above -- see `expect-problem-json.ts`'s doc comment.
+    expectGeneratedProblemResponse(response, {
+      path: "/v1/auth/session/workspace",
+      method: "post",
+      status: 400,
+    });
   });
 
   it("failure: non-UUID workspaceId -> 400 problem+json validation", async () => {
@@ -123,6 +134,11 @@ describe("POST /v1/auth/session/workspace contract (real PostgreSQL)", () => {
     });
     const response = await switchWorkspace(`${SESSION_COOKIE}=${rawToken}`, "not-a-uuid");
     expectProblemJson(response, { status: 400, slug: "validation" });
+    expectGeneratedProblemResponse(response, {
+      path: "/v1/auth/session/workspace",
+      method: "post",
+      status: 400,
+    });
   });
 
   it("failure: no session cookie -> 401 problem+json session-invalid", async () => {
@@ -134,6 +150,11 @@ describe("POST /v1/auth/session/workspace contract (real PostgreSQL)", () => {
       payload: { workspaceId: "11111111-1111-4111-8111-111111111111" },
     });
     expectProblemJson(response, { status: 401, slug: "session-invalid" });
+    expectGeneratedProblemResponse(response, {
+      path: "/v1/auth/session/workspace",
+      method: "post",
+      status: 401,
+    });
   });
 
   it("failure: non-member target -> 403 problem+json not-a-member", async () => {
@@ -147,6 +168,11 @@ describe("POST /v1/auth/session/workspace contract (real PostgreSQL)", () => {
       "00000000-0000-4000-8000-000000000000",
     );
     expectProblemJson(response, { status: 403, slug: "not-a-member" });
+    expectGeneratedProblemResponse(response, {
+      path: "/v1/auth/session/workspace",
+      method: "post",
+      status: 403,
+    });
   });
 
   it("failure: suspended workspace -> 409 problem+json workspace-unavailable", async () => {
@@ -157,6 +183,11 @@ describe("POST /v1/auth/session/workspace contract (real PostgreSQL)", () => {
     });
     const response = await switchWorkspace(`${SESSION_COOKIE}=${rawToken}`, workspaceId);
     expectProblemJson(response, { status: 409, slug: "workspace-unavailable" });
+    expectGeneratedProblemResponse(response, {
+      path: "/v1/auth/session/workspace",
+      method: "post",
+      status: 409,
+    });
   });
 
   it("failure: suspended membership -> 409 problem+json workspace-unavailable", async () => {
@@ -167,5 +198,10 @@ describe("POST /v1/auth/session/workspace contract (real PostgreSQL)", () => {
     });
     const response = await switchWorkspace(`${SESSION_COOKIE}=${rawToken}`, workspaceId);
     expectProblemJson(response, { status: 409, slug: "workspace-unavailable" });
+    expectGeneratedProblemResponse(response, {
+      path: "/v1/auth/session/workspace",
+      method: "post",
+      status: 409,
+    });
   });
 });

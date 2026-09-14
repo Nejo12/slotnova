@@ -14,7 +14,10 @@ import { DEFAULT_POSTGRES_IMAGE, startPostgres, type PostgresHarness } from "@sl
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { resolveSecurityConfig } from "../../../../config/security-config.js";
-import { expectProblemJson } from "../../../../http/problem/__tests__/expect-problem-json.js";
+import {
+  expectGeneratedProblemResponse,
+  expectProblemJson,
+} from "../../../../http/problem/__tests__/expect-problem-json.js";
 import { createApp } from "../../../../main.js";
 import { csrfCookieName } from "../../../platform/security/csrf.js";
 import { sessionCookieName } from "../../application/session/session-cookie.js";
@@ -145,12 +148,25 @@ describe("invitations contract (real PostgreSQL)", () => {
       const response = await issue(denied, `${unique("denied")}@example.test`);
       expectProblemJson(response, { status: 403, slug: "forbidden" });
       expect(response.json().requiredCapability).toBe("members:invite");
+      // Second assertion (PR-15 review fix): proves this response also
+      // matches the GENERATED OpenAPI contract, not just the hand-written
+      // helper above -- see `expect-problem-json.ts`'s doc comment.
+      expectGeneratedProblemResponse(response, {
+        path: "/v1/invitations",
+        method: "post",
+        status: 403,
+      });
     });
 
     it("failure: role owner -> 400 problem+json validation", async () => {
       const actor = await createActor();
       const response = await issue(actor, `${unique("owner-role")}@example.test`, "owner");
       expectProblemJson(response, { status: 400, slug: "validation" });
+      expectGeneratedProblemResponse(response, {
+        path: "/v1/invitations",
+        method: "post",
+        status: 400,
+      });
     });
 
     it("failure: duplicate pending invitation -> 409 problem+json invitation-exists", async () => {
@@ -159,6 +175,11 @@ describe("invitations contract (real PostgreSQL)", () => {
       await issueValid(actor, email);
       const response = await issue(actor, email);
       expectProblemJson(response, { status: 409, slug: "invitation-exists" });
+      expectGeneratedProblemResponse(response, {
+        path: "/v1/invitations",
+        method: "post",
+        status: 409,
+      });
     });
 
     it("failure: already-active member -> 409 problem+json already-member", async () => {
@@ -170,6 +191,11 @@ describe("invitations contract (real PostgreSQL)", () => {
       );
       const response = await issue(actor, member.email);
       expectProblemJson(response, { status: 409, slug: "already-member" });
+      expectGeneratedProblemResponse(response, {
+        path: "/v1/invitations",
+        method: "post",
+        status: 409,
+      });
     });
   });
 
@@ -188,6 +214,15 @@ describe("invitations contract (real PostgreSQL)", () => {
         url: `/v1/invitations/${unique("garbage-token")}`,
       });
       expectProblemJson(response, { status: 404, slug: "invitation-not-found" });
+      // Second assertion (PR-15 review fix): proves this response also
+      // matches the GENERATED OpenAPI contract, not just the hand-written
+      // helper above -- see `expect-problem-json.ts`'s doc comment. The
+      // OpenAPI path template uses `{token}`, not the literal token value.
+      expectGeneratedProblemResponse(response, {
+        path: "/v1/invitations/{token}",
+        method: "get",
+        status: 404,
+      });
     });
 
     it("failure: revoked token -> 404 problem+json invitation-not-found (no distinction from unknown)", async () => {
@@ -201,6 +236,11 @@ describe("invitations contract (real PostgreSQL)", () => {
         url: `/v1/invitations/${revoked.token}`,
       });
       expectProblemJson(response, { status: 404, slug: "invitation-not-found" });
+      expectGeneratedProblemResponse(response, {
+        path: "/v1/invitations/{token}",
+        method: "get",
+        status: 404,
+      });
     });
 
     it("failure: expired token -> 410 problem+json invitation-expired", async () => {
@@ -215,6 +255,11 @@ describe("invitations contract (real PostgreSQL)", () => {
         url: `/v1/invitations/${expired.token}`,
       });
       expectProblemJson(response, { status: 410, slug: "invitation-expired" });
+      expectGeneratedProblemResponse(response, {
+        path: "/v1/invitations/{token}",
+        method: "get",
+        status: 410,
+      });
     });
 
     it("failure: used (accepted) token -> 410 problem+json invitation-expired", async () => {
@@ -225,6 +270,11 @@ describe("invitations contract (real PostgreSQL)", () => {
       ]);
       const response = await app.inject({ method: "GET", url: `/v1/invitations/${used.token}` });
       expectProblemJson(response, { status: 410, slug: "invitation-expired" });
+      expectGeneratedProblemResponse(response, {
+        path: "/v1/invitations/{token}",
+        method: "get",
+        status: 410,
+      });
     });
 
     it("failure: rate-limited after too many requests for the same token/IP -> 429 problem+json rate-limited", async () => {
@@ -236,6 +286,11 @@ describe("invitations contract (real PostgreSQL)", () => {
         last = await app.inject({ method: "GET", url: `/v1/invitations/${token}` });
       }
       expectProblemJson(last!, { status: 429, slug: "rate-limited" });
+      expectGeneratedProblemResponse(last!, {
+        path: "/v1/invitations/{token}",
+        method: "get",
+        status: 429,
+      });
     });
   });
 
@@ -263,6 +318,14 @@ describe("invitations contract (real PostgreSQL)", () => {
         headers: { cookie: token.cookie, "x-csrf-token": token.token },
       });
       expectProblemJson(response, { status: 401, slug: "session-invalid" });
+      // Second assertion (PR-15 review fix): proves this response also
+      // matches the GENERATED OpenAPI contract, not just the hand-written
+      // helper above -- see `expect-problem-json.ts`'s doc comment.
+      expectGeneratedProblemResponse(response, {
+        path: "/v1/invitations/{token}/acceptance",
+        method: "post",
+        status: 401,
+      });
     });
 
     it("failure: signed-in user's email does not match invitation -> 403 problem+json email-mismatch", async () => {
@@ -276,6 +339,11 @@ describe("invitations contract (real PostgreSQL)", () => {
       const mismatch = await issueValid(actor, invitee.email);
       const response = await accept(otherSession.rawToken, mismatch.token);
       expectProblemJson(response, { status: 403, slug: "email-mismatch" });
+      expectGeneratedProblemResponse(response, {
+        path: "/v1/invitations/{token}/acceptance",
+        method: "post",
+        status: 403,
+      });
     });
 
     it("failure: expired invitation -> 410 problem+json invitation-expired, no membership created", async () => {
@@ -292,6 +360,11 @@ describe("invitations contract (real PostgreSQL)", () => {
       });
       const response = await accept(session.rawToken, invitation.token);
       expectProblemJson(response, { status: 410, slug: "invitation-expired" });
+      expectGeneratedProblemResponse(response, {
+        path: "/v1/invitations/{token}/acceptance",
+        method: "post",
+        status: 410,
+      });
       expect(
         (
           await admin.query(
@@ -316,6 +389,11 @@ describe("invitations contract (real PostgreSQL)", () => {
       });
       const response = await accept(inviteeSession.rawToken, already.token);
       expectProblemJson(response, { status: 409, slug: "already-member" });
+      expectGeneratedProblemResponse(response, {
+        path: "/v1/invitations/{token}/acceptance",
+        method: "post",
+        status: 409,
+      });
     });
   });
 
@@ -345,6 +423,15 @@ describe("invitations contract (real PostgreSQL)", () => {
         payload: { status: "not-a-real-status" },
       });
       expectProblemJson(response, { status: 400, slug: "validation" });
+      // Second assertion (PR-15 review fix): proves this response also
+      // matches the GENERATED OpenAPI contract, not just the hand-written
+      // helper above -- see `expect-problem-json.ts`'s doc comment. The
+      // OpenAPI path template uses `{id}`, not the literal invitation id.
+      expectGeneratedProblemResponse(response, {
+        path: "/v1/invitations/{id}",
+        method: "patch",
+        status: 400,
+      });
     });
 
     it("failure: missing members:invite capability -> 403 problem+json forbidden", async () => {
@@ -358,6 +445,11 @@ describe("invitations contract (real PostgreSQL)", () => {
         payload: { status: "revoked" },
       });
       expectProblemJson(response, { status: 403, slug: "forbidden" });
+      expectGeneratedProblemResponse(response, {
+        path: "/v1/invitations/{id}",
+        method: "patch",
+        status: 403,
+      });
     });
 
     it("failure: cross-workspace invitation id -> 404 problem+json not-found", async () => {
@@ -371,6 +463,11 @@ describe("invitations contract (real PostgreSQL)", () => {
         payload: { status: "revoked" },
       });
       expectProblemJson(response, { status: 404, slug: "not-found" });
+      expectGeneratedProblemResponse(response, {
+        path: "/v1/invitations/{id}",
+        method: "patch",
+        status: 404,
+      });
     });
   });
 });

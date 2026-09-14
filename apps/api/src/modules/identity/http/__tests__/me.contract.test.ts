@@ -14,7 +14,10 @@ import type { NestFastifyApplication } from "@nestjs/platform-fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { resolveSecurityConfig } from "../../../../config/security-config.js";
-import { expectProblemJson } from "../../../../http/problem/__tests__/expect-problem-json.js";
+import {
+  expectGeneratedProblemResponse,
+  expectProblemJson,
+} from "../../../../http/problem/__tests__/expect-problem-json.js";
 import { createApp } from "../../../../main.js";
 import { sessionCookieName } from "../../application/session/session-cookie.js";
 import { SessionService } from "../../application/session/session.service.js";
@@ -96,6 +99,10 @@ describe("GET /v1/me contract (real PostgreSQL)", () => {
   it("failure: no session cookie -> 401 problem+json session-invalid", async () => {
     const response = await app.inject({ method: "GET", url: "/v1/me" });
     expectProblemJson(response, { status: 401, slug: "session-invalid" });
+    // Second assertion (PR-15 review fix): proves this response also
+    // matches the GENERATED OpenAPI contract, not just the hand-written
+    // helper above -- see `expect-problem-json.ts`'s doc comment.
+    expectGeneratedProblemResponse(response, { path: "/v1/me", method: "get", status: 401 });
   });
 
   it("failure: garbage session cookie -> 401 problem+json session-invalid", async () => {
@@ -105,5 +112,6 @@ describe("GET /v1/me contract (real PostgreSQL)", () => {
       headers: { cookie: `${SESSION_COOKIE}=not-a-real-token` },
     });
     expectProblemJson(response, { status: 401, slug: "session-invalid" });
+    expectGeneratedProblemResponse(response, { path: "/v1/me", method: "get", status: 401 });
   });
 });

@@ -19,7 +19,10 @@ import type { NestFastifyApplication } from "@nestjs/platform-fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { expectProblemJson } from "../../../../http/problem/__tests__/expect-problem-json.js";
+import {
+  expectGeneratedProblemResponse,
+  expectProblemJson,
+} from "../../../../http/problem/__tests__/expect-problem-json.js";
 import { createApp } from "../../../../main.js";
 
 const healthzResponseSchema = z.object({
@@ -77,6 +80,10 @@ describe("health/readiness contract (real PostgreSQL)", () => {
     try {
       const response = await app.inject({ method: "GET", url: "/readyz" });
       expectProblemJson(response, { status: 503, slug: "not-ready" });
+      // Second assertion (PR-15 review fix): proves this response also
+      // matches the GENERATED OpenAPI contract, not just the hand-written
+      // helper above -- see `expect-problem-json.ts`'s doc comment.
+      expectGeneratedProblemResponse(response, { path: "/readyz", method: "get", status: 503 });
       expect(response.json().checks.migrations).not.toBe("current");
     } finally {
       await admin.query(
