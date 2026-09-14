@@ -1,0 +1,16 @@
+.trigger {
+  background: var(--slotnova-surface-bg-subtle);
+  border: none;
+  border-radius: var(--nova-radius-pill);
+  width: 40px;
+  height: 40px;
+  color: var(--slotnova-text-primary);
+  font-weight: var(--slotnova-typography-semibold);
+  font-size: var(--slotnova-typography-sm);
+  cursor: pointer;
+}
+
+.trigger:focus-visible {
+  outline: 2px solid var(--slotnova-interaction-focus-ring);
+  outline-offset: 2px;
+}

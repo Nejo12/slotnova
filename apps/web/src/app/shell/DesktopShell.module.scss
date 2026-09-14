@@ -1,0 +1,53 @@
+.shell {
+  display: grid;
+  grid-template:
+    "sidebar topbar" 72px
+    "sidebar main" 1fr
+    / 264px 1fr;
+  min-height: 100vh;
+}
+
+.sidebar {
+  grid-area: sidebar;
+  background: var(--slotnova-surface-bg-subtle);
+  padding: var(--nova-space-5) var(--nova-space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--nova-space-4);
+  overflow-y: auto;
+}
+
+.brand {
+  padding: 0 var(--nova-space-2);
+}
+
+.brand-name {
+  margin: 0;
+  color: var(--slotnova-text-primary);
+  font-size: var(--slotnova-typography-xl);
+  font-weight: var(--slotnova-typography-semibold);
+}
+
+.brand-meta {
+  margin: 0;
+  color: var(--slotnova-text-secondary);
+  font-size: var(--slotnova-typography-sm);
+}
+
+.topbar {
+  grid-area: topbar;
+  background: var(--slotnova-surface-bg-surface);
+  border-bottom: 1px solid var(--slotnova-border-default);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--nova-space-3);
+  padding: 0 var(--nova-space-5);
+}
+
+.main {
+  grid-area: main;
+  background: var(--slotnova-surface-bg-subtle);
+  padding: var(--nova-space-8);
+  overflow-y: auto;
+}

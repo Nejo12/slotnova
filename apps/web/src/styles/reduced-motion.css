@@ -1,0 +1,17 @@
+/**
+ * Global prefers-reduced-motion handling (T061, docs/standards/motion.md).
+ *
+ * Suppresses non-essential transitions/animations globally for the shell.
+ * This is a floor, not a ceiling: it does not touch focus visibility, and
+ * navigation/state changes still commit their end state instantly — no
+ * information is lost, only the animated transition to it.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

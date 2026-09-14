@@ -1,0 +1,29 @@
+/**
+ * Shell theme entry point (T058/T061). Establishes the exact four-file
+ * load order the Nova/Slotnova token chain requires (PR-12/PR-13):
+ *
+ *   1. Nova's own primitive-layer tokens (space/radius/shadow/duration/
+ *      easing/z/control) — reused as-is, never duplicated (ADR-022).
+ *   2. Slotnova's reconciled semantic tokens (--slotnova-*).
+ *   3. The Nova -> Slotnova bridge (--nova-* mapped to --slotnova-*), so
+ *      consumed Nova primitives render in Slotnova's theme.
+ *   4. Nova's own component stylesheet, which only ever *reads* --nova-*.
+ *
+ * Do not reorder — each later layer depends on custom properties the
+ * previous layer defines. Do not add a second theme/token system here.
+ */
+@import "@nova-component/design-tokens/tokens.css";
+@import "@slotnova/design-tokens/tokens.css";
+@import "@slotnova/ui/theme.css";
+@import "@nova-component/ui/styles.css";
+
+:root {
+  color-scheme: light dark;
+}
+
+body {
+  margin: 0;
+  background: var(--slotnova-surface-bg-page);
+  color: var(--slotnova-text-primary);
+  font-family: var(--slotnova-typography-body);
+}

@@ -1,11 +1,32 @@
+import { execFileSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { beforeAll, afterEach, describe, expect, it } from "vitest";
 import { build } from "vite";
 
 const MARKER = "SLOTNOVA_E2E_HARNESS_MARKER";
 const created: string[] = [];
+
+// This test's own `vite build` resolves @slotnova/ui through its published
+// `default` export condition (dist/index.js), not the `source` alias the
+// root vitest config uses for other workspace packages — so it needs
+// @slotnova/ui actually built. turbo.json's `test` task declares
+// `dependsOn: ["^build"]`, but the root `pnpm test` script (and CI's fast
+// lane, which runs `pnpm test` before `pnpm build`) calls vitest directly,
+// bypassing that dependency graph. Build @slotnova/ui here rather than
+// widening the CI-ordering fix beyond this test's own concern.
+beforeAll(() => {
+  const uiDist = new URL("../../../../packages/ui/dist/index.js", import.meta.url).pathname;
+  if (!existsSync(uiDist)) {
+    const repoRoot = new URL("../../../../", import.meta.url).pathname;
+    execFileSync("pnpm", ["--filter", "@slotnova/ui", "build"], {
+      cwd: repoRoot,
+      stdio: "inherit",
+    });
+  }
+});
 
 async function filesUnder(directory: string): Promise<string[]> {
   const entries = await readdir(directory, { withFileTypes: true });

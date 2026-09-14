@@ -1,0 +1,89 @@
+// Fixed bottom nav height, referenced by both the nav bar itself and the
+// main content's bottom padding so fixed navigation never covers content.
+$bottom-nav-height: 84px;
+
+.shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.topbar {
+  background: var(--slotnova-surface-bg-surface);
+  border-bottom: 1px solid var(--slotnova-border-default);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--nova-space-3);
+  padding: 0 var(--nova-space-4);
+  height: 64px;
+  flex: 0 0 auto;
+}
+
+.workspace-name {
+  margin: 0;
+  color: var(--slotnova-text-primary);
+  font-size: var(--slotnova-typography-lg);
+  font-weight: var(--slotnova-typography-semibold);
+}
+
+.main {
+  flex: 1 1 auto;
+  background: var(--slotnova-surface-bg-subtle);
+  padding: var(--nova-space-5) var(--nova-space-4);
+
+  // Reserve space for the fixed bottom nav so it never covers content.
+  padding-bottom: calc(#{$bottom-nav-height} + var(--nova-space-5));
+  overflow-y: auto;
+}
+
+.bottom-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: $bottom-nav-height;
+  background: var(--slotnova-surface-bg-surface);
+  border-top: 1px solid var(--slotnova-border-default);
+  z-index: var(--nova-z-sticky, 100);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: var(--nova-space-1) var(--nova-space-2);
+}
+
+.bottom-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 52px;
+  border-radius: var(--nova-radius-md);
+  color: var(--slotnova-text-secondary);
+  font-size: var(--slotnova-typography-xs);
+  font-weight: var(--slotnova-typography-semibold);
+  text-decoration: none;
+  position: relative;
+}
+
+.bottom-nav-item:focus-visible {
+  outline: 2px solid var(--slotnova-interaction-focus-ring);
+  outline-offset: 2px;
+}
+
+.bottom-nav-item-active {
+  background: var(--slotnova-action-subtle);
+  color: var(--slotnova-text-link);
+}
+
+.bottom-nav-item-active::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 20px;
+  width: 32px;
+  height: 3px;
+  border-radius: 1.5px;
+  background: var(--slotnova-action-primary);
+}
