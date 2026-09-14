@@ -3,6 +3,7 @@
  * CSRF requirement (safe method).
  */
 import { Controller, Get, Inject, Req } from "@nestjs/common";
+import { ZodResponse } from "nestjs-zod";
 import type { FastifyRequest } from "fastify";
 
 import type { SecurityConfig } from "../../../config/security-config.js";
@@ -11,7 +12,7 @@ import { ProblemException } from "../../../http/problem/problem.exception.js";
 import { sessionCookieName } from "../application/session/session-cookie.js";
 import { SessionContextService } from "../application/session/session-context.service.js";
 import { SessionService } from "../application/session/session.service.js";
-import type { MeResponseBody } from "./me.schema.js";
+import { MeResponseDto, type MeResponseBody } from "./me.schema.js";
 
 @Controller("v1")
 export class MeController {
@@ -22,6 +23,7 @@ export class MeController {
   ) {}
 
   @Get("me")
+  @ZodResponse({ status: 200, type: MeResponseDto })
   async me(@Req() request: FastifyRequest): Promise<MeResponseBody> {
     const rawToken = request.cookies[sessionCookieName(this.security.secureCookies)];
     const session = rawToken === undefined ? null : await this.sessionService.validate(rawToken);

@@ -33,8 +33,16 @@ packages:
 #     by `sass --watch`. We never invoke sass directly (only through Vite's
 #     own build/dev pipeline, which uses its own watcher), so the postinstall
 #     that downloads/builds this native binding is unneeded here.
+#
+# Explicitly denied (transitive dep of `swagger-ui-dist`, pulled in by
+# `@nestjs/swagger`, task T064):
+#   - @scarf/scarf: an anonymous install-telemetry ping, no build step. We
+#     never call `SwaggerModule.setup()` (which would serve `swagger-ui-dist`'s
+#     bundled UI); only `SwaggerModule.createDocument()` for static JSON
+#     generation, so this transitive package isn't even exercised at runtime.
 allowBuilds:
   "@parcel/watcher": false
+  "@scarf/scarf": false
   cpu-features: false
   esbuild: true
   msw: false
@@ -47,6 +55,8 @@ allowBuilds:
 # the typescript-eslint 8.70.0 family — the version that officially supports our
 # pinned TypeScript 6.0.x (peer `>=4.8.4 <6.1.0`). The exact pins are locked in
 # pnpm-lock.yaml and revisited in T080 (docs/decisions/0002-version-pins.md).
+# zod@4.6.5 (task T064, docs/decisions/0004-validation-contract-integration.md)
+# is the exact patch pinned per the decision record's Risk 5 guidance.
 # The cooldown stays active for every other dependency.
 minimumReleaseAgeExclude:
   - "@typescript-eslint/eslint-plugin@8.70.0"
@@ -59,4 +69,5 @@ minimumReleaseAgeExclude:
   - "@typescript-eslint/typescript-estree@8.70.0"
   - "@typescript-eslint/utils@8.70.0"
   - "@typescript-eslint/visitor-keys@8.70.0"
-  - "typescript-eslint@8.70.0"
+  - typescript-eslint@8.70.0
+  - zod@4.6.5

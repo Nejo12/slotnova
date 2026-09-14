@@ -612,7 +612,7 @@ Each task carries a compact block:
 
 **Independent Test**: quickstart §6 — `contracts:generate` byte-identical on unchanged input; hand-edit fails `contracts:check`; SPA calls generated client with full types; forced errors are valid `problem+json`.
 
-- [ ] T064 [US4] Choose + wire runtime-schema → OpenAPI integration
+- [x] T064 [US4] Choose + wire runtime-schema → OpenAPI integration
   - **Dep**: T019, T020; **R4 decision record** (`docs/decisions/0004-...`)
   - **Files**: `apps/api/src/**/http/*.schema.ts` convention, OpenAPI emitter config, `pnpm openapi:generate` (deterministic)
   - **Accept**: one boundary schema per request/response is the single source (no decorator duplication); deterministic document; FR-034, FR-036, ADR-013

@@ -5,7 +5,19 @@
  * not re-check it, only rotates the CSRF cookie alongside the session, same
  * as sign-in.
  */
-import { Body, Controller, HttpCode, HttpStatus, Inject, Post, Req, Res } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  HttpCode,
+  HttpStatus,
+  Inject,
+  Post,
+  Req,
+  Res,
+  UsePipes,
+} from "@nestjs/common";
+import { ApiBody } from "@nestjs/swagger";
+import { ZodResponse } from "nestjs-zod";
 import type { FastifyReply, FastifyRequest } from "fastify";
 
 import type { SecurityConfig } from "../../../config/security-config.js";
@@ -20,8 +32,12 @@ import { SessionContextService } from "../application/session/session-context.se
 import { SessionService } from "../application/session/session.service.js";
 import { asWorkspaceId } from "../domain/ids.js";
 import { MembershipsRepository } from "../infrastructure/repositories/memberships.repository.js";
-import type { MeResponseBody } from "./me.schema.js";
-import { parseWorkspaceSwitchRequestBody } from "./workspace-context.schema.js";
+import { MeResponseDto, type MeResponseBody } from "./me.schema.js";
+import {
+  WorkspaceSwitchRequestDto,
+  type WorkspaceSwitchRequestBody,
+} from "./workspace-context.schema.js";
+import { ZodValidationPipe } from "./zod-validation.js";
 
 @Controller("v1/auth/session")
 export class WorkspaceContextController {
@@ -34,12 +50,15 @@ export class WorkspaceContextController {
 
   @Post("workspace")
   @HttpCode(HttpStatus.OK)
+  @UsePipes(new ZodValidationPipe(WorkspaceSwitchRequestDto))
+  @ApiBody({ type: WorkspaceSwitchRequestDto })
+  @ZodResponse({ status: 200, type: MeResponseDto })
   async switchWorkspace(
-    @Body() body: unknown,
+    @Body() body: WorkspaceSwitchRequestBody,
     @Req() request: FastifyRequest,
     @Res({ passthrough: true }) reply: FastifyReply,
   ): Promise<MeResponseBody> {
-    const { workspaceId } = parseWorkspaceSwitchRequestBody(body);
+    const { workspaceId } = body;
 
     const cookieName = sessionCookieName(this.security.secureCookies);
     const rawToken = request.cookies[cookieName];

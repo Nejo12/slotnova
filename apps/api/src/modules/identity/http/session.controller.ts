@@ -14,7 +14,10 @@ import {
   Post,
   Req,
   Res,
+  UsePipes,
 } from "@nestjs/common";
+import { ApiBody } from "@nestjs/swagger";
+import { ZodResponse } from "nestjs-zod";
 import type { FastifyReply, FastifyRequest } from "fastify";
 
 import type { SecurityConfig } from "../../../config/security-config.js";
@@ -28,7 +31,13 @@ import {
   sessionCookieName,
 } from "../application/session/session-cookie.js";
 import { SessionService } from "../application/session/session.service.js";
-import { parseSignInRequestBody, type SignInResponseBody } from "./session.schema.js";
+import {
+  SignInRequestDto,
+  SignInResponseDto,
+  type SignInRequestBody,
+  type SignInResponseBody,
+} from "./session.schema.js";
+import { ZodValidationPipe } from "./zod-validation.js";
 
 @Controller("v1/auth/session")
 export class SessionController {
@@ -40,11 +49,14 @@ export class SessionController {
 
   @Post()
   @HttpCode(HttpStatus.OK)
+  @UsePipes(new ZodValidationPipe(SignInRequestDto))
+  @ApiBody({ type: SignInRequestDto })
+  @ZodResponse({ status: 200, type: SignInResponseDto })
   async signIn(
-    @Body() body: unknown,
+    @Body() body: SignInRequestBody,
     @Res({ passthrough: true }) reply: FastifyReply,
   ): Promise<SignInResponseBody> {
-    const { credential } = parseSignInRequestBody(body);
+    const { credential } = body;
     const result = await this.signInUseCase.execute(credential);
 
     if (result.outcome === "invalid-credentials") {

@@ -11,7 +11,10 @@ import {
   Req,
   Res,
   UseGuards,
+  UsePipes,
 } from "@nestjs/common";
+import { ApiBody, ApiParam } from "@nestjs/swagger";
+import { ZodResponse } from "nestjs-zod";
 import type { FastifyReply, FastifyRequest } from "fastify";
 
 import type { SecurityConfig } from "../../../config/security-config.js";
@@ -35,11 +38,15 @@ import { RequireCapability } from "../domain/policy/require-capability.decorator
 import { MembershipsRepository } from "../infrastructure/repositories/memberships.repository.js";
 import { InvitationPreviewRateLimiter } from "./invitation-preview-rate-limiter.js";
 import {
-  parseInvitationId,
-  parseIssueInvitationBody,
-  parseRevokeInvitationBody,
+  invitationIdParamSchema,
+  IssueInvitationRequestDto,
+  IssueInvitationResponseDto,
+  InvitationPreviewResponseDto,
+  RevokeInvitationRequestDto,
+  type IssueInvitationRequestBody,
 } from "./invitations.schema.js";
-import type { MeResponseBody } from "./me.schema.js";
+import { MeResponseDto, type MeResponseBody } from "./me.schema.js";
+import { ZodValidationPipe } from "./zod-validation.js";
 
 @Controller("v1/invitations")
 export class InvitationsController {
@@ -68,8 +75,10 @@ export class InvitationsController {
   @Post()
   @UseGuards(CapabilityGuard)
   @RequireCapability(MEMBERS_INVITE)
-  async issue(@Body() body: unknown, @Req() request: FastifyRequest) {
-    const parsed = parseIssueInvitationBody(body);
+  @UsePipes(new ZodValidationPipe(IssueInvitationRequestDto))
+  @ApiBody({ type: IssueInvitationRequestDto })
+  @ZodResponse({ status: 201, type: IssueInvitationResponseDto })
+  async issue(@Body() body: IssueInvitationRequestBody, @Req() request: FastifyRequest) {
     const auth = await this.authenticated(request);
     const active = auth.context.activeWorkspace;
     if (!active) {
@@ -85,7 +94,7 @@ export class InvitationsController {
       workspaceId: active.id,
       actorUserId: auth.session.userId,
       invitedBy: membership.membershipId,
-      ...parsed,
+      ...body,
     });
     return {
       invitation: {
@@ -100,6 +109,8 @@ export class InvitationsController {
   }
 
   @Get(":token")
+  @ApiParam({ name: "token", type: "string" })
+  @ZodResponse({ status: 200, type: InvitationPreviewResponseDto })
   async preview(@Param("token") token: string, @Req() request: FastifyRequest) {
     this.previewRateLimiter.check(token, request.ip);
     const invitation = await this.previewUseCase.execute(token);
@@ -114,6 +125,8 @@ export class InvitationsController {
 
   @Post(":token/acceptance")
   @HttpCode(HttpStatus.OK)
+  @ApiParam({ name: "token", type: "string" })
+  @ZodResponse({ status: 200, type: MeResponseDto })
   async accept(
     @Param("token") token: string,
     @Req() request: FastifyRequest,
@@ -153,13 +166,14 @@ export class InvitationsController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @UseGuards(CapabilityGuard)
   @RequireCapability(MEMBERS_INVITE)
+  @ApiParam({ name: "id", type: "string" })
+  @ApiBody({ type: RevokeInvitationRequestDto })
   async revoke(
-    @Param("id") id: string,
-    @Body() body: unknown,
+    @Param("id", new ZodValidationPipe(invitationIdParamSchema)) id: string,
+    @Body(new ZodValidationPipe(RevokeInvitationRequestDto)) _body: unknown,
     @Req() request: FastifyRequest,
   ): Promise<void> {
-    parseRevokeInvitationBody(body);
-    const invitationId = asInvitationId(parseInvitationId(id));
+    const invitationId = asInvitationId(id);
     const auth = await this.authenticated(request);
     const active = auth.context.activeWorkspace;
     if (!active) {
