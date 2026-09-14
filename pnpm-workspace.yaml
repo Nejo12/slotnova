@@ -26,7 +26,15 @@ packages:
 #     We do not — the browser worker script is installed on demand with
 #     `pnpm --filter @slotnova/testing exec msw init <public-dir>` once a
 #     Storybook/dev host exists. The script is a no-op here, so it stays denied.
+#
+# Explicitly denied (transitive dep of `sass`, pulled in by `packages/ui`,
+# task T055):
+#   - @parcel/watcher: sass's optional native file-watcher binding, used only
+#     by `sass --watch`. We never invoke sass directly (only through Vite's
+#     own build/dev pipeline, which uses its own watcher), so the postinstall
+#     that downloads/builds this native binding is unneeded here.
 allowBuilds:
+  "@parcel/watcher": false
   cpu-features: false
   esbuild: true
   msw: false

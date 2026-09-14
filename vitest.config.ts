@@ -1,8 +1,10 @@
 import { fileURLToPath } from "node:url";
 
+import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
+  plugins: [react()],
   resolve: {
     // Root fast-lane tests run before workspace packages are built. Resolve
     // local workspace imports directly to their source entry points so the
@@ -32,6 +34,16 @@ export default defineConfig({
         find: "@slotnova/testing",
         replacement: fileURLToPath(new URL("./packages/testing/src/index.ts", import.meta.url)),
       },
+      {
+        find: "@slotnova/design-tokens",
+        replacement: fileURLToPath(
+          new URL("./packages/design-tokens/src/index.ts", import.meta.url),
+        ),
+      },
+      {
+        find: "@slotnova/ui",
+        replacement: fileURLToPath(new URL("./packages/ui/src/index.ts", import.meta.url)),
+      },
     ],
   },
   test: {
@@ -39,6 +51,7 @@ export default defineConfig({
     include: [
       "tooling/**/__tests__/**/*.test.ts",
       "packages/**/__tests__/**/*.test.ts",
+      "packages/**/__tests__/**/*.test.tsx",
       "apps/**/__tests__/**/*.test.ts",
       "apps/**/__tests__/**/*.test.tsx",
     ],

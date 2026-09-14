@@ -528,7 +528,7 @@ Each task carries a compact block:
 
 ### PR-13 — Nova-UI consumer foundation + Slotnova composition layer + proven gaps only
 
-- [ ] T055 [US3] Consume `@nova-component/ui`; Slotnova composition layer (`packages/ui`) + Storybook for Slotnova-local stories only
+- [x] T055 [US3] Consume `@nova-component/ui`; Slotnova composition layer (`packages/ui`) + Storybook for Slotnova-local stories only
   - **Dep**: T052; ADR-025
   - **Files**: `packages/ui/` (pin the reviewed `@nova-component/ui` version; consume Nova primitives Slotnova needs — Button, TextInput, Textarea, Badge, Select, Checkbox, Radio, Dialog, Toast, InlineAlert, Skeleton, Progress, Popover, Menu, Tooltip, Card, EmptyState, FormField — rather than recreating them), `packages/ui/.storybook/` (Slotnova-local stories only; no duplicate Nova Storybook)
   - **Accept**: consumes Nova primitives rather than recreating them; no domain logic; product-specific compositions (Metric Card, Appointment Block, product navigation composition, Recovery cards) stay local to their consuming app/module, never in this shared package; FR-021, ADR-025, AGENTS frontend baseline
@@ -536,7 +536,7 @@ Each task carries a compact block:
   - **Constraints**: no import of domain services (enforced by T005); no barrel that hides cycles; no copying Nova source into this repo; no local `link:`/workspace linkage to `Nejo12/nova-ui`; a genuine generic-primitive gap (e.g. Toggle, Date Picker, Time Picker, Drawer, Icon Button, Avatar, Segmented control) is tracked as a separate Nova-UI issue with evidence, never copied or implemented here
   - **Out**: product components; reimplementing any primitive Nova already publishes
 
-- [ ] T056 [US3] System-state components (empty/loading/no-results/error/offline/success/destructive-confirm/permission-restricted/partial-stale)
+- [x] T056 [US3] System-state components (empty/loading/no-results/error/offline/success/destructive-confirm/permission-restricted/partial-stale)
   - **Dep**: T055
   - **Files**: `packages/ui/src/system-states/` (composed over consumed Nova primitives + Slotnova tokens), Storybook stories per state in Light + Dark
   - **Accept**: shared presentation; status never color-only; safe exit preserved; composed from Nova primitives where they fit rather than reimplemented; FR-018
@@ -544,7 +544,7 @@ Each task carries a compact block:
   - **Constraints**: motion per `docs/standards/motion.md`
   - **Out**: wiring into product routes
 
-- [ ] T057 [P] [US3] Component + accessibility compatibility tests for consumed Nova primitives + Slotnova compositions
+- [x] T057 [P] [US3] Component + accessibility compatibility tests for consumed Nova primitives + Slotnova compositions
   - **Dep**: T055, T056
   - **Files**: `packages/ui/src/**/__tests__/*.test.tsx`
   - **Accept**: keyboard semantics; dialog/drawer focus trap + Escape + focus restore; axe clean; verifies consumed Nova primitives render and behave correctly under the Slotnova theme; FR-019, ADR-006 layer 3/9
