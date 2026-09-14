@@ -18,6 +18,7 @@
     "test": "vitest run",
     "test:integration": "turbo run test:integration",
     "tokens:generate": "turbo run tokens:generate",
+    "contracts:generate": "turbo run contracts:generate",
     "e2e": "pnpm --filter @slotnova/web e2e",
     "e2e:server": "tsx tooling/e2e/api-server.ts",
     "db:migrate": "turbo run db:migrate",

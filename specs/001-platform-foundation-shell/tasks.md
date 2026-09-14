@@ -620,7 +620,7 @@ Each task carries a compact block:
   - **Constraints**: frontend never imports backend entities (FR-035); generation deterministic
   - **Out**: product endpoints
 
-- [ ] T065 [US4] `packages/contracts` generation: client + types + MSW handlers
+- [x] T065 [US4] `packages/contracts` generation: client + types + MSW handlers
   - **Dep**: T064, T016
   - **Files**: `packages/contracts/` (generated-only: `openapi.json`, typed client, types, MSW handlers), `pnpm contracts:generate`
   - **Accept**: artifacts generated-only, committed, never hand-edited; SPA imports from here; MSW handlers consumed by `packages/testing` (T016); FR-035

@@ -11,6 +11,16 @@ export default defineConfig({
     // test runner never depends on stale/pre-existing dist output.
     alias: [
       {
+        find: "@slotnova/contracts/msw",
+        replacement: fileURLToPath(
+          new URL("./packages/contracts/src/msw/index.ts", import.meta.url),
+        ),
+      },
+      {
+        find: "@slotnova/contracts",
+        replacement: fileURLToPath(new URL("./packages/contracts/src/index.ts", import.meta.url)),
+      },
+      {
         find: "@slotnova/db/testing",
         replacement: fileURLToPath(new URL("./packages/db/src/testing/index.ts", import.meta.url)),
       },
