@@ -1,0 +1,40 @@
+name: e2e
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  postgres-and-playwright:
+    name: PostgreSQL integration · Playwright journeys
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build clean checkout
+        run: pnpm build
+
+      - name: Real PostgreSQL integration tests
+        run: pnpm test:integration
+
+      - name: Install Playwright Chromium
+        run: pnpm --filter @slotnova/web exec playwright install --with-deps chromium
+
+      - name: Playwright smoke and journeys 6/7
+        run: pnpm e2e
