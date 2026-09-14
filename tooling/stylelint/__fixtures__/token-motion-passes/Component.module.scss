@@ -1,4 +1,4 @@
 .card {
-  transition-duration: var(--slotnova-motion-fast);
-  transition-timing-function: var(--slotnova-motion-standard);
+  transition-duration: var(--slotnova-motion-duration-fast);
+  transition-timing-function: var(--slotnova-motion-easing-standard);
 }

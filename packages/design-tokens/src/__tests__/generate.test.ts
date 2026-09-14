@@ -127,4 +127,61 @@ describe("reconcile", () => {
     }
     expect(tsKeysLight.size).toBe(cssVarNames.size);
   });
+
+  it("preserves the canonical motion.duration/easing/spring namespace in the resolved tree", () => {
+    const result = reconcile(novaTokens, slotnovaInput);
+
+    for (const mode of [result.light, result.dark]) {
+      expect(mode["motion-duration"]?.["fast"]).toBeDefined();
+      expect(mode["motion-duration"]?.["normal"]).toBeDefined();
+      expect(mode["motion-duration"]?.["slow"]).toBeDefined();
+
+      expect(mode["motion-easing"]?.["standard"]).toBeDefined();
+      expect(mode["motion-easing"]?.["enter"]).toBeDefined();
+      expect(mode["motion-easing"]?.["exit"]).toBeDefined();
+
+      expect(mode["motion-spring"]?.["snappy"]).toBeDefined();
+      expect(mode["motion-spring"]?.["gentle"]).toBeDefined();
+
+      // The old flattened group must not exist as the public contract.
+      expect(mode["motion"]).toBeUndefined();
+    }
+  });
+
+  it("emits canonical motion CSS custom-property names, not flattened alternatives", () => {
+    const result = reconcile(novaTokens, slotnovaInput);
+    const css = renderCss(result);
+
+    expect(css).toContain("--slotnova-motion-duration-fast:");
+    expect(css).toContain("--slotnova-motion-duration-normal:");
+    expect(css).toContain("--slotnova-motion-duration-slow:");
+    expect(css).toContain("--slotnova-motion-easing-standard:");
+    expect(css).toContain("--slotnova-motion-easing-enter:");
+    expect(css).toContain("--slotnova-motion-easing-exit:");
+    expect(css).toContain("--slotnova-motion-spring-snappy:");
+    expect(css).toContain("--slotnova-motion-spring-gentle:");
+
+    // Flattened alternatives (from before this fix) must not appear.
+    expect(css).not.toMatch(/--slotnova-motion-fast:/);
+    expect(css).not.toMatch(/--slotnova-motion-enter:/);
+    expect(css).not.toMatch(/--slotnova-motion-snappy:/);
+  });
+
+  it("emits canonical motion TypeScript token names, not flattened alternatives", () => {
+    const result = reconcile(novaTokens, slotnovaInput);
+    const ts = renderTs(result);
+
+    expect(ts).toContain('"motion-duration.fast"');
+    expect(ts).toContain('"motion-duration.normal"');
+    expect(ts).toContain('"motion-duration.slow"');
+    expect(ts).toContain('"motion-easing.standard"');
+    expect(ts).toContain('"motion-easing.enter"');
+    expect(ts).toContain('"motion-easing.exit"');
+    expect(ts).toContain('"motion-spring.snappy"');
+    expect(ts).toContain('"motion-spring.gentle"');
+
+    expect(ts).not.toContain('"motion.fast"');
+    expect(ts).not.toContain('"motion.enter"');
+    expect(ts).not.toContain('"motion.snappy"');
+  });
 });

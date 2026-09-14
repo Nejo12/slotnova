@@ -286,13 +286,35 @@ export function reconcile(novaTokens: NovaTokens, input: SlotnovaInput): Reconci
   light["typography"] = typography;
   dark["typography"] = typography;
 
-  const motion: ResolvedGroup = {
-    ...resolveFlatWithNova(input.motion.duration, "motion.duration", novaTokens, "light"),
-    ...resolveFlatWithNova(input.motion.easing, "motion.easing", novaTokens, "light"),
-    ...resolveFlatWithNova(input.motion.spring, "motion.spring", novaTokens, "light"),
-  };
-  light["motion"] = motion;
-  dark["motion"] = motion;
+  // Each motion category keeps its own canonical namespace
+  // (motion.duration.*, motion.easing.*, motion.spring.* per
+  // docs/standards/motion.md) rather than flattening into one "motion"
+  // group — duration.fast and easing.enter are not the same axis and must
+  // not collide or be indistinguishable in the generated output.
+  const motionDuration = resolveFlatWithNova(
+    input.motion.duration,
+    "motion.duration",
+    novaTokens,
+    "light",
+  );
+  const motionEasing = resolveFlatWithNova(
+    input.motion.easing,
+    "motion.easing",
+    novaTokens,
+    "light",
+  );
+  const motionSpring = resolveFlatWithNova(
+    input.motion.spring,
+    "motion.spring",
+    novaTokens,
+    "light",
+  );
+
+  for (const mode of [light, dark]) {
+    mode["motion-duration"] = motionDuration;
+    mode["motion-easing"] = motionEasing;
+    mode["motion-spring"] = motionSpring;
+  }
 
   return { light, dark };
 }

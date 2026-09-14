@@ -34,15 +34,19 @@ export const tokens = {
       focusRing: "#2563eb",
       skeleton: "#f3f4f6",
     },
-    motion: {
-      enter: "cubic-bezier(0.2, 0, 0, 1)",
-      exit: "cubic-bezier(0.2, 0, 0, 1.2)",
+    "motion-duration": {
       fast: "120ms",
-      gentle: "280ms",
       normal: "180ms",
       slow: "280ms",
-      snappy: "120ms",
+    },
+    "motion-easing": {
+      enter: "cubic-bezier(0.2, 0, 0, 1)",
+      exit: "cubic-bezier(0.2, 0, 0, 1.2)",
       standard: "cubic-bezier(0.2, 0, 0, 1)",
+    },
+    "motion-spring": {
+      gentle: "280ms",
+      snappy: "120ms",
     },
     recovery: {
       atRiskText: "#211a1b",
@@ -132,15 +136,19 @@ export const tokens = {
       focusRing: "#2563eb",
       skeleton: "#1f2937",
     },
-    motion: {
-      enter: "cubic-bezier(0.2, 0, 0, 1)",
-      exit: "cubic-bezier(0.2, 0, 0, 1.2)",
+    "motion-duration": {
       fast: "120ms",
-      gentle: "280ms",
       normal: "180ms",
       slow: "280ms",
-      snappy: "120ms",
+    },
+    "motion-easing": {
+      enter: "cubic-bezier(0.2, 0, 0, 1)",
+      exit: "cubic-bezier(0.2, 0, 0, 1.2)",
       standard: "cubic-bezier(0.2, 0, 0, 1)",
+    },
+    "motion-spring": {
+      gentle: "280ms",
+      snappy: "120ms",
     },
     recovery: {
       atRiskText: "#f5efe9",
@@ -223,14 +231,14 @@ export type TokenName =
   | "elevation.surface"
   | "interaction.focusRing"
   | "interaction.skeleton"
-  | "motion.enter"
-  | "motion.exit"
-  | "motion.fast"
-  | "motion.gentle"
-  | "motion.normal"
-  | "motion.slow"
-  | "motion.snappy"
-  | "motion.standard"
+  | "motion-duration.fast"
+  | "motion-duration.normal"
+  | "motion-duration.slow"
+  | "motion-easing.enter"
+  | "motion-easing.exit"
+  | "motion-easing.standard"
+  | "motion-spring.gentle"
+  | "motion-spring.snappy"
   | "recovery.atRiskText"
   | "recovery.candidateSurface"
   | "recovery.fitExcellentText"
