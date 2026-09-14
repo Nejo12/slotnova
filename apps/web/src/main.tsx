@@ -8,8 +8,17 @@ if (container === null) {
   throw new Error("main.tsx: #root element not found");
 }
 
-createRoot(container).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-);
+async function render(): Promise<void> {
+  const Root =
+    import.meta.env.VITE_E2E === "true"
+      ? (await import("./test-harness/TestHarness.js")).TestHarness
+      : App;
+
+  createRoot(container as HTMLElement).render(
+    <StrictMode>
+      <Root />
+    </StrictMode>,
+  );
+}
+
+void render();

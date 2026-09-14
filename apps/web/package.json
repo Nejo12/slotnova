@@ -8,13 +8,15 @@
   "scripts": {
     "build": "vite build",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "dev": "vite"
+    "dev": "vite",
+    "e2e": "playwright test"
   },
   "dependencies": {
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@slotnova/tsconfig": "workspace:*",
     "@testing-library/react": "^16.3.3",
     "@types/react": "^19.3.0",
