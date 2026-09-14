@@ -5,6 +5,9 @@
  * FR-037). The frontend branches on `type` only, never on `detail`/`title`
  * text, and never sees server-internal detail (stack traces, SQL, secrets).
  */
+import type { z } from "zod";
+
+import type { problemDetailsSchema } from "./problem-details.schema.js";
 
 export const PROBLEM_BASE_URL = "https://slotnova.app/problems";
 export const REQUEST_BASE_URL = "https://slotnova.app/requests";
@@ -33,17 +36,17 @@ export interface ProblemValidationError {
   readonly message: string;
 }
 
-/** The response body shape. `instance` is filled in by the filter from the active request's correlation id. */
-export interface ProblemDetails {
-  readonly type: string;
-  readonly title: string;
-  readonly status: number;
-  readonly detail?: string;
-  readonly instance?: string;
-  readonly errors?: readonly ProblemValidationError[];
-  readonly requiredCapability?: string;
-  readonly checks?: Readonly<Record<string, string>>;
-}
+/**
+ * The response body shape. `instance` is filled in by the filter from the
+ * active request's correlation id.
+ *
+ * Derived from {@link problemDetailsSchema} (`./problem-details.schema.ts`)
+ * -- that Zod schema is the single source of truth (it is also what every
+ * controller's OpenAPI error `@ApiResponse` decorator references), and this
+ * interface is kept as a `z.infer<>` alias rather than a hand-maintained
+ * second declaration so the two can never drift.
+ */
+export type ProblemDetails = z.infer<typeof problemDetailsSchema>;
 
 export function problemTypeUrl(slug: ProblemSlug): string {
   return `${PROBLEM_BASE_URL}/${slug}`;

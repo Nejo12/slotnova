@@ -1,5 +1,7 @@
 import { Controller, Get } from "@nestjs/common";
+import { ApiResponse, getSchemaPath } from "@nestjs/swagger";
 
+import { ProblemDetailsDto } from "../../../http/problem/problem-details.schema.js";
 import { ProblemException } from "../../../http/problem/problem.exception.js";
 import { HealthCheckService, type ReadinessChecks } from "./health-check.service.js";
 
@@ -32,6 +34,22 @@ export class HealthController {
   }
 
   @Get("readyz")
+  // Explicit 200, not left to `@nestjs/swagger`'s implicit-status fallback:
+  // that fallback (`api-response.explorer.js`'s `exploreApiResponseMetadata`)
+  // only synthesizes a bare `{ description: '' }` response when NO
+  // `@ApiResponse` metadata exists on the method at all -- adding the 503
+  // below would otherwise silently make the previously-implicit 200 vanish
+  // from the document rather than coexist with it (confirmed by reading that
+  // explorer's source directly, then reproducing it: the document generated
+  // before this file's 503 was added).
+  @ApiResponse({ status: 200, description: "All dependencies are reachable (`ready`)." })
+  @ApiResponse({
+    status: 503,
+    description: "A dependency is unreachable/degraded (`not-ready`, with `checks`).",
+    content: {
+      "application/problem+json": { schema: { $ref: getSchemaPath(ProblemDetailsDto) } },
+    },
+  })
   async readyz(): Promise<ReadyzResponse> {
     const { ready, checks } = await this.healthCheckService.checkReadiness();
     if (!ready) {

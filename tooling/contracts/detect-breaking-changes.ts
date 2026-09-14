@@ -23,12 +23,21 @@
  *   any change of `type` is treated as breaking -- this repo's generated
  *   clients are structurally typed from this exact value, so no change of
  *   `type` is guaranteed source-compatible)
+ * - a previously-documented response status removed from a still-present
+ *   operation, or a response's content schema `$ref` repointed at a
+ *   different schema (added for the PR-15 review gap, T064-T067 follow-up:
+ *   every endpoint's `problem+json` error responses are now documented via
+ *   a shared `ProblemDetailsDto` `$ref` -- a typed caller (`openapi-fetch`'s
+ *   discriminated-by-status response type) that narrowed on a documented
+ *   error status disappearing, or on what schema that status's body
+ *   satisfies, is exactly as broken as a removed success field)
  *
  * Explicitly NOT flagged (additive, per T066's spec): new paths, new
- * operations, new optional fields, new schemas, a field moving from
- * required to optional (loosening a guarantee never breaks a caller that
- * already tolerated its absence... except it never could, since it was
- * required -- the point is only that no *existing* caller pattern breaks).
+ * operations, new optional fields, new schemas, new response statuses on an
+ * existing operation, a field moving from required to optional (loosening a
+ * guarantee never breaks a caller that already tolerated its absence...
+ * except it never could, since it was required -- the point is only that no
+ * *existing* caller pattern breaks).
  *
  * No third-party OpenAPI-diff library is used -- `pnpm-lock.yaml` has none
  * in this repo's dependency tree (checked directly), and the scope above is
@@ -94,7 +103,16 @@ export type BreakingChange =
   | { kind: "operation-removed"; path: string; method: HttpMethod }
   | { kind: "required-field-removed"; schema: string; field: string }
   | { kind: "field-newly-required"; schema: string; field: string }
-  | { kind: "field-type-changed"; schema: string; field: string; from: string; to: string };
+  | { kind: "field-type-changed"; schema: string; field: string; from: string; to: string }
+  | { kind: "response-removed"; path: string; method: HttpMethod; status: string }
+  | {
+      kind: "response-ref-changed";
+      path: string;
+      method: HttpMethod;
+      status: string;
+      from: string;
+      to: string;
+    };
 
 /** Stable sort key so findings never flap in report ordering across runs. */
 function sortKey(change: BreakingChange): string {
@@ -109,11 +127,72 @@ function sortKey(change: BreakingChange): string {
       return `4|${change.schema}|${change.field}`;
     case "field-type-changed":
       return `5|${change.schema}|${change.field}`;
+    case "response-removed":
+      return `6|${change.path}|${change.method}|${change.status}`;
+    case "response-ref-changed":
+      return `7|${change.path}|${change.method}|${change.status}`;
   }
 }
 
 function sortedKeys(record: Record<string, unknown> | undefined): string[] {
   return Object.keys(record ?? {}).sort();
+}
+
+/**
+ * Diffs one still-present operation's `responses` map: a previously-
+ * documented status disappearing, or its content schema's `$ref` changing.
+ * Only the first `content` media type's `schema.$ref` is compared (every
+ * response this repo documents is single-media-type -- `application/json`
+ * for success, `application/problem+json` for errors -- confirmed by reading
+ * every controller's decorators; a response with no `content`/`$ref` at all,
+ * e.g. a bare `204`, has nothing to compare and is skipped).
+ */
+function diffResponses(
+  path: string,
+  method: HttpMethod,
+  oldOperation: OpenApiOperation,
+  newOperation: OpenApiOperation,
+): BreakingChange[] {
+  const findings: BreakingChange[] = [];
+  const oldResponses = oldOperation.responses ?? {};
+  const newResponses = newOperation.responses ?? {};
+
+  for (const status of sortedKeys(oldResponses)) {
+    const oldResponse = oldResponses[status];
+    const newResponse = newResponses[status];
+    if (!oldResponse) continue;
+
+    if (!newResponse) {
+      findings.push({ kind: "response-removed", path, method, status });
+      continue;
+    }
+
+    const oldRef = firstContentRef(oldResponse.content);
+    const newRef = firstContentRef(newResponse.content);
+    if (oldRef !== undefined && newRef !== undefined && oldRef !== newRef) {
+      findings.push({
+        kind: "response-ref-changed",
+        path,
+        method,
+        status,
+        from: oldRef,
+        to: newRef,
+      });
+    }
+  }
+
+  return findings;
+}
+
+function firstContentRef(
+  content: Record<string, { schema?: OpenApiSchemaRef }> | undefined,
+): string | undefined {
+  if (!content) return undefined;
+  for (const mediaType of Object.keys(content).sort()) {
+    const ref = content[mediaType]?.schema?.$ref;
+    if (ref !== undefined) return ref;
+  }
+  return undefined;
 }
 
 function diffPathsAndOperations(
@@ -133,9 +212,20 @@ function diffPathsAndOperations(
     }
 
     for (const method of HTTP_METHODS) {
-      if (oldPathItem[method] && !newPathItem[method]) {
+      const oldOperation = oldPathItem[method];
+      const newOperation = newPathItem[method];
+      if (!oldOperation) continue;
+
+      if (!newOperation) {
         findings.push({ kind: "operation-removed", path, method });
+        continue;
       }
+
+      // Only diff responses for an operation still present on both sides --
+      // a removed operation is already reported once above (`operation-
+      // removed`); re-reporting each of its responses too would be a
+      // duplicate, less-specific finding for the same root cause.
+      findings.push(...diffResponses(path, method, oldOperation, newOperation));
     }
   }
 
@@ -239,5 +329,9 @@ export function formatBreakingChange(change: BreakingChange): string {
       return `field newly required (was optional): ${change.schema}.${change.field}`;
     case "field-type-changed":
       return `field type changed: ${change.schema}.${change.field} (${change.from} -> ${change.to})`;
+    case "response-removed":
+      return `response removed: ${change.status} ${change.method.toUpperCase()} ${change.path}`;
+    case "response-ref-changed":
+      return `response schema changed: ${change.status} ${change.method.toUpperCase()} ${change.path} (${change.from} -> ${change.to})`;
   }
 }

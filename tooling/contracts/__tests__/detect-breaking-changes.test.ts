@@ -35,6 +35,14 @@ function baseDocument(): OpenApiDocument {
                 },
               },
             },
+            "401": {
+              description: "No/invalid session (`session-invalid`).",
+              content: {
+                "application/problem+json": {
+                  schema: { $ref: "#/components/schemas/ProblemDetailsDto" },
+                },
+              },
+            },
           },
         },
       },
@@ -55,6 +63,14 @@ function baseDocument(): OpenApiDocument {
               content: {
                 "application/json": {
                   schema: { $ref: "#/components/schemas/SignInResponseDto" },
+                },
+              },
+            },
+            "401": {
+              description: "Adapter rejected the credential (`invalid-credentials`).",
+              content: {
+                "application/problem+json": {
+                  schema: { $ref: "#/components/schemas/ProblemDetailsDto" },
                 },
               },
             },
@@ -90,6 +106,15 @@ function baseDocument(): OpenApiDocument {
             user: { type: "object" },
           },
           required: ["user"],
+        },
+        ProblemDetailsDto: {
+          type: "object",
+          properties: {
+            type: { type: "string" },
+            title: { type: "string" },
+            status: { type: "number" },
+          },
+          required: ["type", "title", "status"],
         },
       },
     },
@@ -258,6 +283,84 @@ describe("detectBreakingChanges", () => {
     }
 
     expect(detectBreakingChanges(oldDoc, newDoc)).toEqual([]);
+  });
+
+  // Regression coverage for the PR-15 review gap (T064-T067 follow-up,
+  // `docs/decisions/0004-validation-contract-integration.md`): error
+  // responses (`problem+json`, 4xx/5xx) are now documented per-endpoint via
+  // a shared `ProblemDetailsDto` `$ref`. `diffPathsAndOperations` previously
+  // only checked whether a path/method KEY existed, never whether a
+  // documented response status or its content `$ref` changed within a
+  // still-present operation -- so removing a documented error response, or
+  // repointing it at a different schema, went completely undetected. These
+  // cases prove the extension below (`diffResponses`) closes that gap.
+  it("flags a previously-documented response status being removed from a still-present operation", () => {
+    const oldDoc = baseDocument();
+    const newDoc = baseDocument();
+    const operation = newDoc.paths["/v1/me"]?.get;
+    if (operation?.responses) delete operation.responses["401"];
+
+    const findings = detectBreakingChanges(oldDoc, newDoc);
+    expect(findings).toContainEqual(
+      expect.objectContaining({
+        kind: "response-removed",
+        path: "/v1/me",
+        method: "get",
+        status: "401",
+      }),
+    );
+  });
+
+  it("flags a documented response's content schema $ref changing", () => {
+    const oldDoc = baseDocument();
+    const newDoc = baseDocument();
+    const operation = newDoc.paths["/v1/auth/session"]?.post;
+    const response = operation?.responses?.["401"];
+    const schema = response?.content?.["application/problem+json"]?.schema;
+    if (schema) schema.$ref = "#/components/schemas/SomeOtherDto";
+
+    const findings = detectBreakingChanges(oldDoc, newDoc);
+    expect(findings).toContainEqual(
+      expect.objectContaining({
+        kind: "response-ref-changed",
+        path: "/v1/auth/session",
+        method: "post",
+        status: "401",
+        from: "#/components/schemas/ProblemDetailsDto",
+        to: "#/components/schemas/SomeOtherDto",
+      }),
+    );
+  });
+
+  it("does NOT flag a new response status on a still-present operation (additive)", () => {
+    const oldDoc = baseDocument();
+    const newDoc = baseDocument();
+    const operation = newDoc.paths["/v1/me"]?.get;
+    if (operation?.responses) {
+      operation.responses["403"] = {
+        description: "newly documented",
+        content: {
+          "application/problem+json": {
+            schema: { $ref: "#/components/schemas/ProblemDetailsDto" },
+          },
+        },
+      };
+    }
+
+    expect(detectBreakingChanges(oldDoc, newDoc)).toEqual([]);
+  });
+
+  it("does NOT flag a response whose operation itself was already reported removed (no duplicate finding)", () => {
+    const oldDoc = baseDocument();
+    const newDoc = baseDocument();
+    delete newDoc.paths["/v1/auth/session"]?.delete;
+
+    const findings = detectBreakingChanges(oldDoc, newDoc);
+    const responseFindings = findings.filter(
+      (f) =>
+        f.kind === "response-removed" && f.path === "/v1/auth/session" && f.method === "delete",
+    );
+    expect(responseFindings).toEqual([]);
   });
 
   it("produces deterministically ordered findings across repeated calls", () => {

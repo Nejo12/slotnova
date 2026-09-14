@@ -34,6 +34,7 @@ import { fileURLToPath } from "node:url";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { cleanupOpenApiDoc } from "nestjs-zod";
 
+import { ProblemDetailsDto } from "../http/problem/problem-details.schema.js";
 import { createApp } from "../main.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -58,7 +59,17 @@ async function main(): Promise<void> {
     .setVersion("0.0.0")
     .build();
 
-  const rawDocument = SwaggerModule.createDocument(app, config);
+  // `extraModels`: `ProblemDetailsDto` is referenced by every controller's
+  // error `@ApiResponse({ content: { "application/problem+json": { schema:
+  // { $ref: getSchemaPath(ProblemDetailsDto) } } } })` decorator -- a raw
+  // `$ref` string, not a `type:` reference -- so it needs this explicit
+  // registration to actually land in `components.schemas` (the mechanism
+  // `@nestjs/swagger`'s `ApiExtraModels`/`createDocument({ extraModels })`
+  // exists for; confirmed by reading `swagger-module.d.ts`/
+  // `swagger-scanner.js` directly, not assumed).
+  const rawDocument = SwaggerModule.createDocument(app, config, {
+    extraModels: [ProblemDetailsDto],
+  });
   const document = cleanupOpenApiDoc(rawDocument);
 
   await app.close();

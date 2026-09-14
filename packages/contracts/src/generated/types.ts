@@ -241,6 +241,21 @@ export interface components {
       /** @enum {string} */
       status: "revoked";
     };
+    ProblemDetailsDto: {
+      type: string;
+      title: string;
+      status: number;
+      detail?: string;
+      instance?: string;
+      readonly errors?: {
+        path: string;
+        message: string;
+      }[];
+      requiredCapability?: string;
+      checks?: {
+        [key: string]: string;
+      };
+    };
   };
   responses: never;
   parameters: never;
@@ -276,11 +291,21 @@ export interface operations {
     };
     requestBody?: never;
     responses: {
+      /** @description All dependencies are reachable (`ready`). */
       200: {
         headers: {
           [name: string]: unknown;
         };
         content?: never;
+      };
+      /** @description A dependency is unreachable/degraded (`not-ready`, with `checks`). */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
       };
     };
   };
@@ -322,6 +347,33 @@ export interface operations {
           "application/json": components["schemas"]["SignInResponseDto_Output"];
         };
       };
+      /** @description Malformed body (`validation`). */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description Adapter rejected the credential (`invalid-credentials`). */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description User exists but is disabled (`user-disabled`). */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
     };
   };
   SessionController_signOut: {
@@ -358,6 +410,15 @@ export interface operations {
           "application/json": components["schemas"]["MeResponseDto_Output"];
         };
       };
+      /** @description No/invalid session (`session-invalid`). */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
     };
   };
   WorkspaceContextController_switchWorkspace: {
@@ -379,6 +440,42 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["MeResponseDto_Output"];
+        };
+      };
+      /** @description Malformed body (`validation`). */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description No/invalid session (`session-invalid`). */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description No active membership in the target workspace (`not-a-member`). */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description Target workspace or membership is suspended (`workspace-unavailable`). */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
         };
       };
     };
@@ -404,6 +501,42 @@ export interface operations {
           "application/json": components["schemas"]["IssueInvitationResponseDto_Output"];
         };
       };
+      /** @description Bad email/role, or `role: owner` (`validation`). */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description No/invalid session (`session-invalid`). */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description Missing `members:invite`, or no active workspace (`forbidden`). */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description A pending invitation already exists for that email (`invitation-exists`), or the email already maps to an active membership (`already-member`). */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
     };
   };
   InvitationsController_preview: {
@@ -423,6 +556,33 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["InvitationPreviewResponseDto_Output"];
+        };
+      };
+      /** @description Unknown/garbage/revoked token (`invitation-not-found`). */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description Expired or already-used token (`invitation-expired`). */
+      410: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description Too many requests for this token/IP (`rate-limited`). */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
         };
       };
     };
@@ -446,6 +606,42 @@ export interface operations {
           "application/json": components["schemas"]["MeResponseDto_Output"];
         };
       };
+      /** @description No/invalid session (`session-invalid`). */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description Signed-in user's email does not match the invitation (`email-mismatch`). */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description User is already a member (`already-member`). */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description Expired, already-used, or revoked token (`invitation-expired`). */
+      410: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
     };
   };
   InvitationsController_revoke: {
@@ -463,11 +659,41 @@ export interface operations {
       };
     };
     responses: {
-      204: {
+      /** @description Malformed id/body (`validation`). */
+      400: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description No/invalid session (`session-invalid`). */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description Missing `members:invite`, or no active workspace (`forbidden`). */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description No pending invitation with that id in the active workspace (`not-found`). */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
       };
     };
   };

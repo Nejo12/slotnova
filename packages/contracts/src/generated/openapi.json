@@ -13,7 +13,17 @@
       "get": {
         "operationId": "HealthController_readyz",
         "parameters": [],
-        "responses": { "200": { "description": "" } },
+        "responses": {
+          "200": { "description": "All dependencies are reachable (`ready`)." },
+          "503": {
+            "description": "A dependency is unreachable/degraded (`not-ready`, with `checks`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          }
+        },
         "tags": ["Health"]
       }
     },
@@ -43,6 +53,30 @@
                 "schema": { "$ref": "#/components/schemas/SignInResponseDto_Output" }
               }
             }
+          },
+          "400": {
+            "description": "Malformed body (`validation`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "401": {
+            "description": "Adapter rejected the credential (`invalid-credentials`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "403": {
+            "description": "User exists but is disabled (`user-disabled`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
           }
         },
         "tags": ["Session"]
@@ -64,6 +98,14 @@
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/MeResponseDto_Output" }
+              }
+            }
+          },
+          "401": {
+            "description": "No/invalid session (`session-invalid`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
               }
             }
           }
@@ -91,6 +133,38 @@
                 "schema": { "$ref": "#/components/schemas/MeResponseDto_Output" }
               }
             }
+          },
+          "400": {
+            "description": "Malformed body (`validation`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "401": {
+            "description": "No/invalid session (`session-invalid`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "403": {
+            "description": "No active membership in the target workspace (`not-a-member`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "409": {
+            "description": "Target workspace or membership is suspended (`workspace-unavailable`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
           }
         },
         "tags": ["WorkspaceContext"]
@@ -116,6 +190,38 @@
                 "schema": { "$ref": "#/components/schemas/IssueInvitationResponseDto_Output" }
               }
             }
+          },
+          "400": {
+            "description": "Bad email/role, or `role: owner` (`validation`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "401": {
+            "description": "No/invalid session (`session-invalid`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing `members:invite`, or no active workspace (`forbidden`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "409": {
+            "description": "A pending invitation already exists for that email (`invitation-exists`), or the email already maps to an active membership (`already-member`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
           }
         },
         "tags": ["Invitations"]
@@ -133,6 +239,30 @@
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/InvitationPreviewResponseDto_Output" }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown/garbage/revoked token (`invitation-not-found`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "410": {
+            "description": "Expired or already-used token (`invitation-expired`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests for this token/IP (`rate-limited`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
               }
             }
           }
@@ -154,6 +284,38 @@
                 "schema": { "$ref": "#/components/schemas/MeResponseDto_Output" }
               }
             }
+          },
+          "401": {
+            "description": "No/invalid session (`session-invalid`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "403": {
+            "description": "Signed-in user's email does not match the invitation (`email-mismatch`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "409": {
+            "description": "User is already a member (`already-member`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "410": {
+            "description": "Expired, already-used, or revoked token (`invitation-expired`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
           }
         },
         "tags": ["Invitations"]
@@ -173,7 +335,40 @@
             }
           }
         },
-        "responses": { "204": { "description": "" } },
+        "responses": {
+          "400": {
+            "description": "Malformed id/body (`validation`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "401": {
+            "description": "No/invalid session (`session-invalid`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing `members:invite`, or no active workspace (`forbidden`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "404": {
+            "description": "No pending invitation with that id in the active workspace (`not-found`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          }
+        },
         "tags": ["Invitations"]
       }
     }
@@ -344,6 +539,28 @@
         "type": "object",
         "properties": { "status": { "type": "string", "enum": ["revoked"] } },
         "required": ["status"]
+      },
+      "ProblemDetailsDto": {
+        "type": "object",
+        "properties": {
+          "type": { "type": "string" },
+          "title": { "type": "string" },
+          "status": { "type": "number" },
+          "detail": { "type": "string" },
+          "instance": { "type": "string" },
+          "errors": {
+            "readOnly": true,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": { "path": { "type": "string" }, "message": { "type": "string" } },
+              "required": ["path", "message"]
+            }
+          },
+          "requiredCapability": { "type": "string" },
+          "checks": { "type": "object", "additionalProperties": { "type": "string" } }
+        },
+        "required": ["type", "title", "status"]
       }
     }
   }
