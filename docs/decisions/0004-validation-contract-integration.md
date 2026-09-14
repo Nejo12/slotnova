@@ -1,6 +1,6 @@
 # 0004 — Runtime-Validation → OpenAPI Integration (R4)
 
-Status: **PROPOSED** — not Founder-approved. This is the output of the T064 prerequisite compatibility spike (PR-15 Stage A, issue #44). It records evidence for a decision; it is not itself authorization to implement T064–T067.
+Status: **Founder-approved**. Approved to proceed with T064–T067 on `feat/pr-15-contract-pipeline`. This began as the output of the T064 prerequisite compatibility spike (PR-15 Stage A, issue #44); the stack below is now the adopted implementation direction, not only recorded evidence.
 
 ## Context
 
@@ -101,8 +101,10 @@ This directly satisfies "browser code will not need to import apps/api internals
 4. **`nestjs-zod`'s `ZodGuard`/`createZodGuard` are marked deprecated upstream** (validation should happen in pipes, not guards) — irrelevant to this spike's proof, but T064 should not reach for the guard-based API.
 5. Exact patch-level drift: `zod@4.6.5` was `latest` at spike time (2026-09-14); Zod 4 is a young major line with an active release cadence. T064's implementation should pin the exact patch version used at implementation time (not `^4.6.5`) and re-verify the proofs above against that exact pin, per the repo's existing "exact reviewed version" convention for external dependencies.
 
-## Verification required before this record can be Founder-approved
+## Implementation follow-through (post-approval)
 
-- Confirm exact patch versions to pin at T064 implementation time (this record's versions were current as of the spike date above).
-- Re-run the per-route decorator-discipline proof against Slotnova's actual four Phase 1 endpoint schemas (this spike modeled them structurally but did not migrate the real files).
-- Decide and document the `problem+json` filter wiring approach (extend the existing filter vs. `createValidationException` factory) referenced in the risks above.
+The items below were open questions at spike time; T064 resolves them directly rather than leaving them as pre-approval gates:
+
+- Exact patch versions are pinned in `apps/api/package.json`/`apps/web/package.json` at T064 implementation time, not left as `^` ranges for this integration.
+- The per-route decorator-discipline pattern (`@ApiBody`/`@ApiParam`/`@ZodResponse({ status, ... })`) is applied to Slotnova's actual Phase 1 endpoint schemas, not only the spike's structural models.
+- The `problem+json` filter wiring extends the existing `ProblemExceptionFilter` (via a `createValidationException` factory constructing a `ProblemException`) rather than adding a second parallel filter, per Risk 3's recommendation.
