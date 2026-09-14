@@ -554,7 +554,7 @@ Each task carries a compact block:
 
 ### PR-14 — `apps/web` shell
 
-- [ ] T058 [US3] Router + providers (QueryClient workspace-scoped, theme, error boundary)
+- [x] T058 [US3] Router + providers (QueryClient workspace-scoped, theme, error boundary)
   - **Dep**: T025, T052, T038, T014
   - **Files**: `apps/web/src/app/{router.tsx,providers/*}` — `createBrowserRouter`, `QueryClientProvider` with key factory `['ws', workspaceId, ...]`, clear-on-logout/switch, theme provider, root error boundary
   - **Accept**: server state only via TanStack Query; loaders for gating/prefetch not a second cache; cache cleared on logout + switch; FR-011, FR-012, FR-013, ADR-003/021
@@ -562,7 +562,7 @@ Each task carries a compact block:
   - **Constraints**: Zustand only if justified + recorded in a `docs/decisions/` client-state note referenced from this spec (FR-014); no Tailwind
   - **Out**: product data fetching
 
-- [ ] T059 [US3] Desktop + mobile application shells + navigation IA
+- [x] T059 [US3] Desktop + mobile application shells + navigation IA
   - **Dep**: T058, T055
   - **Files**: `apps/web/src/app/shell/{DesktopShell,MobileShell,Navigation,WorkspaceSwitcher,AccountMenu}.tsx`
   - **Accept**: desktop nav + mobile `Home · Calendar · Clients · Recovery · More` (rest under `More`); deliberate mobile substitution not compressed desktop; fixed mobile nav doesn't cover primary actions; FR-015, hard product invariant
@@ -570,7 +570,7 @@ Each task carries a compact block:
   - **Constraints**: IA from `docs/product-handoff.md`; visual detail from Figma `19 — Implementation Handoff` (surface ambiguity, don't invent)
   - **Out**: product screens
 
-- [ ] T060 [US3] Placeholder routes for every product destination (empty states only)
+- [x] T060 [US3] Placeholder routes for every product destination (empty states only)
   - **Dep**: T059, T056
   - **Files**: `apps/web/src/app/routes/*` (Home, Calendar, Clients, Recovery, Messaging, Payments, Staff, Inventory, Marketing, Analytics, Settings) — each renders a system "empty/coming-later" state
   - **Accept**: every nav target reachable; no product behavior; FR-020, SC-014
@@ -578,7 +578,7 @@ Each task carries a compact block:
   - **Constraints**: no data fetching, no forms beyond auth
   - **Out**: everything product
 
-- [ ] T061 [US3] Light/Dark + reduced-motion shell infrastructure
+- [x] T061 [US3] Light/Dark + reduced-motion shell infrastructure
   - **Dep**: T058, T052
   - **Files**: `apps/web/src/styles/` theme roots, `prefers-reduced-motion` global handling, View Transitions opt-in for route changes
   - **Accept**: all shell surfaces token-driven; reduced-motion degrades transitions with no info loss; focus preserved through transitions; FR-016, FR-017, `docs/standards/motion.md`, SC-007
@@ -586,7 +586,7 @@ Each task carries a compact block:
   - **Constraints**: Motion for React only where it earns bundle cost, code-split
   - **Out**: product animations
 
-- [ ] T062 [P] [US3] Shell accessibility + theming + reduced-motion tests
+- [x] T062 [P] [US3] Shell accessibility + theming + reduced-motion tests
   - **Dep**: T059, T061
   - **Files**: `apps/web/src/app/shell/__tests__/*.test.tsx`, `apps/web/e2e/shell-a11y.spec.ts`
   - **Accept**: axe clean on nav/switcher/dialogs; keyboard-only reaches every destination with visible focus; Light/Dark toggle token-driven; reduced-motion suppresses non-essential motion; SC-006, SC-007
@@ -594,7 +594,7 @@ Each task carries a compact block:
   - **Constraints**: manual keyboard pass recorded in PR (CONTRIBUTING)
   - **Out**: n/a
 
-- [ ] T063 [US3] Retarget E2E journeys 6 & 7 onto the production shell; retire the test-nav harness from journeys
+- [x] T063 [US3] Retarget E2E journeys 6 & 7 onto the production shell; retire the test-nav harness from journeys
   - **Dep**: T059, T060, T050, T051
   - **Files**: `apps/web/e2e/journey-06-workspace-switch.spec.ts`, `journey-07-restricted-permission.spec.ts` (repoint selectors to the real shell), remove harness dependency; keep `apps/web/src/test-harness/` only if still useful for isolated debugging (still build-excluded)
   - **Accept**: journeys 6 & 7 pass against the real shell; production surface is covered; SC-017

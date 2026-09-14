@@ -4,6 +4,8 @@ dist/
 .turbo/
 coverage/
 storybook-static/
+test-results/
+playwright-report/
 *.tsbuildinfo
 .env
 .env.*

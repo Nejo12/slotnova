@@ -1,32 +1,19 @@
-import { useEffect, useState } from "react";
+import { RouterProvider } from "react-router";
 
-import { checkApiHealth, type HealthResult } from "./health/check-api-health.js";
+import { AppProviders } from "./app/providers/AppProviders.js";
+import { router } from "./app/router.js";
 
-const API_BASE_URL = import.meta.env["VITE_API_URL"] ?? "http://localhost:3001";
-
+/**
+ * Application root (T058). Supersedes the T025 skeleton: the shell now
+ * owns routing, session gating and theming instead of a standalone health
+ * ping. `apps/web/src/health/check-api-health.ts` remains available for
+ * reuse (e.g. a future health-aware system state) but is no longer wired
+ * to the root.
+ */
 export function App(): React.JSX.Element {
-  const [health, setHealth] = useState<HealthResult | undefined>(undefined);
-
-  useEffect(() => {
-    let cancelled = false;
-    checkApiHealth(API_BASE_URL).then((result) => {
-      if (!cancelled) setHealth(result);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   return (
-    <main>
-      <h1>Slotnova</h1>
-      <p>{describeHealth(health)}</p>
-    </main>
+    <AppProviders>
+      <RouterProvider router={router} />
+    </AppProviders>
   );
-}
-
-function describeHealth(health: HealthResult | undefined): string {
-  if (health === undefined) return "API: checking…";
-  if (health.status === "healthy") return "API: healthy";
-  return `API: unhealthy — ${health.detail}`;
 }

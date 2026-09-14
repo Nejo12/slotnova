@@ -1,0 +1,57 @@
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nova-space-1);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.group-label {
+  padding: var(--nova-space-3) var(--nova-space-3) var(--nova-space-1);
+  color: var(--slotnova-text-secondary);
+  font-size: var(--slotnova-typography-xs);
+  font-weight: var(--slotnova-typography-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--nova-space-2);
+  height: var(--nova-control-height-md);
+  min-height: var(--nova-control-touch-target);
+  padding: var(--nova-space-2) var(--nova-space-3);
+  border-radius: var(--nova-radius-md);
+  color: var(--slotnova-text-secondary);
+  font-size: var(--slotnova-typography-lg);
+  font-weight: var(--slotnova-typography-medium);
+  text-decoration: none;
+  position: relative;
+}
+
+.item:hover {
+  background: var(--slotnova-action-subtle);
+}
+
+.item:focus-visible {
+  outline: 2px solid var(--slotnova-interaction-focus-ring);
+  outline-offset: 2px;
+}
+
+.item-active {
+  background: var(--slotnova-action-subtle);
+  color: var(--slotnova-text-link);
+}
+
+.item-active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 12px;
+  bottom: 12px;
+  width: 3px;
+  border-radius: 1.5px;
+  background: var(--slotnova-action-primary);
+}
