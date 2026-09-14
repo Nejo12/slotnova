@@ -1,0 +1,90 @@
+/**
+ * Nova -> Slotnova theme bridge.
+ *
+ * @nova-component/ui's published stylesheet (dist/nova-ui.css) styles every
+ * primitive purely through `--nova-*` custom properties — it never defines
+ * their values itself. Nova's own docs point generic consumers at
+ * `@nova-component/design-tokens/tokens.css` to supply values, but
+ * ADR-022/ADR-025 forbid using Nova's generic SEMANTIC defaults for
+ * Slotnova: Nova's neutral/action color/elevation defaults do not match
+ * the approved Slotnova Figma Oxblood/Paper-Cream semantics, which
+ * `@slotnova/design-tokens` (PR-12) already reconciles into `--slotnova-*`
+ * custom properties.
+ *
+ * Nova's PRIMITIVE layer (--nova-space-*, --nova-radius-*, --nova-shadow-*,
+ * --nova-duration-*, --nova-easing-*, --nova-z-*, --nova-control-*) has no
+ * Slotnova override — PR-12 deliberately reuses it as-is (ADR-022: "reuse a
+ * Nova value as-is wherever it faithfully matches approved Figma", "no
+ * duplicate generic scale"). That layer is theme-independent and lives in
+ * Nova's own `:root` block, unconditionally set regardless of
+ * `[data-nova-theme]`.
+ *
+ * Required load order (all three, in this order):
+ *   1. `@nova-component/design-tokens/tokens.css`  — supplies the Nova
+ *      PRIMITIVE layer (space/radius/shadow/duration/easing/z/control) that
+ *      Slotnova reuses as-is. Its own semantic layer is also set here, but
+ *      step 3 below overrides every semantic name Slotnova owns.
+ *   2. `@slotnova/design-tokens`'s generated `tokens.css` — supplies every
+ *      `--slotnova-*` custom property this bridge references.
+ *   3. THIS FILE — overrides Nova's semantic `--nova-color-*` /
+ *      `--nova-elevation-*` custom properties to point at the
+ *      Slotnova-reconciled values, later in cascade order so it wins.
+ *   4. `@nova-component/ui/styles.css` — Nova's component stylesheet
+ *      itself; order relative to the others does not matter, it only
+ *      *reads* `--nova-*`, never sets it.
+ *
+ * `@slotnova/ui`'s public entry (`src/index.ts`) re-exports this file so a
+ * single `import "@slotnova/ui/theme.css"` after the two token imports is
+ * enough for any consuming app.
+ */
+
+:root,
+:root[data-theme="light"],
+:root[data-theme="dark"] {
+  /* Color: Slotnova-owned semantics (surface/text/border/action/status) */
+  --nova-color-bg-surface: var(--slotnova-surface-bg-surface);
+  --nova-color-bg-subtle: var(--slotnova-surface-bg-subtle);
+  --nova-color-bg-inverse: var(--slotnova-surface-bg-inverse);
+  --nova-color-text-primary: var(--slotnova-text-primary);
+  --nova-color-text-secondary: var(--slotnova-text-secondary);
+  --nova-color-text-disabled: var(--slotnova-text-disabled);
+  --nova-color-text-inverse: var(--slotnova-text-inverse);
+  --nova-color-border-default: var(--slotnova-border-default);
+  --nova-color-border-strong: var(--slotnova-border-strong);
+  --nova-color-action-primary: var(--slotnova-action-primary);
+  --nova-color-action-primary-text: var(--slotnova-action-primary-text);
+  --nova-color-action-secondary: var(--slotnova-action-secondary);
+  --nova-color-focus-ring: var(--slotnova-interaction-focus-ring);
+  --nova-color-skeleton: var(--slotnova-interaction-skeleton);
+  --nova-color-status-success: var(--slotnova-status-success);
+  --nova-color-status-success-surface: var(--slotnova-status-success-surface);
+  --nova-color-status-success-border: var(--slotnova-status-success-border);
+  --nova-color-status-success-text: var(--slotnova-status-success-text);
+  --nova-color-status-danger: var(--slotnova-status-danger);
+  --nova-color-status-danger-surface: var(--slotnova-status-danger-surface);
+  --nova-color-status-danger-border: var(--slotnova-status-danger-border);
+  --nova-color-status-danger-text: var(--slotnova-status-danger-text);
+  --nova-color-status-warning: var(--slotnova-status-warning);
+  --nova-color-status-warning-surface: var(--slotnova-status-warning-surface);
+  --nova-color-status-warning-border: var(--slotnova-status-warning-border);
+  --nova-color-status-warning-text: var(--slotnova-status-warning-text);
+  --nova-color-status-info: var(--slotnova-status-info);
+  --nova-color-status-info-surface: var(--slotnova-status-info-surface);
+  --nova-color-status-info-border: var(--slotnova-status-info-border);
+  --nova-color-status-info-text: var(--slotnova-status-info-text);
+
+  /* Elevation: Slotnova reuses Nova's own shadow scale as-is (PR-12) */
+  --nova-elevation-surface: var(--slotnova-elevation-surface);
+  --nova-elevation-modal: var(--slotnova-elevation-modal);
+
+  /*
+   * Radius / spacing / control / duration / easing / z-index: PR-12
+   * deliberately reused Nova's own primitive scale as-is (no duplicate
+   * generic scale — ADR-022 "reuse a Nova value as-is wherever it
+   * faithfully matches approved Figma"). @slotnova/design-tokens therefore
+   * does not re-expose these under --slotnova-* names, and there is nothing
+   * to bridge: Nova's own stylesheet already carries no default for them
+   * either, so the published @nova-component/design-tokens primitive
+   * layer is the correct, deliberate source for this axis only.
+   */
+}

@@ -31,6 +31,7 @@
     "@slotnova/eslint-config": "workspace:*",
     "@slotnova/tsconfig": "workspace:*",
     "@types/node": "^24.13.3",
+    "@vitejs/plugin-react": "^6.1.1",
     "dependency-cruiser": "^18.2.0",
     "eslint": "^10.10.0",
     "eslint-config-prettier": "^10.1.8",

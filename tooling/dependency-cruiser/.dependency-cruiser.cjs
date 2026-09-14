@@ -119,6 +119,17 @@ module.exports = {
           "^packages/$2/",
           // the public entry point is fine
           "^packages/[^/]+/src/index\\.(ts|tsx|js|mjs)$",
+          // Declared CSS subpath exports (package.json `exports`):
+          // design-tokens' "./tokens.css", ui's "./theme.css". These are
+          // public entry points too — dependency-cruiser's resolver follows
+          // the `exports` map correctly for them, but its extensions list
+          // (js/ts family only) means the target still physically lives
+          // under `src/`, so each declared CSS export needs its own explicit
+          // exemption rather than being caught by the `src/index.*` pattern
+          // above. Keep this list in sync with each package's `exports`
+          // map — do not widen to a blanket `\\.css$` allowance.
+          "^packages/design-tokens/src/generated/tokens\\.css$",
+          "^packages/ui/src/theme/nova-bridge\\.css$",
         ].join("|"),
       },
     },
