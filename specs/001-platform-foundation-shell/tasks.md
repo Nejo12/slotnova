@@ -459,7 +459,7 @@ Each task carries a compact block:
 
 ### PR-11 — Test-only navigation harness + Playwright harness + journeys 6 & 7
 
-- [ ] T048 [US2] Minimal test-only navigation / workspace harness in `apps/web`
+- [x] T048 [US2] Minimal test-only navigation / workspace harness in `apps/web`
   - **Dep**: T025, T038, T042, T046
   - **Files**: `apps/web/src/test-harness/` (gated behind `import.meta.env.VITE_E2E`; **excluded from every production build** — verified by a build-output check and a dependency-cruiser rule in T085), a bare page with: sign-in via dev adapter, a workspace switcher, a list of the active workspace's foundation records (memberships/locations), and an action button that calls a `members:invite`-gated endpoint
   - **Accept**: provides just enough UI for E2E journeys 6 & 7 to run **without** the US3 production shell; FR-051
@@ -467,7 +467,7 @@ Each task carries a compact block:
   - **Constraints**: test-only, flag-gated, absent from production bundle; **not** the production shell; no product behavior
   - **Out**: real navigation IA, theming, a11y polish (all US3)
 
-- [ ] T049 [US2] Playwright base harness + second isolated browser context helper
+- [x] T049 [US2] Playwright base harness + second isolated browser context helper
   - **Dep**: T025, T038, T048
   - **Files**: `apps/web/e2e/` config, fixtures (seeded workspaces/users via dev adapter), `secondContext()` helper
   - **Accept**: harness runs headless in CI; can open a second isolated context (needed for Recovery later); FR-051
@@ -475,7 +475,7 @@ Each task carries a compact block:
   - **Constraints**: no product journeys
   - **Out**: journeys 1–5 (later roadmap phases)
 
-- [ ] T050 [P] [US2] E2E journey 6 — workspace-switch data isolation
+- [x] T050 [P] [US2] E2E journey 6 — workspace-switch data isolation
   - **Dep**: T049, T042, T048
   - **Files**: `apps/web/e2e/journey-06-workspace-switch.spec.ts`
   - **Accept**: after switch A→B via the test-nav harness, no workspace-A record is visible; server-state cache cleared; SC-017
@@ -483,7 +483,7 @@ Each task carries a compact block:
   - **Constraints**: asserts no stale query data after switch
   - **Out**: n/a
 
-- [ ] T051 [P] [US2] E2E journey 7 — restricted-permission denial
+- [x] T051 [P] [US2] E2E journey 7 — restricted-permission denial
   - **Dep**: T049, T041, T046, T048
   - **Files**: `apps/web/e2e/journey-07-restricted-permission.spec.ts`
   - **Accept**: a `staff`-role user triggering the invite action is denied **server-side** (403), not just a hidden control; SC-017
