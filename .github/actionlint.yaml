@@ -1,0 +1,3 @@
+# Deliberately unprovisioned dedicated release-runner label; see migration runbook.
+self-hosted-runner:
+  labels: [slotnova-release]

@@ -84,6 +84,11 @@ export class SessionController {
     description: "User exists but is disabled (`user-disabled`).",
     content: PROBLEM_JSON_CONTENT,
   })
+  @ApiResponse({
+    status: 429,
+    description: "Authentication attempts are rate limited.",
+    content: PROBLEM_JSON_CONTENT,
+  })
   async signIn(
     @Body() body: SignInRequestBody,
     @Res({ passthrough: true }) reply: FastifyReply,

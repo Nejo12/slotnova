@@ -126,3 +126,7 @@ Confirm each exists, cites evidence + rejected alternatives, and is ADR-consiste
 ## Definition of done for Phase 1
 
 All of the above pass, `SC-001`…`SC-018` are demonstrably met, a reviewer confirms **no product-domain behavior** is present (SC-014), and the work merged as a sequence of bounded PRs (SC-015) — founder performs each merge.
+
+## PR-17 executable environment boundary
+
+Set `SLOTNOVA_ENV=local` for development or `preview` for CI/test builds. The current executable commands and role prerequisites are in [local development](../../docs/runbooks/local-dev.md) and [migration release](../../docs/runbooks/migration-release.md). This PR does not implement the earlier aspirational `dev:db`/Compose command or automatic migrations. Hosted configuration and unverified AWS acceptance checks are in [deployment](../../docs/runbooks/deployment.md).

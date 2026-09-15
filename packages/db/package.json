@@ -30,7 +30,8 @@
     "test:integration": "vitest run --config vitest.integration.config.ts"
   },
   "dependencies": {
-    "pg": "^8.22.0"
+    "pg": "^8.22.0",
+    "@slotnova/deployment-config": "workspace:*"
   },
   "devDependencies": {
     "@slotnova/tsconfig": "workspace:*",

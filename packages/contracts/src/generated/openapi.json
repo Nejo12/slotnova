@@ -77,6 +77,14 @@
                 "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
               }
             }
+          },
+          "429": {
+            "description": "Authentication attempts are rate limited.",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
           }
         },
         "tags": ["Session"]

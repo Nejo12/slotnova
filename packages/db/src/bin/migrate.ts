@@ -9,6 +9,7 @@
  * Connection: the privileged migration role from `DATABASE_MIGRATION_URL`
  * (see `packages/db/src/config.ts`). Never the application role.
  */
+import { resolveEnvironment } from "@slotnova/deployment-config";
 import { resolveDbConfig } from "../config.js";
 import { getPendingMigrations, runMigrations, DEFAULT_MIGRATIONS_DIR } from "../migrate.js";
 import { Client } from "pg";
@@ -68,8 +69,17 @@ async function main(): Promise<void> {
     return;
   }
 
-  const { connectionString } = resolveDbConfig("migration");
-  const client = new Client({ connectionString, application_name: "slotnova-migration" });
+  resolveEnvironment(process.env);
+  const config = resolveDbConfig("migration");
+  const client = new Client({
+    connectionString: config.connectionString,
+    ssl: config.ssl,
+    application_name: config.applicationName,
+    connectionTimeoutMillis: config.connectionTimeoutMillis,
+    ...(config.statementTimeoutMillis === undefined
+      ? {}
+      : { statement_timeout: config.statementTimeoutMillis }),
+  });
   await client.connect();
 
   try {
@@ -95,7 +105,7 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((error: unknown) => {
-  process.stderr.write(`db:migrate failed: ${(error as Error).message}\n`);
+main().catch(() => {
+  process.stderr.write("db:migrate failed; inspect restricted database/release logs\n");
   process.exitCode = 1;
 });

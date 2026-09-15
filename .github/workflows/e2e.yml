@@ -7,6 +7,9 @@ on:
 permissions:
   contents: read
 
+env:
+  SLOTNOVA_ENV: preview
+
 jobs:
   postgres-and-playwright:
     name: PostgreSQL integration · Playwright journeys

@@ -1,4 +1,4 @@
-import { Pool } from "@slotnova/db";
+import { Pool, assertRuntimeDatabaseRole } from "@slotnova/db";
 import { createIdentityMaintenance } from "@slotnova/api/identity-maintenance";
 import { createLogger, type Logger, type LoggerOptions } from "@slotnova/observability-server";
 import { resolveWorkerConfig } from "./config.js";
@@ -25,6 +25,10 @@ export function createWorker(options: WorkerOptions = {}) {
     ssl: config.db.ssl,
     connectionTimeoutMillis: config.db.connectionTimeoutMillis,
     idleTimeoutMillis: config.db.idleTimeoutMillis,
+    application_name: config.db.applicationName,
+    ...(config.db.statementTimeoutMillis === undefined
+      ? {}
+      : { statement_timeout: config.db.statementTimeoutMillis }),
   });
   pool.on("error", () => logger.error("worker.pool_error"));
   const scheduler = createScheduler(
@@ -33,6 +37,13 @@ export function createWorker(options: WorkerOptions = {}) {
     config.migrate,
     logger,
     config.db.ssl,
+    {
+      max: config.schedulerPoolMax,
+      connectionTimeoutMillis: config.db.connectionTimeoutMillis,
+      ...(config.db.statementTimeoutMillis === undefined
+        ? {}
+        : { statement_timeout: config.db.statementTimeoutMillis }),
+    },
   );
   let consumer: Awaited<ReturnType<typeof startConsumer>> | undefined;
   let startPromise: Promise<void> | undefined;
@@ -63,6 +74,14 @@ export function createWorker(options: WorkerOptions = {}) {
       return (startPromise ??= (async () => {
         const identity = createIdentityMaintenance(pool);
         try {
+          if (config.enforceRuntimeRole) {
+            const client = await pool.connect();
+            try {
+              await assertRuntimeDatabaseRole(client);
+            } finally {
+              client.release();
+            }
+          }
           await scheduler.start({
             "expired-sessions": expiredSessions(identity, config.batchSize, config.retentionDays),
             "expired-invitations": expiredInvitations(identity, config.batchSize),

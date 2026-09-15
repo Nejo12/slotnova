@@ -44,6 +44,23 @@ Closes #
 - [ ] This PR introduces no product-domain behavior beyond what the linked issue/task authorizes
 - [ ] No forward work from a later task/PR was implemented early
 
+## Migration review (required, including no-schema PRs)
+
+- [ ] Schema change: yes
+- [ ] Schema change: no
+- [ ] Expand/additive step reviewed
+- [ ] Backward compatibility window reviewed
+- [ ] Data migration/backfill reviewed
+- [ ] Contract/removal step reviewed
+- [ ] Roll-forward and rollback limits documented
+- [ ] RLS/policy impact reviewed
+- [ ] Index/lock risk reviewed
+- [ ] pg-boss impact reviewed
+- [ ] Production migration ordering reviewed
+
+<!-- Check exactly one schema choice and every review item; explain N/A items. -->
+Migration plan: <!-- For schema changes, state concrete sequencing, verification and recovery. -->
+
 ## Merge policy
 
 - [ ] Auto-merge is disabled

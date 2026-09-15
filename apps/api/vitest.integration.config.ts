@@ -21,6 +21,7 @@ import { defineConfig } from "vitest/config";
  */
 export default defineConfig({
   test: {
+    env: { SLOTNOVA_ENV: "preview", API_RATE_LIMIT_AUTH_MAX: "1000" },
     environment: "node",
     include: [
       "src/**/__tests__/**/*.int.test.ts",

@@ -20,7 +20,6 @@ import { IssueInvitationUseCase } from "./application/invitation/issue.js";
 import { PreviewInvitationUseCase } from "./application/invitation/preview.js";
 import { RevokeInvitationUseCase } from "./application/invitation/revoke.js";
 import { InvitationsController } from "./http/invitations.controller.js";
-import { InvitationPreviewRateLimiter } from "./http/invitation-preview-rate-limiter.js";
 import {
   InvitationsRepository,
   InvitationTransactions,
@@ -49,8 +48,19 @@ import {
     PreviewInvitationUseCase,
     AcceptInvitationUseCase,
     RevokeInvitationUseCase,
-    InvitationPreviewRateLimiter,
-    { provide: CREDENTIAL_ADAPTER, useValue: new DevCredentialAdapter(DEFAULT_SEEDED_USERS) },
+    {
+      provide: CREDENTIAL_ADAPTER,
+      useFactory: () => {
+        if (process.env["API_CREDENTIAL_ADAPTER"] === "disabled")
+          return { verify: async () => null };
+        if (
+          ["staging", "production"].includes(process.env["SLOTNOVA_ENV"] ?? "") ||
+          process.env["NODE_ENV"] === "production"
+        )
+          throw new Error("Development credential adapter is forbidden in hosted environments");
+        return new DevCredentialAdapter(DEFAULT_SEEDED_USERS);
+      },
+    },
   ],
 })
 export class IdentityModule {}

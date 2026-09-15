@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { loadMigrations, type Pool } from "@slotnova/db";
+import { loadMigrations, assertRuntimeDatabaseRole, type Pool } from "@slotnova/db";
 
 import { DB_POOL } from "../database/database.tokens.js";
 
@@ -43,6 +43,7 @@ export class HealthCheckService {
     }
 
     try {
+      await assertRuntimeDatabaseRole(client);
       await client.query("SELECT 1");
       checks.database = "ok";
 

@@ -37,7 +37,6 @@ import { CapabilityGuard } from "../domain/policy/capability.guard.js";
 import { MEMBERS_INVITE } from "../domain/policy/capabilities.js";
 import { RequireCapability } from "../domain/policy/require-capability.decorator.js";
 import { MembershipsRepository } from "../infrastructure/repositories/memberships.repository.js";
-import { InvitationPreviewRateLimiter } from "./invitation-preview-rate-limiter.js";
 import {
   invitationIdParamSchema,
   IssueInvitationRequestDto,
@@ -71,7 +70,6 @@ export class InvitationsController {
     private readonly sessionService: SessionService,
     private readonly sessionContextService: SessionContextService,
     private readonly memberships: MembershipsRepository,
-    private readonly previewRateLimiter: InvitationPreviewRateLimiter,
     @Inject(SECURITY_CONFIG) private readonly security: SecurityConfig,
   ) {}
 
@@ -138,7 +136,10 @@ export class InvitationsController {
         status: result.invitation.status,
         expiresAt: result.invitation.expiresAt.toISOString(),
       },
-      ...(process.env["NODE_ENV"] === "production" ? {} : { token: result.rawToken }),
+      ...(["staging", "production"].includes(process.env["SLOTNOVA_ENV"] ?? "") ||
+      process.env["NODE_ENV"] === "production"
+        ? {}
+        : { token: result.rawToken }),
     };
   }
 
@@ -160,8 +161,7 @@ export class InvitationsController {
     description: "Too many requests for this token/IP (`rate-limited`).",
     content: PROBLEM_JSON_CONTENT,
   })
-  async preview(@Param("token") token: string, @Req() request: FastifyRequest) {
-    this.previewRateLimiter.check(token, request.ip);
+  async preview(@Param("token") token: string) {
     const invitation = await this.previewUseCase.execute(token);
     return {
       workspaceName: invitation.workspaceName,

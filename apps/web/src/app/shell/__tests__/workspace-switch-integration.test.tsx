@@ -3,14 +3,13 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type * as SessionApi from "../../auth/session-api.js";
 import type { MeResponse } from "../../auth/session-api.js";
 import { DesktopShell } from "../DesktopShell.js";
 import { alphaWorkspaceMe, mockMatchMedia, renderShellAt } from "./test-support.js";
 
 vi.mock("../../auth/session-api.js", async () => {
-  const actual = await vi.importActual<typeof import("../../auth/session-api.js")>(
-    "../../auth/session-api.js",
-  );
+  const actual = await vi.importActual<typeof SessionApi>("../../auth/session-api.js");
   return { ...actual, switchWorkspace: vi.fn() };
 });
 

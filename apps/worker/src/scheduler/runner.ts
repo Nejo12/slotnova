@@ -23,10 +23,11 @@ export function createScheduler(
   migrate: boolean,
   logger: Logger,
   ssl: DbConnectionConfig["ssl"] = false,
+  poolOptions: { max?: number; connectionTimeoutMillis?: number; statement_timeout?: number } = {},
 ) {
   if (!/^[a-z][a-z0-9_]{0,49}$/.test(schema) || schema === "public")
     throw new Error("invalid scheduler schema");
-  const boss = new PgBoss({ connectionString, schema, migrate, ssl });
+  const boss = new PgBoss({ connectionString, schema, migrate, ssl, ...poolOptions });
   boss.on("error", () => logger.error("scheduler.error"));
   boss.on("warning", () => logger.warn("scheduler.warning"));
   const activeQueues: FoundationQueue[] = [];
