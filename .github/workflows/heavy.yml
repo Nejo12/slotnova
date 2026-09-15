@@ -1,0 +1,95 @@
+# T074 foundation only; not full T087 completion. Never deploys the application.
+name: heavy
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, edited]
+  workflow_dispatch:
+    inputs:
+      target:
+        type: choice
+        options: [staging, production]
+        required: true
+      release_sha:
+        description: Exact reviewed main commit to migrate
+        type: string
+        required: true
+permissions:
+  contents: read
+env:
+  SLOTNOVA_ENV: preview
+jobs:
+  migration-checklist:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec tsx tooling/migrations/check-pr-checklist.ts
+  migration-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: Explicit CLI clean and populated forward migration proof
+        run: pnpm --filter @slotnova/db test:integration
+      - name: Separate scheduler release and runtime role proof
+        run: pnpm --filter @slotnova/worker exec vitest run --config vitest.integration.config.ts src/scheduler/__tests__/release.int.test.ts
+  release-migrations:
+    # Deliberately disabled until a private runner, secrets and release controls exist.
+    # Dispatch is Founder-only, from reviewed main, bound to its exact SHA.
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.ref == 'refs/heads/main' &&
+      github.actor == github.repository_owner &&
+      github.triggering_actor == github.repository_owner &&
+      inputs.release_sha == github.sha &&
+      vars.MIGRATION_RELEASE_ENABLED == 'true'
+    needs: migration-proof
+    runs-on: [self-hosted, linux, slotnova-release]
+    timeout-minutes: 20
+    environment: ${{ inputs.target }}
+    concurrency:
+      group: database-release-${{ inputs.target }}
+      cancel-in-progress: false
+    env:
+      SLOTNOVA_ENV: ${{ inputs.target }}
+      DATABASE_CONNECTION_MODE: direct
+      DATABASE_SSL: require
+      SCHEDULER_OWNER_ROLE: slotnova_scheduler_owner
+      NODE_EXTRA_CA_CERTS: ${{ vars.DATABASE_CA_FILE }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @slotnova/worker... build
+      - name: Reviewed business migrations (not application startup)
+        run: pnpm --filter @slotnova/db db:migrate
+        env:
+          DATABASE_MIGRATION_URL: ${{ secrets.DATABASE_MIGRATION_URL }}
+      - name: Pinned scheduler schema initialization or upgrade
+        run: pnpm --filter @slotnova/worker db:migrate:scheduler
+        env:
+          SCHEDULER_MIGRATION_URL: ${{ secrets.SCHEDULER_MIGRATION_URL }}
+      - name: Release gate evidence
+        run: echo 'Migration steps succeeded. Application deployment remains a separate release action.'

@@ -10,7 +10,7 @@ describe("worker configuration and foundation boundary", () => {
   });
   it("requires an explicit DB and validates bounded config", () => {
     expect(() => resolveWorkerConfig({})).toThrow();
-    const env = { WORKER_DATABASE_URL: "postgres://localhost/test" };
+    const env = { SLOTNOVA_ENV: "local", WORKER_DATABASE_URL: "postgres://worker@localhost/test" };
     expect(resolveWorkerConfig(env)).toMatchObject({
       maxAttempts: 5,
       migrate: false,

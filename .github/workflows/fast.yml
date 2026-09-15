@@ -1,7 +1,7 @@
 # Fast lane — runs on every PR and on pushes to main.
 # Target: under 3 minutes on a warm Turborepo cache (see docs/standards/ci-quality-gates.md).
-# Heavy lane (real PostgreSQL, migrations, Playwright, a11y, security scans) is a
-# separate required workflow added in a later PR.
+# Real PostgreSQL/browser checks live in e2e.yml; T074 migration proof in heavy.yml;
+# credential-free scanners in security.yml. Full T087 remains separate.
 #
 # Merge policy: this workflow is a REQUIRED status check. Auto-merge is disabled
 # at the repository level; the founder performs the final merge.
@@ -20,6 +20,7 @@ permissions:
   contents: read
 
 env:
+  SLOTNOVA_ENV: preview
   TURBO_TELEMETRY_DISABLED: "1"
   # Optional remote cache — set repo/org secret TURBO_TOKEN and variable TURBO_TEAM to enable.
   TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}

@@ -15,6 +15,8 @@
  *                 (`pnpm db:migrate`) and never by application request paths.
  */
 
+import { isHosted, resolveEnvironment } from "@slotnova/deployment-config";
+
 export type DbRole = "app" | "migration";
 
 /** SSL negotiation mode, provider-neutral. */
@@ -76,6 +78,8 @@ function parseSsl(raw: string | undefined): DbConnectionConfig["ssl"] {
     case "no-verify":
     case "allow":
     case "prefer":
+      // Local/preview opt-in only; hosted guard rejects this mode before parsing.
+      // nosemgrep: tooling.security.no-disabled-tls-verification
       return { rejectUnauthorized: false };
     default:
       throw new DbConfigError(
@@ -105,9 +109,55 @@ export function resolveDbConfig(role: DbRole, env: Env = process.env): DbConnect
     );
   }
 
+  let url: URL;
+  try {
+    url = new URL(connectionString);
+  } catch {
+    throw new DbConfigError(`${urlVar} must be a PostgreSQL URL`);
+  }
+  if (
+    !["postgres:", "postgresql:"].includes(url.protocol) ||
+    !url.hostname ||
+    !url.username ||
+    url.pathname.length < 2
+  )
+    throw new DbConfigError(`${urlVar} must name a PostgreSQL host, user and database`);
+  const hosted =
+    (env["SLOTNOVA_ENV"] !== undefined && isHosted(resolveEnvironment(env))) ||
+    env["NODE_ENV"] === "production";
+  if (hosted) {
+    if (env["NODE_TLS_REJECT_UNAUTHORIZED"] === "0")
+      throw new DbConfigError("Hosted connections forbid disabling Node TLS verification");
+    if (env["DATABASE_SSL"] !== "require" || !url.password)
+      throw new DbConfigError(
+        "Hosted database connections require credentials and certificate-verified TLS",
+      );
+    if ([...url.searchParams.keys()].some((key) => key.toLowerCase().startsWith("ssl")))
+      throw new DbConfigError(
+        "Configure TLS through DATABASE_SSL and CA trust, not URL SSL overrides",
+      );
+    if (env["DATABASE_CONNECTION_MODE"] !== "direct")
+      throw new DbConfigError(
+        "Hosted database connections require explicit DATABASE_CONNECTION_MODE=direct",
+      );
+    if (["6432", "6543"].includes(url.port) || url.hostname.includes("-pooler"))
+      throw new DbConfigError("A pooled endpoint cannot be declared direct");
+    if (
+      role === "migration" &&
+      [env["DATABASE_URL"], env["WORKER_DATABASE_URL"]].some((other) => {
+        if (!other) return false;
+        try {
+          return new URL(other).username === url.username;
+        } catch {
+          return true;
+        }
+      })
+    )
+      throw new DbConfigError("Migration and runtime database principals must differ");
+  }
   const poolMax = parseIntEnv(env[DB_ENV.poolMax], DB_ENV.poolMax) ?? DEFAULT_POOL_MAX[role];
-  if (poolMax < 1) {
-    throw new DbConfigError(`${DB_ENV.poolMax} must be at least 1`);
+  if (poolMax < 1 || poolMax > 100) {
+    throw new DbConfigError(`${DB_ENV.poolMax} must be between 1 and 100`);
   }
 
   return {

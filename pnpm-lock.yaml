@@ -196,6 +196,9 @@ importers:
       '@slotnova/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@slotnova/deployment-config':
+        specifier: workspace:*
+        version: link:../../packages/deployment-config
       '@slotnova/observability-server':
         specifier: workspace:*
         version: link:../../packages/observability-server
@@ -236,6 +239,9 @@ importers:
       '@slotnova/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@slotnova/deployment-config':
+        specifier: workspace:*
+        version: link:../../packages/deployment-config
       '@slotnova/design-tokens':
         specifier: workspace:*
         version: link:../../packages/design-tokens
@@ -254,6 +260,9 @@ importers:
       react-router:
         specifier: ^8.3.1
         version: 8.3.1(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      zod:
+        specifier: 4.6.5
+        version: 4.6.5
     devDependencies:
       '@axe-core/playwright':
         specifier: ^4.13.0
@@ -312,12 +321,18 @@ importers:
       '@slotnova/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@slotnova/deployment-config':
+        specifier: workspace:*
+        version: link:../../packages/deployment-config
       '@slotnova/observability-server':
         specifier: workspace:*
         version: link:../../packages/observability-server
       pg-boss:
         specifier: 12.31.1
         version: 12.31.1
+      zod:
+        specifier: 4.6.5
+        version: 4.6.5
     devDependencies:
       '@slotnova/tsconfig':
         specifier: workspace:*
@@ -356,6 +371,9 @@ importers:
 
   packages/db:
     dependencies:
+      '@slotnova/deployment-config':
+        specifier: workspace:*
+        version: link:../deployment-config
       pg:
         specifier: ^8.22.0
         version: 8.23.0
@@ -372,6 +390,16 @@ importers:
       testcontainers:
         specifier: ^12.0.4
         version: 12.1.0(supports-color@10.2.2)
+
+  packages/deployment-config:
+    dependencies:
+      zod:
+        specifier: 4.6.5
+        version: 4.6.5
+    devDependencies:
+      '@slotnova/tsconfig':
+        specifier: workspace:*
+        version: link:../tsconfig
 
   packages/design-tokens:
     dependencies:
@@ -5075,9 +5103,6 @@ packages:
     peerDependencies:
       zod: ^3.25.0 || ^4.0.0
 
-  zod@4.6.4:
-    resolution: {integrity: sha512-AXSD6hvGdvRjajG/l1cC+d6IrhH+sjmPKtYeQdJIK8MFJl3LyClzS+o/YsVC+zQZPupAaeH5skwwm8YqYH7BqA==}
-
   zod@4.6.5:
     resolution: {integrity: sha512-v5l/aFXZQeai4awLbOpSoHecE9UiMrnfx75tEXLjNonXVARxQ5mOeipTjROUchszUNCqnE+hqAMujRsRHsut2Q==}
 
@@ -7254,8 +7279,8 @@ snapshots:
       '@babel/parser': 7.29.8
       eslint: 10.10.0(supports-color@10.2.2)
       hermes-parser: 0.25.1
-      zod: 4.6.4
-      zod-validation-error: 4.0.2(zod@4.6.4)
+      zod: 4.6.5
+      zod-validation-error: 4.0.2(zod@4.6.5)
     transitivePeerDependencies:
       - supports-color
 
@@ -9631,10 +9656,8 @@ snapshots:
       compress-commons: 6.0.2
       readable-stream: 4.7.0
 
-  zod-validation-error@4.0.2(zod@4.6.4):
+  zod-validation-error@4.0.2(zod@4.6.5):
     dependencies:
-      zod: 4.6.4
-
-  zod@4.6.4: {}
+      zod: 4.6.5
 
   zod@4.6.5: {}

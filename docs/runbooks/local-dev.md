@@ -27,7 +27,7 @@ required from PR-02 onward for real-PostgreSQL tests.
 | Command | What it does |
 |---|---|
 | `pnpm install` | Cold-installs the workspace. Only build scripts allowlisted in `pnpm-workspace.yaml` → `allowBuilds` run. |
-| `pnpm build` | `turbo run build` across the workspace. No unit produces build output yet. |
+| `pnpm build` | `turbo run build` across the workspace. Builds all application/package artifacts. |
 | `pnpm typecheck` | `tsc --noEmit` with the strict flag set from `@slotnova/tsconfig`. |
 | `pnpm lint` | ESLint flat config (`eslint.config.mjs` → `@slotnova/eslint-config`). |
 | `pnpm lint:styles` | Stylelint (`stylelint.config.cjs` → `tooling/stylelint/`). Raw-value ban is scaffolded, enabled in PR-12. |
@@ -38,31 +38,33 @@ required from PR-02 onward for real-PostgreSQL tests.
 | `pnpm db:migrate` | Runs the gated migration runner (standalone step, never app-startup). |
 | `pnpm dev:api` | `apps/api` — NestJS + Fastify on `:3001` (watch mode via `tsx`). |
 | `pnpm dev:web` | `apps/web` — Vite SPA on `:3000`. |
-| `pnpm dev:worker` | `apps/worker` — minimal skeleton worker (watch mode via `tsx`). |
+| `pnpm dev:worker` | `apps/worker` — outbox consumer and scheduler (watch mode via `tsx`). |
 
-## Running the three apps (PR-06, T025)
+## Running the three apps
 
-```bash
-# apps/api needs a reachable Postgres connection string and an explicit CORS
-# allowlist that includes the web dev origin. The DatabaseModule's pool is
-# constructed lazily, so /healthz works even before a real database exists;
-# /readyz requires one.
-DATABASE_URL="postgres://app:app@127.0.0.1:5432/slotnova" \
-API_CORS_ALLOWED_ORIGINS="http://localhost:3000" \
-pnpm dev:api      # -> http://localhost:3001/healthz  { "status": "ok", ... }
+All commands now require an explicit deployment class. Use `SLOTNOVA_ENV=local`
+for development and `SLOTNOVA_ENV=preview` for builds/tests. Read the process-specific
+placeholder reference in `.env.example`; Node does not automatically load it.
+Export only the values needed by each process. The Vite dev server uses port 3000.
 
-pnpm dev:web        # -> http://localhost:3000 renders "Slotnova" + the API health ping
-pnpm dev:worker     # -> emits one structured `worker.ready` log line and stays running
+```sh
+export SLOTNOVA_ENV=local
+# Supply a reachable ordinary DATABASE_URL, and apply explicit migrations first.
+API_SECURE_COOKIES=false API_ENABLE_HSTS=false \
+API_CORS_ALLOWED_ORIGINS=http://localhost:3000 pnpm dev:api
+# Separate terminals, with their own environment:
+SLOTNOVA_ENV=local pnpm dev:web
+# Supply WORKER_DATABASE_URL and initialize pg-boss separately first:
+SLOTNOVA_ENV=local pnpm dev:worker
 ```
 
-Each is a **minimal runnable skeleton** (FR-010, SC-001 step 2): no product
-routes, no shell, no outbox consumer/scheduler. `apps/web` performs only the
-approved minimal `GET /healthz` ping and renders the resulting healthy/error
-state; `apps/worker` is a no-op keep-alive that exits cleanly on `SIGTERM` /
-`SIGINT`. Real database-backed local dev (`pnpm dev:db` / Docker Compose) is
-introduced in a later PR — `dev:api`/`dev:worker` work today against any
-reachable Postgres instance you provide via `DATABASE_URL`, or degrade to
-`/healthz`-only if none is reachable.
+API bootstrap now checks runtime database privileges before listening. `/healthz`
+is process liveness after startup; `/readyz` also checks migrations/outbox access.
+The worker runs the PR-16 consumer and scheduler, not a keep-alive skeleton.
+Follow [migration release](migration-release.md) for business/scheduler ordering and
+[deployment](deployment.md) for role separation. No Docker Compose provisioning
+or automatic startup migration is added here. Integration tests provision their
+own disposable PostgreSQL through Testcontainers.
 
 ## Architecture-boundary enforcement
 

@@ -1,16 +1,18 @@
 # 0001 — Managed Hosting and PostgreSQL Provider (R1)
 
-Status: **PROPOSED — awaiting Founder approval**
+Status: **FOUNDER-APPROVED**
+
+Founder approval date: **2026-09-15**. The Stage B instruction accepts the Stage A recommendation below; hosted verification and spending remain separate.
 
 Evidence reviewed: **2026-09-15**. Issue: [#48](https://github.com/Nejo12/slotnova/issues/48). Baseline: `ef56cbcc7e8a25d1493400baef1d5fc2fe67be35` (`origin/main`, merged PR #47; issue #46 closed). Branch: `feat/pr-17-deployment-env-security`.
 
-## Context and proposed decision
+## Approved decision and Stage A context
 
-Recommend **Amazon RDS for PostgreSQL 18, Multi-AZ DB instance deployment, with separate API and worker ECS services on on-demand Fargate**. Use one AWS region, provisionally **Europe (Frankfurt), `eu-central-1`**, private database access, direct PostgreSQL connections and certificate-verified TLS. Host the Vite build in private S3 behind CloudFront. Frankfurt is a proposed operational default, not a founder-imposed residency requirement.
+Adopt **Amazon RDS for PostgreSQL 18, Multi-AZ DB instance deployment, with separate API and worker ECS services on on-demand Fargate**. Use one AWS region, provisionally **Europe (Frankfurt), `eu-central-1`**, private database access, direct PostgreSQL connections and certificate-verified TLS. Host the Vite build in private S3 behind CloudFront. Frankfurt is a proposed operational default, not a founder-imposed residency requirement.
 
 This favors database correctness, recovery and explicit security boundaries over the lowest subscription price. Render is substantially easier to operate and cheaper at small sizes; Neon is attractive for disposable branches. Neither advantage removes the connection, security or operational qualifications below. No provider resource was provisioned, no hosted database was tested, and this record does not authorize spending or declare production readiness.
 
-This is only PR-17 Stage A. T072–T075 and T079 remain unchecked. Founder R1 approval is required before Stage B; no implementation PR is opened by this spike.
+Stage A research is retained below as historical evidence. Stage B implements T072–T075 in the [deployment](../runbooks/deployment.md) and [migration-release](../runbooks/migration-release.md) foundation. **T079 remains unchecked and owned by PR-00 reconciliation.**
 
 ## Current Slotnova requirements
 
@@ -53,7 +55,7 @@ Supabase's public direct endpoint defaults to IPv6; its IPv4 add-on is distinct 
 
 ## Database roles and pg-boss provisioning
 
-Required model, to be provisioned only after approval:
+Approved role model; resource provisioning requires a separate authorized rollout:
 
 | Principal | Required scope | Must not receive |
 | --- | --- | --- |
@@ -155,22 +157,24 @@ Measure strict TLS including negative trust/hostname tests, role rejection, depl
 
 Source review also found a pre-existing secure-mode deployment gap: `apps/web/src/app/auth/session-api.ts` reads `slotnova_csrf`, while the API's `csrfCookieName(true)` emits `__Host-slotnova_csrf`. Same-origin routing solves host visibility, but not this name mismatch. T072/T073 must reconcile the existing secure-mode client/server contract and prove workspace switching/logout with secure cookies; do not disable secure cookies as a workaround. This was source inspection, not a production-mode browser test, and no code fix is included in Stage A.
 
-Founder approval would accept the proposed provider, topology and its higher operational cost as the R1 direction; it would not make these unperformed hosted tests pass or approve a cloud bill. Capacity, RPO/RTO, region choice, AWS account readiness and precise monthly estimate remain explicit pre-provisioning checks. No external account access or paid resource was needed for this stage.
+Founder approval accepts the provider, topology and its higher operational cost as the R1 direction; it does not make these unperformed hosted tests pass or approve a cloud bill. Capacity, RPO/RTO, region choice, AWS account readiness and precise monthly estimate remain explicit pre-provisioning checks. No external account access or paid resource was needed for this stage.
 
-| Task | Consequence after R1 approval; not implemented here |
+| Task | Historical Stage A handoff; Stage B implementation is linked above |
 | --- | --- |
 | T072 | Four environment classes; distinct API/worker/migration secrets and roles; schema-validated provider-neutral settings; strict TLS trust delivery and documented secret sources. |
 | T073 | Preserve existing session/CSRF and explicit CORS behavior; validate same-origin routing, ALB/proxy trust and the secure CSRF-cookie name contract; CSP/headers, auth/invitation rate limits and dependency/secret/SAST gates. Account for multiple live processes during deploys without introducing an unapproved broker. |
 | T074 | Explicit gated business and pg-boss release steps; restricted release credentials, private runner/task reachability; clean/forward populated migration evidence, expand/contract checklist, roll-forward recovery. No startup migration or schema push. |
 | T075 | Turn approved topology into the deployment runbook, document pools/roles/maintenance/backups/PITR/restore procedure, and record chosen-provider connection evidence. |
-| T079 | Remains incomplete until the R1 decision is Founder-approved and the exit criteria actually hold. This proposed record alone cannot close it. |
+| T079 | Remains unchecked; PR-00 owns reconciliation after Founder approval. PR-17 does not close it. |
 
 **ADR amendment: none required for this proposal.** It preserves ADR-004's native PostgreSQL/Drizzle and adapter boundaries, ADR-008 tenant isolation, ADR-005 outbox, ADR-014 separate scheduler and ADR-020 gated migrations/environment separation. Private TLS verification, initial sizing, Multi-AZ and recovery targets are proposed operational choices; they are not retroactively described as founder-mandated product invariants. A later decision that changes those ADR guarantees must surface the conflict separately.
 
-## Review and validation
+## Historical Stage A review and validation
 
 A separate review pass checked this record against issue #48, T072/T075/T079, ADR-004/020, PR-16 worker ownership, and current session/RLS behavior. Material corrections incorporated: distinguish API transaction-local safety from worker session-lock safety; do not describe pg-boss runtime as DML-only; do not confuse Render's TLS modes or assume zero-loss HA; recognize current Railway PITR and Render PrivateLink; avoid outdated Neon fixed minimum pricing; qualify Supabase PG 18 and Railway extension availability; keep local evidence distinct from hosted certification; record same-origin cookie routing and the current secure CSRF-cookie name mismatch as Stage B prerequisites.
 
-Validation results: `pnpm lint`, `pnpm lint:styles`, `pnpm lint:boundaries` and `pnpm typecheck` passed; `pnpm test` passed all **331 tests / 59 files**. `pnpm format:check` also passed. No T072–T075 code, task checkbox, accepted ADR, workflow or provider configuration is changed by this record.
+Validation results: `pnpm lint`, `pnpm lint:styles`, `pnpm lint:boundaries` and `pnpm typecheck` passed; `pnpm test` passed all **331 tests / 59 files**. `pnpm format:check` also passed. Those Stage A results preceded the Stage B implementation and do not describe its verification.
 
-**STOPPED FOR FOUNDER R1 APPROVAL. T072–T075 NOT STARTED. NO MERGE OR AUTO-MERGE PERFORMED.**
+**Historical Stage A stop superseded by Founder approval on 2026-09-15. No merge or auto-merge performed.**
+
+Stage B reconciles the secure CSRF cookie name in the SPA and adds regression coverage. Actual HTTPS CloudFront/ALB workspace switching/logout remains an unchecked hosted acceptance test in the deployment runbook.

@@ -73,13 +73,13 @@ and disposable test provisioning, `WORKER_SCHEDULER_MIGRATE=true` allows this
 library-owned initialization. Normal worker startup defaults to `migrate=false`;
 production rejects this flag. Production must provision/upgrade pg-boss in an
 explicit release action using the pinned library before starting workers.
-This PR documents the ordering; deployment migration gating remains T074.
+T074 now provides the explicit `db:migrate:scheduler` command and [release gate](../../docs/runbooks/migration-release.md).
 
 `WORKER_DATABASE_URL` is an explicit worker credential, separate from
 `DATABASE_MIGRATION_URL`. Provision permissions for platform outbox maintenance,
 session cleanup, workspace enumeration, pg-boss's schema, and membership in the
 existing `slotnova_app` role. Invitation sweeps deliberately switch to that
-non-bypass role. This PR does not redesign environment/role provisioning (T072+).
+non-bypass role. T072 validates the explicit environment and hosted runtime-role boundary; see the [deployment runbook](../../docs/runbooks/deployment.md).
 Existing `DATABASE_SSL`, timeout, and pool validation conventions are reused.
 
 | Setting | Default | Bound |
@@ -101,6 +101,7 @@ skips this lifecycle. Session-lock recovery and durable pg-boss storage handle i
 Use pinned Node 24.20.0 and pnpm 12.3.4 with Docker available:
 
 ```sh
+export SLOTNOVA_ENV=preview
 pnpm build
 pnpm --filter @slotnova/worker test:integration
 ```

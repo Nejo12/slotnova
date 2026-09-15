@@ -29,6 +29,7 @@
     "tooling/**/__tests__/**/*.ts",
     "tooling/e2e/**/*.ts",
     "tooling/contracts/**/*.ts",
+    "tooling/migrations/**/*.ts",
     "vitest.config.ts",
     "packages/*/src/**/*.ts",
     "packages/*/*.config.ts",

@@ -1,0 +1,70 @@
+rules:
+  - id: no-dynamic-evaluation
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: Do not evaluate dynamically supplied code.
+    pattern-either:
+      - pattern: eval(...)
+      - pattern: new Function(...)
+  - id: no-disabled-tls-verification
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: TLS peers must be certificate verified.
+    paths:
+      exclude: ["**/__tests__/**"]
+    pattern: "{rejectUnauthorized: false, ...}"
+  - id: no-shell-request-execution
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: Never pass request data to a shell command.
+    mode: taint
+    pattern-sources:
+      - patterns:
+          - pattern: $REQ.query
+          - metavariable-regex:
+              metavariable: $REQ
+              regex: ^(req|request)$
+        exact: true
+      - patterns:
+          - pattern: $REQ.body
+          - metavariable-regex:
+              metavariable: $REQ
+              regex: ^(req|request)$
+        exact: true
+      - patterns:
+          - pattern: $REQ.params
+          - metavariable-regex:
+              metavariable: $REQ
+              regex: ^(req|request)$
+        exact: true
+    pattern-sinks:
+      - pattern: exec($COMMAND, ...)
+      - pattern: execSync($COMMAND, ...)
+  - id: no-request-sql-interpolation
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: Bind request values as SQL parameters.
+    mode: taint
+    pattern-sources:
+      - patterns:
+          - pattern: $REQ.query
+          - metavariable-regex:
+              metavariable: $REQ
+              regex: ^(req|request)$
+        exact: true
+      - patterns:
+          - pattern: $REQ.body
+          - metavariable-regex:
+              metavariable: $REQ
+              regex: ^(req|request)$
+        exact: true
+      - patterns:
+          - pattern: $REQ.params
+          - metavariable-regex:
+              metavariable: $REQ
+              regex: ^(req|request)$
+        exact: true
+    pattern-sinks:
+      - patterns:
+          - pattern: $DB.query($SQL)
+          - focus-metavariable: $SQL

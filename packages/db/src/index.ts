@@ -23,6 +23,7 @@ export {
   Client,
   Pool,
   assertNonBypassRlsRole,
+  assertRuntimeDatabaseRole,
   createDirectClient,
   createPool,
   withClient,

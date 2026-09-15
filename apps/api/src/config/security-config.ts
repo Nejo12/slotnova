@@ -1,8 +1,7 @@
 /**
  * Minimal, local-to-`apps/api` security configuration: the strict CORS
  * allowlist and HSTS toggle (T019, `docs/security/security-and-audit.md`).
- * The full four-class environment/config model is a later task (T072) — this
- * reads only the handful of env vars this bootstrap needs, with no implicit
+ * Composed by the T072 environment boundary; this module reads security values with no implicit
  * permissive fallback (an unset allowlist means "allow no origins", not "*").
  */
 
@@ -71,9 +70,13 @@ export function resolveSecurityConfig(env: NodeJS.ProcessEnv = process.env): Sec
   corsOrigins.forEach(assertValidOrigin);
 
   const rawHsts = env[SECURITY_ENV.enableHsts]?.trim().toLowerCase();
+  if (rawHsts !== undefined && !["true", "false"].includes(rawHsts))
+    throw new SecurityConfigError("API_ENABLE_HSTS must be true or false");
   const enableHsts = rawHsts !== "false";
 
   const rawSecureCookies = env[SECURITY_ENV.secureCookies]?.trim().toLowerCase();
+  if (rawSecureCookies !== undefined && !["true", "false"].includes(rawSecureCookies))
+    throw new SecurityConfigError("API_SECURE_COOKIES must be true or false");
   const secureCookies = rawSecureCookies !== "false";
 
   return { corsOrigins, enableHsts, secureCookies };

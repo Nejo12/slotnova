@@ -48,6 +48,8 @@ async function main(): Promise<void> {
   // bootstrap the real process and every integration test use -- reusing it
   // here (rather than a hand-rolled `NestFactory.create`) avoids duplicating
   // its plugin/hook wiring and keeps this script exercising the real DI graph.
+  process.env["SLOTNOVA_ENV"] = "preview";
+  process.env["NODE_ENV"] = "test";
   process.env["DATABASE_URL"] ??= "postgres://openapi-generate:unused@localhost:5432/unused";
 
   const app = await createApp();

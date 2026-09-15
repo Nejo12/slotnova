@@ -374,6 +374,15 @@ export interface operations {
           "application/problem+json": components["schemas"]["ProblemDetailsDto"];
         };
       };
+      /** @description Authentication attempts are rate limited. */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
     };
   };
   SessionController_signOut: {

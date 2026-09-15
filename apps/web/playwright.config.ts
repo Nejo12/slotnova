@@ -28,6 +28,7 @@ export default defineConfig({
       reuseExistingServer: false,
       timeout: 60_000,
       env: {
+        SLOTNOVA_ENV: "preview",
         VITE_E2E: "true",
         VITE_API_URL: "http://127.0.0.1:3001",
       },

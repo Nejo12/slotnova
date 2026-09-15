@@ -39,6 +39,7 @@ const apiEntry = fileURLToPath(new URL("../../apps/api/dist/main.js", import.met
 const api = spawn(process.execPath, [apiEntry], {
   env: {
     ...process.env,
+    SLOTNOVA_ENV: "preview",
     DATABASE_URL: harness.appUri,
     API_CORS_ALLOWED_ORIGINS: "http://127.0.0.1:3000",
     API_SECURE_COOKIES: "false",

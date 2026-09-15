@@ -1,0 +1,30 @@
+{
+  "name": "@slotnova/deployment-config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "UNLICENSED",
+  "description": "Environment-class validation shared by API, worker, database release and web build boundaries.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@slotnova/tsconfig": "workspace:*"
+  },
+  "dependencies": {
+    "zod": "4.6.5"
+  }
+}
