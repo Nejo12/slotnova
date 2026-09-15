@@ -104,3 +104,48 @@ At minimum for each affected domain slice:
 - regression coverage for bug fixes
 
 Concurrency tests use real concurrent connections; sequential calls are not concurrency tests.
+
+## Agent execution discipline
+
+### Worktree safety
+
+- Never discard, reset, clean, stash or overwrite an existing dirty worktree unless the Founder explicitly authorizes that exact action.
+- Never reuse another task's dirty worktree.
+- When resuming an interrupted agent session, inspect the existing worktree before creating a replacement.
+- Before recovery work, inspect at minimum: `git status`, current branch/HEAD, recent commits, current diff/untracked files.
+- Preserve already-completed local work.
+
+### Context economy
+
+- Begin with the linked issue/task, AGENTS.md and directly relevant implementation files.
+- Do not recursively read the whole repository, all ADRs, all specs, or entire app directories by default.
+- Read additional sources only when a concrete dependency, conflict or uncertainty requires them.
+- Prefer targeted search/file reads over broad repository ingestion.
+- Existing accepted decisions should be reused rather than repeatedly researched.
+
+### Verification responsibility
+
+- During implementation, run focused tests/gates for the affected slice first.
+- Run broader local verification when required by the task or when cross-cutting changes justify it.
+- GitHub Actions is the normal clean-room/full-suite verifier after push.
+- Do not automatically duplicate the same exhaustive full suite locally, in a second fresh checkout, and again in CI unless the task explicitly requires independent reproduction or a CI-only issue is being diagnosed.
+- Never claim a test/check passed unless it actually ran successfully on the stated head.
+
+### Delivery stopping gates
+
+- A normal implementation-agent run should stop after: implementation → focused verification → review → commit → push.
+- PR creation/CI inspection may be a separate short run.
+- Do not sit polling GitHub CI unless explicitly instructed.
+- After opening a PR, prefer stopping and allowing CI to run independently.
+- If CI fails, resume with a narrowly scoped repair task for the failing job.
+- Never merge or enable auto-merge; Founder performs every merge manually.
+
+### Interrupted-session recovery
+
+- After quota exhaustion, crash, timeout or tool interruption:
+  1. recover current worktree state;
+  2. determine what already completed;
+  3. reuse valid prior results where no relevant files changed afterward;
+  4. rerun only incomplete or invalidated checks;
+  5. continue from the interruption point.
+- Never restart the full task blindly merely because the previous agent session ended.
