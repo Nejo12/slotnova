@@ -140,3 +140,20 @@ export async function assertNonBypassRlsRole(executor: ClientBase): Promise<void
     );
   }
 }
+
+/** Runtime cannot SET ROLE into a privileged principal or own business tables. */
+export async function assertRuntimeDatabaseRole(executor: ClientBase): Promise<void> {
+  await assertNonBypassRlsRole(executor);
+  const { rows } = await executor.query<{ elevated: boolean; businessOwner: boolean }>(`
+    SELECT EXISTS (SELECT 1 FROM pg_roles WHERE
+      (rolsuper OR rolbypassrls OR rolcreaterole OR rolcreatedb)
+      AND pg_has_role(current_user, oid, 'MEMBER')) AS elevated,
+      EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+        WHERE n.nspname='public' AND c.relkind IN ('r','p')
+        AND pg_has_role(current_user, c.relowner, 'MEMBER')) AS "businessOwner"
+  `);
+  if (!rows[0] || rows[0].elevated || rows[0].businessOwner)
+    throw new Error(
+      "Runtime database principal has administrative membership or business ownership",
+    );
+}

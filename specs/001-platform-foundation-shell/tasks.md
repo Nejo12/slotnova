@@ -696,7 +696,7 @@ Each task carries a compact block:
 
 **Independent Test**: quickstart §8 — clean + forward migrations pass; migration is a standalone gated step; a sample non-trivial change is expressed as expand/contract stages.
 
-- [ ] T072 [US6] Environment configuration model (local / preview-CI / staging / production)
+- [x] T072 [US6] Environment configuration model (local / preview-CI / staging / production)
   - **Dep**: T009; **R1 decision record** (`docs/decisions/0001-...`)
   - **Files**: `apps/*/src/config/*` (schema-validated env), `.env.example`, per-env secret-source docs
   - **Accept**: four classes; separately managed secrets; no shared credentials; no secrets in Git; FR-059
@@ -704,7 +704,7 @@ Each task carries a compact block:
   - **Constraints**: provider-neutral; adapter seams
   - **Out**: actual cloud provisioning (post-decision)
 
-- [ ] T073 [US6] Security baseline wiring: rate limits, CSP/headers, CORS allowlist, dependency/secret scans
+- [x] T073 [US6] Security baseline wiring: rate limits, CSP/headers, CORS allowlist, dependency/secret scans
   - **Dep**: T019, T007
   - **Files**: `apps/api/src/modules/platform/security/*`, `.github/workflows/*` (dep + secret + SAST)
   - **Accept**: rate limits on auth + invitation-preview endpoints; scanners in CI; `docs/security/security-and-audit.md` web baseline
@@ -712,7 +712,7 @@ Each task carries a compact block:
   - **Constraints**: no auto-apply of major dep upgrades to `main`
   - **Out**: pen-test / incident drills (roadmap Phase 8)
 
-- [ ] T074 [US6] Gated migration release + expand/contract PR checklist automation
+- [x] T074 [US6] Gated migration release + expand/contract PR checklist automation
   - **Dep**: T010, T012
   - **Files**: `.github/workflows/heavy.yml` (migration job), `docs/runbooks/migration-release.md`, PR template migration checklist
   - **Accept**: migration runs as an explicit gated job separate from app deploy; checklist enforced; roll-forward default; FR-060, FR-061, FR-062, FR-063, ADR-020
@@ -720,7 +720,7 @@ Each task carries a compact block:
   - **Constraints**: no `push` shortcuts; no destructive-rollback assumptions
   - **Out**: n/a
 
-- [ ] T075 [US6] Deployment topology runbook (containers, same-region DB, private networking)
+- [x] T075 [US6] Deployment topology runbook (containers, same-region DB, private networking)
   - **Dep**: **R1 decision record**
   - **Files**: `docs/runbooks/deployment.md`, `docs/decisions/0001-hosting-postgres-provider.md` (finalized)
   - **Accept**: documents environments, gated release, backups/PITR expectations; provider confirmed to support RLS/range/exclusion/`SET LOCAL`/backups/private-net; FR-064, FR-065

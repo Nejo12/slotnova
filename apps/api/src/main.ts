@@ -1,4 +1,6 @@
 import "reflect-metadata";
+import { assertRuntimeDatabaseRole, type Pool } from "@slotnova/db";
+import { DB_POOL } from "./modules/platform/database/database.tokens.js";
 
 import fastifyCookie from "@fastify/cookie";
 import fastifyHelmet from "@fastify/helmet";
@@ -6,11 +8,12 @@ import { NestFactory } from "@nestjs/core";
 import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fastify";
 
 import { AppModule } from "./app.module.js";
-import { resolveSecurityConfig } from "./config/security-config.js";
+import { resolveApiConfig } from "./config/environment-config.js";
 import {
   REQUEST_ID_HEADER,
   registerCorrelationHook,
 } from "./http/correlation/register-correlation.js";
+import { registerRateLimits } from "./modules/platform/security/rate-limits.js";
 import { CSRF_HEADER_NAME, registerCsrfProtection } from "./modules/platform/security/csrf.js";
 
 /**
@@ -20,11 +23,16 @@ import { CSRF_HEADER_NAME, registerCsrfProtection } from "./modules/platform/sec
  * via Fastify's `inject()` or `app.listen(0, ...)`, never a hard-coded port.
  */
 export async function createApp(): Promise<NestFastifyApplication> {
-  const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter(), {
-    bufferLogs: true,
-  });
+  const config = resolveApiConfig(process.env);
+  const app = await NestFactory.create<NestFastifyApplication>(
+    AppModule,
+    new FastifyAdapter({ trustProxy: config.trustProxy.length ? config.trustProxy : false }),
+    {
+      bufferLogs: true,
+    },
+  );
 
-  const security = resolveSecurityConfig(process.env);
+  const security = config.security;
   const instance = app.getHttpAdapter().getInstance();
 
   // Correlation must be the very first thing that runs for a request so every
@@ -60,6 +68,13 @@ export async function createApp(): Promise<NestFastifyApplication> {
     crossOriginResourcePolicy: { policy: "same-origin" },
   });
 
+  registerRateLimits(instance, {
+    authMax: config.API_RATE_LIMIT_AUTH_MAX,
+    previewMax: config.API_RATE_LIMIT_PREVIEW_MAX,
+    windowMs: config.API_RATE_LIMIT_WINDOW_MS,
+    maxKeys: config.API_RATE_LIMIT_MAX_KEYS,
+  });
+
   // Strict, explicit allowlist — no permissive "*". `credentials: true` is
   // required for the SPA's session cookie to flow on cross-origin requests
   // (T037/T038); safe only alongside a non-wildcard, explicit allowlist,
@@ -76,8 +91,14 @@ export async function createApp(): Promise<NestFastifyApplication> {
 
 async function bootstrap(): Promise<void> {
   const app = await createApp();
-  const port = Number(process.env["API_PORT"] ?? 3001);
-  const host = process.env["API_HOST"] ?? "0.0.0.0";
+  const { API_PORT: port, API_HOST: host } = resolveApiConfig(process.env);
+  app.enableShutdownHooks();
+  const client = await app.get<Pool>(DB_POOL).connect();
+  try {
+    await assertRuntimeDatabaseRole(client);
+  } finally {
+    client.release();
+  }
   await app.listen(port, host);
 }
 

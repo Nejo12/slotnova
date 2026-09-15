@@ -11,6 +11,12 @@ export default defineConfig({
     // test runner never depends on stale/pre-existing dist output.
     alias: [
       {
+        find: "@slotnova/deployment-config",
+        replacement: fileURLToPath(
+          new URL("./packages/deployment-config/src/index.ts", import.meta.url),
+        ),
+      },
+      {
         find: "@slotnova/contracts/msw",
         replacement: fileURLToPath(
           new URL("./packages/contracts/src/msw/index.ts", import.meta.url),
@@ -57,6 +63,7 @@ export default defineConfig({
     ],
   },
   test: {
+    env: { SLOTNOVA_ENV: "preview" },
     environment: "node",
     include: [
       "tooling/**/__tests__/**/*.test.ts",

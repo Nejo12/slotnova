@@ -188,6 +188,7 @@ describe("scheduler durability and concurrency", () => {
     const lines: string[] = [];
     const worker = createWorker({
       config: resolveWorkerConfig({
+        SLOTNOVA_ENV: "preview",
         WORKER_DATABASE_URL: pg.adminUri,
         WORKER_SCHEDULER_SCHEMA: "worker_lifecycle",
         WORKER_SCHEDULER_MIGRATE: "true",

@@ -1,5 +1,4 @@
 const API_BASE_URL = import.meta.env["VITE_API_URL"] ?? "http://localhost:3001";
-const CSRF_COOKIE_NAME = "slotnova_csrf";
 const CSRF_HEADER_NAME = "x-csrf-token";
 
 export interface WorkspaceSummary {
@@ -37,10 +36,11 @@ export class ApiRequestError extends Error {
 }
 
 function readCsrfCookie(): string {
-  const pair = document.cookie
-    .split("; ")
-    .find((entry) => entry.startsWith(`${CSRF_COOKIE_NAME}=`));
-  return pair?.slice(CSRF_COOKIE_NAME.length + 1) ?? "";
+  for (const name of ["__Host-slotnova_csrf", "slotnova_csrf"]) {
+    const pair = document.cookie.split("; ").find((entry) => entry.startsWith(`${name}=`));
+    if (pair) return pair.slice(name.length + 1);
+  }
+  return "";
 }
 
 async function api(path: string, init: RequestInit = {}): Promise<Response> {

@@ -4,6 +4,7 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
+      "env": ["SLOTNOVA_ENV", "VITE_*"],
       "outputs": ["dist/**", ".output/**"]
     },
     "typecheck": {
@@ -31,6 +32,7 @@
       "cache": false
     },
     "db:migrate": {
+      "passThroughEnv": ["SLOTNOVA_ENV", "DATABASE_*", "NODE_EXTRA_CA_CERTS"],
       "dependsOn": ["build"],
       "outputs": [],
       "cache": false
@@ -43,6 +45,9 @@
       // Turbo's default strict env mode otherwise drops these before they
       // reach `tsx watch` / `vite`.
       "env": [
+        "SLOTNOVA_ENV",
+        "NODE_EXTRA_CA_CERTS",
+        "DATABASE_CONNECTION_MODE",
         "DATABASE_URL",
         "WORKER_*",
         "DATABASE_SSL",

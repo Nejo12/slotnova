@@ -11,13 +11,16 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "dev": "tsx watch src/main.ts",
     "start": "node dist/main.js",
-    "test:integration": "vitest run --config vitest.integration.config.ts"
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "db:migrate:scheduler": "node dist/bin/migrate-scheduler.js"
   },
   "dependencies": {
     "@slotnova/observability-server": "workspace:*",
     "pg-boss": "12.31.1",
     "@slotnova/db": "workspace:*",
-    "@slotnova/api": "workspace:*"
+    "@slotnova/api": "workspace:*",
+    "@slotnova/deployment-config": "workspace:*",
+    "zod": "4.6.5"
   },
   "devDependencies": {
     "@slotnova/tsconfig": "workspace:*"

@@ -114,3 +114,31 @@ Pin supported runtime/package-manager majors, use lockfiles, review dependency a
 ## Incident readiness
 
 Before production, define credential/session/provider-key rotation, audit access, tenant containment, outbound-notification kill switches, backup/restore verification and incident/runbook ownership.
+
+
+## PR-17 baseline gates
+
+`security.yml` uses `pnpm audit --audit-level high` (high/critical findings or
+registry failure stop the job), Gitleaks CLI 8.29.1 over complete Git history
+(redacted findings; any detection/error stops the job), and Semgrep OSS 1.177.0
+with repository-owned JavaScript/TypeScript rules (`--error --strict`, metrics and
+version checks disabled). No scanner account, paid CodeQL entitlement or hosted
+application credentials are required. Dependency metadata and scanner downloads
+require public network access; ordinary CI never calls runtime providers.
+
+Gitleaks archives are checksum pinned. Runtime-generated synthetic secret and
+unsafe-code positive controls must return finding exit code 1; scanner startup or
+silent detection failure blocks the job. Semgrep covers dynamic evaluation,
+explicit TLS verification disabling, request-to-shell execution and request SQL
+interpolation. These focused rules are not a complete penetration test or a
+cross-module taint proof. TLS unit fixtures are excluded from that rule, and the
+existing local-only TLS opt-out has one documented inline suppression; hosted
+configuration rejects it. Review rule changes/suppressions like security code.
+No blanket finding baseline, automatic dependency upgrades or auto-merge is used.
+
+Authentication and invitation preview use bounded per-process server counters,
+stable RFC 9457 `application/problem+json` 429 and `Retry-After`. Existing Fastify
+Helmet/CSP/HSTS, credentialed explicit-origin CORS and CSRF hooks remain in place.
+The [deployment runbook](../runbooks/deployment.md) documents proxy trust, rolling
+replica limits and the hosted acceptance checks; global distributed quotas are
+not claimed.

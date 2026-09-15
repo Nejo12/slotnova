@@ -9,22 +9,19 @@ import { build } from "vite";
 const MARKER = "SLOTNOVA_E2E_HARNESS_MARKER";
 const created: string[] = [];
 
-// This test's own `vite build` resolves @slotnova/ui through its published
-// `default` export condition (dist/index.js), not the `source` alias the
-// root vitest config uses for other workspace packages — so it needs
-// @slotnova/ui actually built. turbo.json's `test` task declares
-// `dependsOn: ["^build"]`, but the root `pnpm test` script (and CI's fast
-// lane, which runs `pnpm test` before `pnpm build`) calls vitest directly,
-// bypassing that dependency graph. Build @slotnova/ui here rather than
-// widening the CI-ordering fix beyond this test's own concern.
+// Vite resolves workspace packages through their built default exports, not
+// Vitest's source aliases. Keep this test runnable before the main CI build
+// by building its missing prerequisites without changing the bundle assertions.
 beforeAll(() => {
-  const uiDist = new URL("../../../../packages/ui/dist/index.js", import.meta.url).pathname;
-  if (!existsSync(uiDist)) {
-    const repoRoot = new URL("../../../../", import.meta.url).pathname;
-    execFileSync("pnpm", ["--filter", "@slotnova/ui", "build"], {
-      cwd: repoRoot,
-      stdio: "inherit",
-    });
+  const repoRoot = new URL("../../../../", import.meta.url).pathname;
+  for (const name of ["ui", "deployment-config"]) {
+    const entry = join(repoRoot, "packages", name, "dist", "index.js");
+    if (!existsSync(entry)) {
+      execFileSync("pnpm", ["--filter", `@slotnova/${name}`, "build"], {
+        cwd: repoRoot,
+        stdio: "inherit",
+      });
+    }
   }
 });
 
