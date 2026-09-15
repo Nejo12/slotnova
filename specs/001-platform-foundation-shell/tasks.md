@@ -738,15 +738,16 @@ Each task carries a compact block:
 
 **Independent Test**: quickstart §9 — correlation id generated/preserved and present in all request logs + triggered-job logs; a telemetry event asserted with no network; sampled log/trace audit finds no sensitive field.
 
-- [ ] T076 [US7] Correlation propagation request → outbox → worker job
+- [x] T076 [US7] Correlation propagation request → outbox → worker job
   - **Dep**: T013, T019, T068
   - **Files**: `packages/observability-server/src/als-context.ts` (extend), outbox payload `request_id` plumb-through, worker context restore
   - **Accept**: same correlation id in request logs and in the logs/telemetry of any job it triggers; FR-054
   - **Tests**: T078
   - **Constraints**: no high-cardinality IDs as metric labels (FR-056)
   - **Out**: distributed tracing backend
+  - **Note (PR-18)**: the request→outbox→worker mechanism (correlation-hook-generated/preserved request id, `writeOutboxRecord`'s required `requestId` payload field, `dispatch.ts`'s `runWithChildContext` restore on the worker side, including the retry/dead-letter path) already existed from PR-16/PR-17; no `als-context.ts` change was required. T078 adds the proving integration coverage.
 
-- [ ] T077 [US7] Metrics separation (technical vs business) + OTel seam
+- [x] T077 [US7] Metrics separation (technical vs business) + OTel seam
   - **Dep**: T013
   - **Files**: `packages/observability-server/src/metrics.ts` (technical: latency/error/outbox-lag/pool; business namespace reserved), OTel exporter adapter interface
   - **Accept**: technical/business kept distinct; exporter is an adapter; `docs/observability/observability.md`
@@ -754,7 +755,7 @@ Each task carries a compact block:
   - **Constraints**: local/CI needs no vendor
   - **Out**: business metrics content (arrives with product phases)
 
-- [ ] T078 [P] [US7] Observability integration tests (correlation, redaction, event assertion)
+- [x] T078 [P] [US7] Observability integration tests (correlation, redaction, event assertion)
   - **Dep**: T076, T077, T018
   - **Files**: `apps/api/src/test/observability/*.int.test.ts`
   - **Accept**: correlation generated-if-absent / preserved-if-present across request+job; sampled logs/traces contain no configured sensitive field; a domain event asserted without network; FR-053, FR-055, FR-057, SC-012

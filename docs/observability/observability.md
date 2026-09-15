@@ -40,6 +40,17 @@ Business examples:
 
 Do not encode high-cardinality IDs as metric labels.
 
+`@slotnova/observability-server`'s `metrics.ts` (T077) makes this structural: a
+`Meter` is created in either the `"technical"` or `"business"` namespace, and
+any label whose key is identifier- or secret-shaped (`requestId`,
+`workspaceId`, `userId`, `jobId`, `email`, `token`, …) is rejected at the call
+site rather than silently accepted. Points are exported through a
+`MetricExporter` adapter — `createNoopExporter()` (default) and
+`createInMemoryExporter()` (tests) ship today; a concrete OpenTelemetry/vendor
+exporter is a later adapter, never a dependency of this package. PR-18 defines
+only the technical instrument names in `TECHNICAL_METRIC_NAMES`; the business
+namespace is reserved, with no business metric content invented here.
+
 ## Logging
 
 Logs should answer what happened and where without becoming the audit store. Use stable event names and structured fields instead of free-form concatenated messages.
