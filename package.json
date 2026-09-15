@@ -26,7 +26,10 @@
     "db:migrate": "turbo run db:migrate",
     "dev:web": "turbo run dev --filter=@slotnova/web",
     "dev:api": "turbo run dev --filter=@slotnova/api",
-    "dev:worker": "turbo run dev --filter=@slotnova/worker"
+    "dev:worker": "turbo run dev --filter=@slotnova/worker",
+    "verify:fast": "node tooling/verify/run.mjs fast",
+    "verify:integration": "node tooling/verify/run.mjs integration",
+    "verify:pr": "node tooling/verify/run.mjs pr"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
