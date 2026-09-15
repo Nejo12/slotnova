@@ -14,7 +14,7 @@ export const MIGRATION_CHECKLIST = [
   "Production migration ordering reviewed",
 ] as const;
 export function validateMigrationChecklist(body: string, paths: readonly string[]): void {
-  body = body.replace(/<!--[\s\S]*?-->/g, "");
+  body = body.replace(new RegExp("<!--[\\s\\S]*?-->", "g"), "");
   const yes = /^- \[x\] Schema change: yes\s*$/im.test(body);
   const no = /^- \[x\] Schema change: no\s*$/im.test(body);
   if (yes === no) throw new Error("Select exactly one Schema change: yes/no checkbox");
