@@ -14,3 +14,9 @@ tail of output, and the full log path are printed.
 `verify:integration` does not install Playwright/browser dependencies --
 run `pnpm --filter @slotnova/web exec playwright install --with-deps
 chromium` first, as CI does.
+
+Spawned checks default `SLOTNOVA_ENV` to `local` (the value documented in
+`.env.example`) only when it is not already set in the caller's
+environment -- an explicit value always wins. CI and other provider
+environments remain responsible for setting their own intended
+`SLOTNOVA_ENV` explicitly.

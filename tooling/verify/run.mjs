@@ -13,6 +13,15 @@ const REPO_ROOT = resolve(import.meta.dirname, "../..");
 const TAIL_LINES = 200;
 const MODES = ["fast", "integration", "pr"];
 
+// PR-17 made SLOTNOVA_ENV required for config validation. CI sets it
+// explicitly per workflow; a plain local shell usually has not. Default to
+// the documented local value (.env.example) only when the caller hasn't
+// already supplied one -- an explicit value always wins.
+const CHILD_ENV = {
+  ...process.env,
+  SLOTNOVA_ENV: process.env.SLOTNOVA_ENV || "local",
+};
+
 const FAST_TASKS = [
   ["Formatting", "format:check"],
   ["ESLint", "lint"],
@@ -95,6 +104,7 @@ function runTask(task, logPath) {
       child = spawn(task.cmd, task.args, {
         cwd: REPO_ROOT,
         stdio: ["ignore", "pipe", "pipe"],
+        env: CHILD_ENV,
       });
     } catch (err) {
       closeSync(logFd);
