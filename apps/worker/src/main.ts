@@ -1,26 +1,25 @@
 import { createWorker } from "./worker.js";
 
-/**
- * Split from the direct-execution guard below (mirrors `apps/api/src/main.ts`
- * T019) so tests can import this module without starting the keep-alive loop
- * or registering process-wide signal handlers.
- */
-export function bootstrap(): void {
+export async function bootstrap(): Promise<void> {
   const worker = createWorker();
-
   const shutdown = (): void => {
-    worker.stop();
-    process.exit(0);
+    void worker.stop().catch(() => {
+      process.exitCode = 1;
+    });
   };
-
-  process.on("SIGTERM", shutdown);
-  process.on("SIGINT", shutdown);
-
-  worker.start();
+  process.once("SIGTERM", shutdown);
+  process.once("SIGINT", shutdown);
+  try {
+    await worker.start();
+  } catch (error) {
+    process.removeListener("SIGTERM", shutdown);
+    process.removeListener("SIGINT", shutdown);
+    throw error;
+  }
 }
-
 const isDirectlyExecuted =
   process.argv[1] !== undefined && import.meta.url === `file://${process.argv[1]}`;
-if (isDirectlyExecuted) {
-  bootstrap();
-}
+if (isDirectlyExecuted)
+  void bootstrap().catch(() => {
+    process.exitCode = 1;
+  });
