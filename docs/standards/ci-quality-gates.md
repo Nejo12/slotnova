@@ -107,3 +107,12 @@ Booking-overlap/RLS/concurrency invariants are tested against real PostgreSQL.
 ## Performance
 
 Phase 1 records install/build/test and route-bundle baselines. Later phases add budgets for critical route bundles, Web Vitals and priority API/worker latency/load paths. CI should surface meaningful regressions before production.
+
+## Heavy-lane pre-merge time budget (T089)
+
+**Status: pending founder approval.** No budget value is recorded here yet.
+Per the PR-19/T089 founder gate, a budget must not be silently selected —
+it is set only after the founder reviews an actual observed heavy-lane
+duration from a completed GitHub Actions run and explicitly approves a
+number. `tooling/perf/check-heavy-budget.ts` implements the enforcement
+mechanism and is ready to wire into `heavy.yml` once a value lands here.
