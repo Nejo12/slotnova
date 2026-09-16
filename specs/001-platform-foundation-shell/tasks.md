@@ -849,7 +849,7 @@ Each task carries a compact block:
   - **Accept**: required before merge; not bypassable for slowness; FR-007, FR-008
   - **Out**: n/a
 
-- [ ] T088 [P] Visual-regression stories for shell primitives + system states
+- [x] T088 [P] Visual-regression stories for shell primitives + system states
   - **Dep**: T056, T059
   - **Files**: Storybook stories + Playwright screenshot config for stable primitives/system states (Light + Dark)
   - **Accept**: targeted screenshots only; no full-route DOM snapshots; ADR-006 layer 10
