@@ -9,26 +9,31 @@ and update this file.
 
 ## Current main
 
-`2a0dddb7d860debb6f8abe831b6bed439813d617` — merged PR #53 — PR-19 / T085-T089
-architecture tightening, provider-smoke CI, heavy lane, visual regression,
-performance baselines. Founder-approved 180s heavy-lane budget recorded and
-actively enforced in CI (`budget-check` job, `heavy.yml`).
+`2d556dec48e6203320b323ccfd6f62790b735304` — merged PR #55 (PR-20 /
+T090-T091 final Phase-1 validation, documentation reconciliation and
+exit). Phase 1 is formally complete.
 
 ## Current implementation state
 
-PR-19 is merged and complete.
-
-Under review: PR-20 — T090-T091 final Phase-1 validation, documentation
-reconciliation and exit (issue #54, PR #55, branch `feat/pr-20-phase-1-exit`).
-Full quickstart/SC-001...SC-018 validation executed; all 18 criteria
-demonstrably PASS — evidence matrix at `docs/phase-1-exit.md`. All six
+**Phase 1 is formally exited.** PR #55 is merged. Issues #2 (Phase 1
+parent) and #54 (PR-20) are closed. All 18 Phase-1 success criteria
+demonstrably passed — evidence matrix at `docs/phase-1-exit.md`. All six
 Phase-1 exit decision records (`docs/decisions/0001`-`0006`) exist and are
-founder-approved. T079-T091 all checked complete in `tasks.md`.
+founder-approved.
 
-**Phase 1 is validated and exit-ready, but is NOT formally exited until the
-founder merges PR #55.** This snapshot records readiness, not completion —
-do not treat Phase 1 as exited, and do not begin Phase 2 product work,
-until PR #55 is actually merged to `main`.
+**Phase 2 — Catalog, Scheduling & Booking (issue #3) is active.** Planning
+issue #56 is active; this planning pass produced the authoritative Spec
+Kit package at `specs/002-catalog-scheduling-booking/` (spec, plan,
+research, data model, contracts, quickstart, tasks) on branch
+`phase-2/catalog-scheduling-booking-planning`. Three product decisions are
+recorded as Founder-blocking in `plan.md`'s "Founder decisions required"
+(Draft persistence, resource/staff scope, location scope) — the planning
+package is otherwise implementation-ready.
+
+**Phase 2 product implementation is BLOCKED** until the planning PR is
+Founder-approved and merged, and until the three Founder-blocking
+decisions above are resolved. Do not begin Catalog/Scheduling/Booking
+application code before both conditions are met.
 
 ## Workflow-efficiency setup
 
