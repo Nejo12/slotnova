@@ -33,7 +33,11 @@ describe("listStableStories", () => {
 
     const stories = listStableStories(tmpFile);
     expect(stories).toEqual([
-      { title: "System States/Empty", lightId: "system-states-empty--light", darkId: "system-states-empty--dark" },
+      {
+        title: "System States/Empty",
+        lightId: "system-states-empty--light",
+        darkId: "system-states-empty--dark",
+      },
     ]);
   });
 
