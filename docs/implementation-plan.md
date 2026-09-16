@@ -14,7 +14,7 @@ Exit: every required item in `docs/architecture/phase-0-gate.md` is approved and
 
 ## Phase 1 — Platform Foundation & Shell
 
-Status: **Implementation substantively complete (PR-01 through PR-19 merged); exit not yet fully declared.** T001–T089 are shipped and verified (see `docs/phase-1-exit.md` for the full SC-001…SC-018 evidence matrix). T090 (quickstart/exit validation) and T091 (this documentation reconciliation) are delivered in PR-20. Three of the six Phase 1 exit decision records (`docs/decisions/0002-version-pins.md`, `0005-production-identity-provider.md`, `0006-csrf-mechanism.md`) were newly written as part of PR-20 and document already-shipped, already-in-force decisions — they are **pending founder review/approval** before Phase 1 can be declared formally exited, consistent with this plan's constitution-derived rule that architecture/exit decisions require founder approval, not agent self-approval. See `docs/phase-1-exit.md` for the precise blocker and required founder action.
+Status: **Exit complete (T001–T091 all shipped and verified; PR-01 through PR-20).** All 18 success criteria (SC-001…SC-018) demonstrably pass — see `docs/phase-1-exit.md` for the full evidence matrix. All six Phase 1 exit decision records (`docs/decisions/0001`–`0006`) exist and are founder-approved. Formal Phase 1 exit is contingent only on the founder's manual merge of PR-20 (`feat/pr-20-phase-1-exit`) into `main`, per this repository's merge policy — no further validation or documentation work remains.
 
 ### Repository/platform
 

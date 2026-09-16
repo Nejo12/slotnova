@@ -52,8 +52,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "fast-check": "^4.9.0",
-    "msw": "^2.15.0"
+    "fast-check": "4.9.0",
+    "msw": "2.15.0"
   },
   "peerDependencies": {
     "vitest": "^5.0.0"
@@ -66,6 +66,6 @@
   "devDependencies": {
     "@slotnova/contracts": "workspace:*",
     "@slotnova/tsconfig": "workspace:*",
-    "vitest": "^5.0.0"
+    "vitest": "5.0.0"
   }
 }

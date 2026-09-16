@@ -1,6 +1,6 @@
 # 0005 — Production Identity Provider (R5)
 
-Status: **Not required for Phase 1 exit — explicit deferral note, pending founder review.** Per T084's accept criteria ("if not [selected] — explicit recorded note; FR-033e, FR-069a, SC-013"). Written as part of PR-20's T090/T091 documentation reconciliation; founder acknowledgment of this deferral is outstanding and must be obtained before T084 is checked complete in `tasks.md`.
+Status: **Founder-approved** — approved as PR-20's explicit "not required for Phase 1 exit" deferral note, per T084's accept criteria ("if not [selected] — explicit recorded note; FR-033e, FR-069a, SC-013").
 
 ## Decision
 

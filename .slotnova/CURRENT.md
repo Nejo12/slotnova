@@ -18,17 +18,17 @@ actively enforced in CI (`budget-check` job, `heavy.yml`).
 
 PR-19 is merged and complete.
 
-Active: PR-20 — T090-T091 final Phase-1 validation, documentation
-reconciliation and exit (issue #54, branch `feat/pr-20-phase-1-exit`).
-Full quickstart/SC-001...SC-018 validation executed; evidence matrix at
-`docs/phase-1-exit.md`. **Phase 1 is NOT yet exited/merged.** One narrow
-blocker remains: three Phase-1 exit decision records
-(`docs/decisions/0002-version-pins.md`, `0005-production-identity-provider.md`,
-`0006-csrf-mechanism.md`) were written in PR-20, consolidating already-shipped
-evidence, but require founder review/approval before T080/T083/T084/T090/T091
-can be checked complete and Phase 1 formally declared exited. Do not treat
-Phase 1 as exited until the founder has reviewed those three records and
-merged PR-20.
+Under review: PR-20 — T090-T091 final Phase-1 validation, documentation
+reconciliation and exit (issue #54, PR #55, branch `feat/pr-20-phase-1-exit`).
+Full quickstart/SC-001...SC-018 validation executed; all 18 criteria
+demonstrably PASS — evidence matrix at `docs/phase-1-exit.md`. All six
+Phase-1 exit decision records (`docs/decisions/0001`-`0006`) exist and are
+founder-approved. T079-T091 all checked complete in `tasks.md`.
+
+**Phase 1 is validated and exit-ready, but is NOT formally exited until the
+founder merges PR #55.** This snapshot records readiness, not completion —
+do not treat Phase 1 as exited, and do not begin Phase 2 product work,
+until PR #55 is actually merged to `main`.
 
 ## Workflow-efficiency setup
 

@@ -791,12 +791,12 @@ Each task carries a compact block:
   - **Constraints**: no founder constraints (Clarifications) → recommend best fit; any ADR deviation → supersede proposal (FR-069)
   - **Out**: provisioning
 
-- [ ] T080 [P] [US8] R2 — exact version-pin decision record + lockfile policy
+- [x] T080 [P] [US8] R2 — exact version-pin decision record + lockfile policy
   - **Dep**: research.md R2; a green fast+heavy run on candidate pins
   - **Files**: `docs/decisions/0002-version-pins.md`, `.nvmrc`, `packageManager`, committed lockfile
   - **Accept**: exact patches pinned after a documented compatibility run; "no auto major upgrades to `main`" policy; FR-066, SC-013
   - **Out**: n/a
-  - **PR-20 status**: `docs/decisions/0002-version-pins.md` written (PR-20), consolidating already-shipped pinning evidence. Checkbox left unchecked pending founder review/approval of the record itself — see `docs/phase-1-exit.md`.
+  - **PR-20 status**: all 80 caret/tilde-ranged `dependencies`/`devDependencies` specifiers across every workspace `package.json` converted to the exact patch already resolved in the lockfile (peerDependencies intentionally excluded — see the record's own scoping note). Verified: zero `packages:`/`snapshots:` lines changed in `pnpm-lock.yaml` (only `specifier:` metadata), `pnpm install --frozen-lockfile` succeeds, full `verify:fast`/`verify:integration`/`contracts:check`/`lint:boundaries`/`e2e` all green against the pinned tree. **Founder-approved conditional on this pinning being genuinely implemented — condition satisfied.**
 
 - [x] T081 [P] [US8] R3 — job-scheduler decision record (graphile-worker vs pg-boss)
   - **Dep**: research.md R3; T069 spike
@@ -810,19 +810,19 @@ Each task carries a compact block:
   - **Accept**: candidate-set comparison; no-duplication confirmed; determinism proven; `problem+json` supported; FR-068, ADR-013, SC-013
   - **Out**: n/a
 
-- [ ] T083 [P] [US8] R6 — CSRF mechanism decision record (or ADR-007 amendment)
+- [x] T083 [P] [US8] R6 — CSRF mechanism decision record (or ADR-007 amendment)
   - **Dep**: research.md R6; T037
   - **Files**: `docs/decisions/0006-csrf-mechanism.md` **or** an `docs/adr/007-...` amendment proposal
   - **Accept**: mechanism chosen + enforcement point; contract tests referenced; closes the Phase 0 review gap
   - **Out**: n/a
-  - **PR-20 status**: `docs/decisions/0006-csrf-mechanism.md` written (PR-20), documenting the already-shipped double-submit-cookie + Origin/Sec-Fetch-Site mechanism (T037). Checkbox left unchecked pending founder review/approval of the record itself — see `docs/phase-1-exit.md`.
+  - **PR-20 status**: `docs/decisions/0006-csrf-mechanism.md` written (PR-20), documenting the already-shipped double-submit-cookie + Origin/Sec-Fetch-Site mechanism (T037). **Founder-approved.**
 
-- [ ] T084 [P] [US8] R5 — production identity provider: decision record OR "not required for exit" note
+- [x] T084 [P] [US8] R5 — production identity provider: decision record OR "not required for exit" note
   - **Dep**: research.md R5; operational-need assessment
   - **Files**: `docs/decisions/0005-production-identity-provider.md` or an exit-checklist entry
   - **Accept**: if selected — plugs into ADR-007 adapter without model change, rejected alternatives stated; if not — explicit recorded note; FR-033e, FR-069a, SC-013
   - **Out**: implementing a real provider unless triggered
-  - **PR-20 status**: `docs/decisions/0005-production-identity-provider.md` written (PR-20), an explicit "not required for exit" deferral note per this task's own accept criteria. Checkbox left unchecked pending founder review/acknowledgment of the record itself — see `docs/phase-1-exit.md`.
+  - **PR-20 status**: `docs/decisions/0005-production-identity-provider.md` written (PR-20), an explicit "not required for exit" deferral note per this task's own accept criteria. **Founder-approved.**
 
 **Checkpoint**: all applicable exit decisions recorded and founder-approved.
 
@@ -865,19 +865,19 @@ Each task carries a compact block:
   - **Tests**: n/a (measurement + recorded decision); a CI check that the heavy lane is within the recorded budget once it exists
   - **Out**: production load budgets / k6 (roadmap Phase 8)
 
-- [ ] T090 Run full `quickstart.md` validation + exit-decision verification
+- [x] T090 Run full `quickstart.md` validation + exit-decision verification
   - **Dep**: T079–T084, T085–T089
   - **Files**: PR checklist, a Phase 1 exit note
   - **Accept**: SC-001…SC-018 demonstrably met (incl. SC-002's recorded heavy-lane baseline + budget); reviewer confirms no product behavior (SC-014); delivered as bounded PRs (SC-015)
   - **Out**: n/a
-  - **PR-20 status**: full validation executed, evidence matrix written to `docs/phase-1-exit.md`. 17/18 SCs demonstrably PASS. **Left unchecked**: this task's own `Dep` field lists T079–T084, and T080/T083/T084 remain unchecked pending founder approval of three newly-written decision records (see `docs/phase-1-exit.md`'s "Outstanding blocker"). No other blocker found.
+  - **PR-20 status**: full validation executed, evidence matrix written to `docs/phase-1-exit.md`. **18/18 SCs demonstrably PASS.** T079–T084 all complete (founder-approved). No blocker remains.
 
-- [ ] T091 [P] Docs sync: `docs/implementation-plan.md`, ADR amendments, event catalogue, issue #2 reconciliation
+- [x] T091 [P] Docs sync: `docs/implementation-plan.md`, ADR amendments, event catalogue, issue #2 reconciliation
   - **Dep**: T079–T084, T085
   - **Files**: `docs/implementation-plan.md` (Phase 1 exit ticked), any accepted ADR amendment (ADR-014 wording D3, ADR-007 CSRF D2), `docs/architecture/event-catalogue.md`, note issue #2's `packages/observability` singular vs the two-package split (D1)
   - **Accept**: committed docs match shipped behavior; Phase 0 review C1/D-items dispositioned
   - **Out**: n/a
-  - **PR-20 status**: docs reconciled (`docs/implementation-plan.md` Phase 0/1 status corrected; D1/D2/D3/D4-D6/"C1" dispositioned in `docs/phase-1-exit.md`; event catalogue confirmed accurate, no edit needed; ADR-014 confirmed already using the stricter "before Phase 1 exits" wording, no edit needed; issue #2 confirmed not to contain the flagged singular wording). This task's substantive accept criteria are met. **Left unchecked** only because its own `Dep` field lists T079–T084, which are not all complete (same blocker as T090).
+  - **PR-20 status**: docs reconciled (`docs/implementation-plan.md` Phase 0/1 status corrected, Phase 1 exit ticked; D1/D2/D3/D4-D6/"C1" dispositioned in `docs/phase-1-exit.md`; event catalogue confirmed accurate, no edit needed; ADR-014 confirmed already using the stricter "before Phase 1 exits" wording, no edit needed; issue #2 confirmed not to contain the flagged singular wording). T079–T084 all complete. No blocker remains.
 
 ---
 
