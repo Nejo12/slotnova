@@ -20,7 +20,7 @@ export interface ProviderSmokeSeamResult {
 export function checkProviderSmokeSeam(
   env: Record<string, string | undefined>,
 ): ProviderSmokeSeamResult {
-  const seamWired = env.PROVIDER_SMOKE_SEAM === "1";
+  const seamWired = env["PROVIDER_SMOKE_SEAM"] === "1";
   return {
     seamWired,
     hasRealProviderAdapter: false,
