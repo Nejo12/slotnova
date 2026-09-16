@@ -9,26 +9,45 @@ and update this file.
 
 ## Current main
 
-`2a0dddb7d860debb6f8abe831b6bed439813d617` — merged PR #53 — PR-19 / T085-T089
-architecture tightening, provider-smoke CI, heavy lane, visual regression,
-performance baselines. Founder-approved 180s heavy-lane budget recorded and
-actively enforced in CI (`budget-check` job, `heavy.yml`).
+`2d556dec48e6203320b323ccfd6f62790b735304` — merged PR #55 (PR-20 /
+T090-T091 final Phase-1 validation, documentation reconciliation and
+exit). Phase 1 is formally complete.
 
 ## Current implementation state
 
-PR-19 is merged and complete.
-
-Under review: PR-20 — T090-T091 final Phase-1 validation, documentation
-reconciliation and exit (issue #54, PR #55, branch `feat/pr-20-phase-1-exit`).
-Full quickstart/SC-001...SC-018 validation executed; all 18 criteria
-demonstrably PASS — evidence matrix at `docs/phase-1-exit.md`. All six
+**Phase 1 is formally exited.** PR #55 is merged. Issues #2 (Phase 1
+parent) and #54 (PR-20) are closed. All 18 Phase-1 success criteria
+demonstrably passed — evidence matrix at `docs/phase-1-exit.md`. All six
 Phase-1 exit decision records (`docs/decisions/0001`-`0006`) exist and are
-founder-approved. T079-T091 all checked complete in `tasks.md`.
+founder-approved.
 
-**Phase 1 is validated and exit-ready, but is NOT formally exited until the
-founder merges PR #55.** This snapshot records readiness, not completion —
-do not treat Phase 1 as exited, and do not begin Phase 2 product work,
-until PR #55 is actually merged to `main`.
+**Phase 2 — Catalog, Scheduling & Booking (issue #3) is active.** Planning
+issue #56 is active; the authoritative Spec Kit package lives at
+`specs/002-catalog-scheduling-booking/` (spec, plan, research, data model,
+contracts, quickstart, tasks) on branch
+`phase-2/catalog-scheduling-booking-planning`, open as PR #57.
+
+**Founder review resolved all four originally Founder-blocking decisions**,
+plus one Clients-sequencing gap found by independent review, on
+2026-09-16:
+
+1. `Draft`/`Review` are client/UI-only — not persisted.
+2. Operator-created Bookings are created directly `Confirmed` — no
+   Phase-2 `Pending` producer.
+3. Phase 2 uses a single implicit workspace-level bookable resource — no
+   staff identity/CRUD/capability table; staff-service capability is a
+   documented future integration port.
+4. Location scope is deferred entirely — no speculative `location_id`.
+5. Phase-2 Booking does not persist a `client_id` — no customer/client
+   entity exists on current `main`; Phase 3 adds the association
+   additively.
+
+The planning package (spec/plan/research/data-model/contracts/tasks) is
+implementation-ready with no open Founder decision remaining.
+
+**Phase 2 product implementation is BLOCKED** until PR #57 is
+Founder-approved and merged. Do not begin Catalog/Scheduling/Booking
+application code before that merge.
 
 ## Workflow-efficiency setup
 
