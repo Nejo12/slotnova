@@ -835,7 +835,7 @@ Each task carries a compact block:
   - **Constraints**: core rules (T005) already in force since Phase 1 — this is additive only
   - **Out**: n/a
 
-- [ ] T086 Provider-adapter mock enforcement in CI + separate provider smoke lane
+- [x] T086 Provider-adapter mock enforcement in CI + separate provider smoke lane
   - **Dep**: T016, T007, T073
   - **Files**: `.github/workflows/fast.yml` + `heavy.yml` (assert no real provider network egress in ordinary test runs — e.g. network-block wrapper / allowlist), `.github/workflows/provider-smoke.yml` (manual `workflow_dispatch` + scheduled `cron`; runs the narrow provider contract/sandbox smoke tests against real provider sandboxes)
   - **Accept**: ordinary fast/heavy lanes make **no** real external-provider calls (provider adapters mocked behind ports); a **separate** manual/scheduled lane exercises real provider sandboxes; FR-049, ADR-006 guardrails, `docs/testing/strategy.md` §7
