@@ -64,6 +64,7 @@ export default defineConfig({
   },
   test: {
     env: { SLOTNOVA_ENV: "preview" },
+    setupFiles: ["./packages/testing/src/msw/deny-network.setup.ts"],
     environment: "node",
     include: [
       "tooling/**/__tests__/**/*.test.ts",
