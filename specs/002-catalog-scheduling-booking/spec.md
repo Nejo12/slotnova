@@ -20,11 +20,15 @@ product implementation code ships under this planning PR.
   interaction rules
 - `docs/architecture/event-catalogue.md` — outbox record shape and
   versioning policy
+- Founder review of the first planning draft (this revision), resolving the
+  Draft/Confirmed, resource/staff scope, location scope, and Clients
+  sequencing questions raised in that draft
 - Figma pages `06 — Calendar`, `07 — Booking`, `18 — Prototypes`,
   `19 — Implementation Handoff`: **not accessible in this planning session**
   (see `## Figma access` below). All UI-flow detail below is sourced from
-  `docs/product-handoff.md`; anything not covered there is recorded as an
-  open product question rather than invented.
+  `docs/product-handoff.md` plus the Founder decisions in this section;
+  anything not covered there is recorded as an open question rather than
+  invented.
 
 ## Figma access
 
@@ -37,6 +41,7 @@ requirement below is labeled as one of:
 
 - **[Handoff]** — sourced from `docs/product-handoff.md` (committed, authoritative)
 - **[ADR]** — sourced from an accepted ADR
+- **[Founder]** — resolved by explicit Founder decision in this revision
 - **[Inference]** — planning inference, not yet confirmed against Figma or an
   explicit product decision; listed in `## Open Product Questions`
 - **[Open]** — unresolved, requires Figma access or a Founder decision before
@@ -48,10 +53,48 @@ requirement below is labeled as one of:
 
 No live clarification session was run against a human stakeholder in this
 planning pass (no `speckit-clarify` interactive session available for a
-docs-only planning task with no reachable Figma detail). Every ambiguity that
-would normally be resolved by clarification is instead recorded verbatim in
-`## Open Product Questions` and carried into `research.md` for explicit
-Founder disposition. This spec does not invent answers to close them.
+docs-only planning task with no reachable Figma detail). Ambiguities that
+would normally be resolved by clarification were instead recorded in the
+first revision's Open Product Questions.
+
+### Session 2026-09-16 (Founder review)
+
+The Founder resolved four of the original open questions directly, and
+independent review during this same pass surfaced a fifth issue (the
+Clients sequencing gap) that the Founder also resolved. Resolutions:
+
+1. **Draft/Review are not persisted.** `Draft` is client/UI flow state only;
+   `Review` is a UI check-answers step. No Booking row exists until final
+   creation, and no capacity is held before then.
+2. **Operator-created Bookings are created directly `Confirmed`.** Phase 2
+   does not implement a `Pending`-producing creation flow. The
+   product-handoff phrase `Draft → Review → Pending/Confirmed → Completed`
+   is product lifecycle vocabulary, not a mandate that every listed state
+   needs a Phase-2 producer; `Pending` is documented as a future lifecycle
+   extension point, not persisted as a reachable enum value in Phase 2.
+3. **Resource scope is a single implicit workspace-level bookable
+   resource.** Phase 2 does not create staff profile rows, synthetic staff
+   identities, staff CRUD, or multi-staff scheduling. The staff-service
+   capability concept is bounded as a documented future
+   integration/application port (ADR-012), not a persisted Phase-2 table,
+   because no concrete staff identity source exists on current `main` to
+   truthfully key it against.
+4. **Location scope is deferred entirely.** No nullable `location_id` is
+   added speculatively; the exclusion constraint does not depend on
+   location. Multi-location support is a future additive migration when a
+   real product requirement exists.
+5. **Clients sequencing gap (independent-review finding, Founder-resolved).**
+   Phase 2 Booking cannot reference a `client_id` because no customer/client
+   identity entity exists on current `main` — `identity.users`,
+   `identity.memberships`, and any future staff identity are operator/staff
+   records, not customer records, and are not reinterpreted as one. Phase 2
+   Booking is valid without a Clients-domain dependency. Phase 3 adds the
+   Booking↔Client association via an additive migration/application-port
+   integration, not Phase 2.
+
+These are Founder decisions, not planning inferences, and are reflected
+throughout `plan.md`, `research.md`, `data-model.md`, `contracts/`, and
+`tasks.md`.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -86,9 +129,9 @@ one bookable service.
 ### User Story 2 - Operator defines recurring availability (Priority: P1)
 
 An operator (or a capability-holding staff member) defines a recurring
-weekly working pattern and optional time-off exceptions for a bookable
-resource, so Scheduling can compute open/blocked intervals. [ADR-010;
-Handoff: Calendar as read surface]
+weekly working pattern and optional time-off exceptions for the workspace's
+single implicit bookable resource, so Scheduling can compute open/blocked
+intervals. [ADR-010; Founder: single implicit workspace-level resource]
 
 **Why this priority**: Booking cannot compute a valid slot without a
 resolved availability model.
@@ -116,34 +159,45 @@ touching Booking.
 
 ---
 
-### User Story 3 - Client-facing operator creates a booking (Priority: P1)
+### User Story 3 - Operator creates a booking (Priority: P1)
 
-An operator selects a service (and staff/resource where applicable), a
-client, and an open time slot, reviews the details, and confirms a booking.
-[Handoff: Booking lifecycle `Draft → Review → Pending/Confirmed → Completed`]
+An operator selects a service and an open time slot against the workspace's
+single implicit bookable resource, reviews the details in a UI check-answers
+step, and confirms — creating the Booking directly as `Confirmed`.
+[Handoff: Booking lifecycle vocabulary; Founder: Draft/Review are UI-only,
+creation lands directly in `Confirmed`, no client selection in the
+authoritative Phase-2 flow]
 
 **Why this priority**: This is the Phase-2 MVP path referenced by issue #3's
 acceptance criteria.
 
 **Independent test**: Create a booking end-to-end against a real service and
 real availability; confirm the blocking interval (service duration + buffers)
-is reserved.
+is reserved and the created Booking's status is `Confirmed`.
 
 **Acceptance Scenarios**:
 
 1. **Given** a valid service and an open slot, **When** the operator
-   completes the booking flow, **Then** a `Pending` or `Confirmed` booking
-   exists (see `## Open Product Questions` — Q1 on which state creation
-   lands in) and the corresponding blocking interval is occupied.
-2. **Given** the operator is mid-flow, **When** they use Back, **Then**
-   previously entered selections (service, client, slot) are preserved
-   [AGENTS.md hard invariant: recoverable errors preserve user input].
+   completes the booking flow, **Then** a `Confirmed` Booking exists and the
+   corresponding blocking interval is occupied. No `Pending` or `Draft` row
+   is ever created.
+2. **Given** the operator is mid-flow (client-side Draft/Review state),
+   **When** they use Back, **Then** previously entered selections (service,
+   slot) are preserved client-side [AGENTS.md hard invariant: recoverable
+   errors preserve user input]. No server-side row exists to preserve — the
+   entered data is UI state only.
 3. **Given** the operator cancels out of the flow, **When** they confirm the
-   destructive exit, **Then** no booking is created and no capacity is held.
-4. **Given** two operators race to book the same resource for an overlapping
-   blocking interval, **When** both submit concurrently, **Then** exactly one
-   booking commits and the other receives an explicit conflict response
-   [ADR-011].
+   destructive exit, **Then** no booking is created and no capacity was ever
+   held (capacity is only reserved at the final `Confirmed` write).
+4. **Given** two operators race to book the workspace's implicit resource
+   for an overlapping blocking interval, **When** both submit concurrently,
+   **Then** exactly one booking commits and the other receives an explicit
+   conflict response [ADR-011].
+5. **Given** no client/customer identity entity exists in Phase 2, **When**
+   the operator completes the booking flow, **Then** no client-selection
+   step is required by the authoritative Phase-2 flow. Any client-selection
+   visual evidence encountered later in Figma is treated as future/Phase-3
+   integration, not a Phase-2 requirement (see Founder decision 5 above).
 
 ---
 
@@ -207,21 +261,28 @@ read composition only, ADR-012).
 
 ### Edge Cases
 
-- Booking blocking interval crosses midnight in the resource's local
+- Booking blocking interval crosses midnight in the workspace's local
   timezone — must resolve to correct UTC instants without splitting or
   double-counting [ADR-010].
 - Two bookings scheduled back-to-back with zero gap (`[end,end)` adjacency)
   must be permitted; buffers, if configured, must still create genuine
   separation [ADR-010, ADR-011].
-- A service is deactivated while a Draft booking flow references it — the
-  in-flight flow must surface this rather than silently completing.
+- A service is deactivated while a Draft (client-side) booking flow
+  references it — the in-flight flow must surface this rather than
+  silently completing.
 - A recurring availability pattern is edited after bookings already exist
-  against the old pattern — existing bookings are not retroactively
-  invalidated (see Open Product Questions Q4).
+  against the old pattern — existing bookings are **not** retroactively
+  invalidated or cancelled by the edit; a future phase may add surfaced
+  conflict/reconciliation UX if a real need is demonstrated (Founder
+  decision on Q4, non-blocking).
 - Workspace switch mid-flow must not leak Catalog/Scheduling/Booking data
   across workspaces (constitution IV, ADR-008).
 - Optimistic-concurrency conflict on booking edit must produce a
   distinguishable, recoverable error rather than a generic 500.
+- A Phase-2 Booking has no `client_id`; any later Phase-3 migration adding
+  the Booking↔Client association must be additive and must not require
+  Phase-2 data backfill beyond a nullable new column (see `research.md`
+  R-CLIENTS).
 
 ## Requirements *(mandatory)*
 
@@ -235,32 +296,37 @@ read composition only, ADR-012).
   post-buffer (minutes, integer ≥ 0).
 - **FR-002**: System MUST scope every Service to exactly one workspace via
   RLS (ADR-008); no cross-workspace Service visibility.
-- **FR-003**: System MAY group Services under Service Categories where a
-  workspace has more than a handful of services (see `research.md` R-CAT for
-  the minimal category model); Categories are optional, not required for a
-  bookable Service.
+- **FR-003**: System MAY group Services under a simple, optional Service
+  Category (name + sort order only — no nesting, icons, or taxonomy
+  framework; Founder-finalized default for Q6).
 - **FR-004**: System MUST support Service `active`/`inactive` state;
   inactive Services cannot be selected for new Bookings but remain
   referenced by historical Bookings.
-- **FR-005**: System MUST define, per planned add-on (if any are accepted —
-  see `research.md` R-ADDON), whether it affects price, duration, both, or
-  neither. Phase 2 does not introduce generic commerce/discount concepts.
-- **FR-006**: System MUST define a staff-service capability boundary (which
-  staff can perform which Service) as a **Catalog-owned association only**
-  (a capability flag/join), and MUST NOT implement staff profile/schedule
-  management — that is a later Staff product phase (ADR-012).
+- **FR-005**: **Deferred.** Service add-ons are not implemented in Phase 2
+  (Founder-finalized default for Q5) — no generic modifier/discount engine.
+  If concrete Figma/product evidence later proves add-ons are required for
+  the Phase-2 booking MVP, they are added via an additive migration
+  following the narrow two-independent-deltas shape recorded in
+  `research.md` R-ADDON, not a generic commerce engine.
+- **FR-006**: **Deferred to a future integration port.** Phase 2 does not
+  persist a staff-service capability table, because no concrete staff
+  identity source exists on current `main` to truthfully key it against
+  (Founder decision 3). The capability boundary is documented as a future
+  Catalog↔Staff application-port integration point, not implemented now.
+  Catalog MUST NOT create staff profile rows, synthetic staff identities,
+  or staff CRUD of any kind.
 - **FR-007**: Catalog management (create/update/deactivate Service, manage
-  categories/add-ons) MUST require an explicit capability; UI controls
-  reflect but never replace server authorization (ADR-009).
+  categories) MUST require an explicit capability; UI controls reflect but
+  never replace server authorization (ADR-009).
 
 #### Scheduling
 
 - **FR-010**: System MUST represent availability as half-open intervals
   `[start,end)` in UTC instants derived from local wall time + IANA
   timezone + recurrence rule (ADR-010).
-- **FR-011**: System MUST support a recurring weekly working pattern per
-  resource (staff, or workspace-level resource where staff scope does not
-  yet exist — see `research.md` R-SCOPE).
+- **FR-011**: System MUST support a recurring weekly working pattern for
+  the workspace's single implicit bookable resource (Founder decision 3 —
+  no multi-staff resource dimension in Phase 2).
 - **FR-012**: System MUST support time-off/exception intervals that
   subtract from recurring availability, with documented precedence
   (exception always wins over recurring pattern for the overlapping span).
@@ -280,27 +346,31 @@ read composition only, ADR-012).
 #### Booking
 
 - **FR-020**: System MUST model a Booking aggregate with an explicit state
-  machine. Canonical persisted states: `Draft` (see Open Product Questions
-  Q1 on whether Draft persists), `Pending`, `Confirmed`, `Completed`,
-  `Cancelled`. `Review` is a UI-only step over an in-memory/Draft
-  representation unless Q1 resolves otherwise.
+  machine. Canonical persisted states in Phase 2: `Confirmed`, `Completed`,
+  `Cancelled`. `Draft` and `Review` are client/UI-only concepts and are
+  **never** persisted (Founder decision 1). `Pending` is **not** a
+  Phase-2-reachable persisted state — it is documented as a future
+  lifecycle extension point only (Founder decision 2), not added to the
+  Phase-2 enum merely for speculative future use.
 - **FR-021**: Every state transition MUST define source state, triggering
   command, destination state, required capability, invariants,
   idempotency behavior, and audit/outbox implications (see `data-model.md`
   state machine table).
 - **FR-022**: System MUST compute a single blocking interval per Booking =
   service duration + pre-buffer + post-buffer, in UTC, half-open.
-- **FR-023**: System MUST prevent two blocking-state Bookings (see
-  `research.md` for which states count as blocking) for the same protected
-  resource key from occupying overlapping blocking intervals, enforced by a
-  PostgreSQL exclusion constraint (ADR-011) — application-level checks are
-  UX-only and never the sole protection.
+- **FR-023**: System MUST prevent two blocking-state Bookings (`Confirmed`
+  bookings — see `research.md` R-EXCL for which states count as blocking)
+  within the same workspace from occupying overlapping blocking intervals,
+  enforced by a PostgreSQL exclusion constraint keyed on `workspace_id`
+  (the workspace **is** the single implicit protected resource — Founder
+  decision 3; ADR-011) — application-level checks are UX-only and never the
+  sole protection.
 - **FR-024**: System MUST support Booking cancellation with an explicit,
   irreversible transition to `Cancelled`, releasing the blocking interval,
   requiring a destructive-action confirmation in the UI, and recording an
   audit entry.
-- **FR-025**: System MUST support Booking reschedule (time/resource change)
-  where evidence justifies it, reusing the same overlap-prevention path as
+- **FR-025**: System MUST support Booking reschedule (time change) where
+  evidence justifies it, reusing the same overlap-prevention path as
   creation (no bypass).
 - **FR-026**: System MUST use optimistic concurrency (a version/revision
   column) for Booking edits where two concurrent edits to the same Booking
@@ -313,6 +383,14 @@ read composition only, ADR-012).
 - **FR-028**: Booking read/create/edit/cancel/complete each require an
   explicit capability (ADR-009); no action is authorized by UI role display
   alone.
+- **FR-029**: Booking MUST NOT persist a `client_id` or any customer/
+  contact/profile reference in Phase 2 (Founder decision 5) — no
+  customer/client identity entity exists on current `main`, and Phase 2
+  must not reinterpret `identity.users`, workspace memberships, or staff
+  identities as customer records to work around this. Phase 2 Booking is
+  fully valid and usable without a Clients-domain dependency. Phase 3 adds
+  the Booking↔Client association via an additive migration/application-port
+  integration (see `research.md` R-CLIENTS).
 
 #### Calendar (composition/read surface)
 
@@ -345,33 +423,30 @@ read composition only, ADR-012).
 - **Service** (Catalog) — name, description, duration, pre/post buffer,
   price (minor units + currency), category (optional), active state,
   workspace-owned.
-- **ServiceCategory** (Catalog, optional) — name, workspace-owned, groups
-  Services.
-- **ServiceAddOn** (Catalog, if accepted — see research) — name, price/
-  duration delta flags, workspace-owned, associated to one or more Services.
-- **StaffServiceCapability** (Catalog) — join of a staff identity (owned
-  elsewhere) to a Service, indicating capability to perform it; Catalog owns
-  only the association, not the staff profile.
-- **AvailabilityPattern** (Scheduling) — resource scope, weekly recurrence
-  rule, IANA timezone, workspace-owned.
-- **AvailabilityException** (Scheduling) — resource scope, date/time range
-  or recurring exception, subtracts from pattern, workspace-owned.
-- **Booking** (Booking) — service reference, resource/staff reference
-  (where applicable), client reference (owned elsewhere), start/end instant,
-  computed blocking interval, state, version (if OCC applies), workspace-
-  owned.
-- **BookingBlockingInterval** — derived value (not necessarily a separate
-  table — see `data-model.md`), the exclusion-constraint-protected range.
+- **ServiceCategory** (Catalog, optional) — name, sort order,
+  workspace-owned, groups Services. No nesting/icons/taxonomy framework.
+- **AvailabilityPattern** (Scheduling) — weekly recurrence rule, IANA
+  timezone, workspace-owned. No resource/location dimension in Phase 2 —
+  one pattern set per workspace (single implicit bookable resource).
+- **AvailabilityException** (Scheduling) — date/time range or recurring
+  exception, subtracts from the workspace's pattern, workspace-owned.
+- **Booking** (Booking) — service reference, start/end instant, computed
+  blocking interval, state (`Confirmed`/`Completed`/`Cancelled`), version,
+  workspace-owned. No resource/location/client reference in Phase 2.
+
+**Explicitly not modeled in Phase 2** (see `data-model.md` non-entities):
+`ServiceAddOn`, `StaffServiceCapability`, any staff profile/identity table,
+any Booking `client_id`/customer table, any `location_id` column.
 
 ## Success Criteria *(mandatory)*
 
 ### Measurable Outcomes
 
 - **SC-001**: Two truly concurrent conflicting booking-creation attempts
-  (independent DB connections) against the same protected resource key
-  result in exactly one commit and one explicit conflict response, proven
-  with real PostgreSQL and real concurrent connections (not sequential
-  calls, not mocks).
+  (independent DB connections) against the workspace's single implicit
+  resource result in exactly one commit and one explicit conflict response,
+  proven with real PostgreSQL and real concurrent connections (not
+  sequential calls, not mocks).
 - **SC-002**: Half-open `[start,end)` interval semantics are proven by
   property tests: adjacent intervals (`end == start`) do not overlap;
   intervals with any non-zero overlap are rejected.
@@ -394,26 +469,22 @@ read composition only, ADR-012).
   reschedule, Calendar date navigation) passes keyboard-only operation and
   automated accessibility (axe) checks with zero critical violations.
 - **SC-010**: No Recovery, Payments, Notifications, Messaging, Staff
-  product UI, Inventory, Marketing, or Analytics behavior is introduced by
-  Phase 2 (verified by the consistency review and PR diff scope).
+  product UI, Clients/customer persistence, Inventory, Marketing, or
+  Analytics behavior is introduced by Phase 2 (verified by the consistency
+  review and PR diff scope).
 - **SC-011**: Phase 2 ships as a bounded PR sequence (`tasks.md`) with no
   single PR exceeding the repository's existing heavy-lane review/CI budget
   expectations established in Phase 1.
 
 ## Assumptions
 
-- Staff identity (the person performing a Service) exists as a referenceable
-  identity from the Identity module by Phase 2; Catalog/Scheduling only
-  reference it, they do not own it. If no staff/resource concept exists yet
-  at Phase 2 implementation time, Scheduling/Booking resource scope
-  defaults to workspace-level (single implicit resource) — see
-  `research.md` R-SCOPE and Open Product Question Q3.
-- Client identity (the person receiving a Service) exists as a referenceable
-  identity Booking can point to; Clients-module ownership of that record is
-  out of scope for Phase 2 to build, only to reference.
 - The job scheduler selected under ADR-014 (Phase 1 exit condition) is
   available for any delayed/recurring Phase-2 need; Phase 2 is not expected
   to require one for its MVP scope (no reminders/expiry in scope).
+- Phase 3 will introduce a Clients-domain identity that Booking can
+  reference via an additive migration; Phase 2 does not anticipate its
+  shape beyond noting the future association point (`research.md`
+  R-CLIENTS).
 
 ## Dependencies
 
@@ -433,42 +504,37 @@ read composition only, ADR-012).
   consumer could use, but implements no Recovery behavior.
 - Payment processing, checkout, deposits, no-show fees.
 - Notification/message delivery (templates, throttling, provider adapters).
-- Staff profile management, staff scheduling UI, HR data.
+- Staff profile management, staff scheduling UI, HR data, staff-service
+  capability persistence (deferred to a future integration port).
+- **Clients/customer identity of any kind** — no `client_id`, no
+  booking-local customer/contact/profile table or snapshot as a workaround.
+  Phase 3 owns this.
+- Multi-location resource scope — deferred entirely; no speculative
+  `location_id` column.
+- Service add-ons — deferred; no generic commerce/discount engine.
 - Inventory, Marketing/Retention campaigns, Analytics read models.
-- Generic commerce/discount engine beyond the narrow add-on model this spec
-  defines (if accepted).
-- Multi-location resource scope beyond what `research.md` R-SCOPE
-  concludes is genuinely required for Phase 2.
 
 ## Open Product Questions
 
-These require Figma access and/or explicit Founder decision before
-implementation; they are not resolved by inference in this planning pass.
+The Founder review in this revision resolved the four originally
+Founder-blocking questions (Draft persistence, initial creation state,
+resource/staff scope, location scope) and the Clients sequencing gap found
+by independent review — see `## Clarifications` above. Nothing in this
+section blocks starting implementation; all remaining items are
+non-blocking, Founder-finalized defaults, kept here only as a record of
+where evidence (not invention) drove the decision:
 
-- **Q1 — Does `Draft` persist?** Is `Draft` a transient client-side/API
-  draft resource that only becomes a real row at `Pending`/`Confirmed`, or
-  a persisted state from the start? Affects FR-020, the state table, and
-  whether Draft needs its own RLS/audit treatment. [Open]
-- **Q2 — Pending vs. Confirmed on creation.** Does every new Booking created
-  by an operator land directly in `Confirmed` (no separate approval step),
-  or does some path require a `Pending` intermediate awaiting confirmation?
-  Issue #3's acceptance text says "pending/confirmed," implying both may be
-  reachable depending on flow — which flow produces which? [Open]
-- **Q3 — Resource/staff scope for Phase 2.** Does Phase 2 need multi-staff
-  resource scope now, or is a single implicit workspace-level resource
-  sufficient until the later Staff phase? Affects the protected-resource
-  key in ADR-011's exclusion constraint and the availability model's
-  resource dimension. [Open — see `research.md` R-SCOPE]
-- **Q4 — Retroactive availability edits.** When a recurring pattern changes
-  after Bookings already exist against the old pattern, must the system
-  flag/surface now-conflicting Bookings, or is this deferred entirely to
-  manual operator review? [Open]
-- **Q5 — Add-on model.** Does Phase 2 need Service add-ons at all, or is
-  that safely deferred? If needed, do add-ons affect price only, duration
-  only, both, or neither? [Open — see `research.md` R-ADDON]
-- **Q6 — Category necessity.** Do Phase-2 Figma flows show service
-  categories as a required grouping construct, or is it purely organizational
-  and safe to defer? [Open — see `research.md` R-CAT]
-- **Q7 — Location scope.** Does Scheduling need multi-location resource
-  scope in Phase 2, or is location out of scope until a later phase?
-  [Open]
+- **Q4 — Retroactive availability edits (resolved, non-blocking).**
+  Existing Bookings remain valid when future availability changes; no
+  retroactive cancellation. Surfaced conflict/reconciliation UX is deferred
+  until specifically required.
+- **Q5 — Add-on model (resolved, non-blocking).** Deferred from Phase 2
+  entirely unless concrete Figma/product evidence later proves necessity.
+- **Q6 — Category necessity (resolved, non-blocking).** A simple optional
+  `ServiceCategory` (name + sort order) is included; no nesting/icons/
+  taxonomy framework.
+
+No further Open Product Questions remain from the original Q1/Q2/Q3/Q7 set —
+all four were Founder-resolved (see Clarifications). Any *new* ambiguity
+discovered once Figma access becomes available should be added here rather
+than resolved by inference.

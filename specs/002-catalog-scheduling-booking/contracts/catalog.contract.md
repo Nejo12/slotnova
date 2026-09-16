@@ -1,5 +1,11 @@
 # Catalog Contract
 
+Founder review note: staff-service capability and service add-on endpoints
+from the first draft are removed from Phase-2 scope (see `research.md`
+R-SCOPE, R-ADDON) — no concrete staff identity source exists on current
+`main`, and no evidence justifies add-ons yet. Both are documented as
+future extension points, not endpoints.
+
 ## `GET /catalog/services`
 
 - Auth: session + workspace. Capability: `catalog:read`.
@@ -39,22 +45,22 @@
   explicit, documented exception, not an oversight.
 - Failures: `404`, `422`, `403`.
 
-## `GET /catalog/categories` / `POST /catalog/categories` — only if R-CAT accepted
+## `GET /catalog/categories` / `POST /catalog/categories`
 
-- Same auth/capability pattern as Service list/create, scoped to
-  `catalog:read` / `catalog:manage`.
+- Auth: session + workspace. Capability: `catalog:read` / `catalog:manage`.
+- `POST` input: `{ name, sortOrder? }`. No nesting/description/icon fields
+  (Founder-finalized R-CAT).
+- Response `201`: created category.
 
-## `GET /catalog/services/:id/add-ons` / `POST .../add-ons` — only if R-ADDON accepted
+## Deferred — not part of Phase 2
 
-- Same auth/capability pattern; `POST` body includes the independently
-  nullable `priceDeltaMinor` / `durationDeltaMinutes` pair.
-
-## `GET /catalog/staff-service-capabilities` / `POST .../staff-service-capabilities`
-
-- Auth: session + workspace. Capability: `catalog:manage`.
-- `POST` input: `{ staffId, serviceId }`. Catalog validates `serviceId`
-  belongs to the workspace; `staffId` is validated as a well-formed
-  reference only (Catalog does not own or query staff profile data).
-- Response `201`: created association.
-- Failures: `409` if the association already exists (unique constraint),
-  `422` if `serviceId` is invalid/inactive.
+- **Service add-ons** (`research.md` R-ADDON): no endpoint exists. If
+  concrete Figma/product evidence later proves necessity, this section
+  gains `GET/POST /catalog/services/:id/add-ons` with an independently
+  nullable `priceDeltaMinor`/`durationDeltaMinutes` pair, added via its own
+  additive migration and PR — not implied by this planning package.
+- **Staff-service capability** (`research.md` R-SCOPE): no endpoint exists.
+  Catalog does not validate, store, or expose any staff/service
+  association in Phase 2. This is a documented future Catalog↔Staff
+  application-port integration point, to be designed once a real staff
+  identity source exists.

@@ -22,18 +22,32 @@ Phase-1 exit decision records (`docs/decisions/0001`-`0006`) exist and are
 founder-approved.
 
 **Phase 2 — Catalog, Scheduling & Booking (issue #3) is active.** Planning
-issue #56 is active; this planning pass produced the authoritative Spec
-Kit package at `specs/002-catalog-scheduling-booking/` (spec, plan,
-research, data model, contracts, quickstart, tasks) on branch
-`phase-2/catalog-scheduling-booking-planning`. Three product decisions are
-recorded as Founder-blocking in `plan.md`'s "Founder decisions required"
-(Draft persistence, resource/staff scope, location scope) — the planning
-package is otherwise implementation-ready.
+issue #56 is active; the authoritative Spec Kit package lives at
+`specs/002-catalog-scheduling-booking/` (spec, plan, research, data model,
+contracts, quickstart, tasks) on branch
+`phase-2/catalog-scheduling-booking-planning`, open as PR #57.
 
-**Phase 2 product implementation is BLOCKED** until the planning PR is
-Founder-approved and merged, and until the three Founder-blocking
-decisions above are resolved. Do not begin Catalog/Scheduling/Booking
-application code before both conditions are met.
+**Founder review resolved all four originally Founder-blocking decisions**,
+plus one Clients-sequencing gap found by independent review, on
+2026-09-16:
+
+1. `Draft`/`Review` are client/UI-only — not persisted.
+2. Operator-created Bookings are created directly `Confirmed` — no
+   Phase-2 `Pending` producer.
+3. Phase 2 uses a single implicit workspace-level bookable resource — no
+   staff identity/CRUD/capability table; staff-service capability is a
+   documented future integration port.
+4. Location scope is deferred entirely — no speculative `location_id`.
+5. Phase-2 Booking does not persist a `client_id` — no customer/client
+   entity exists on current `main`; Phase 3 adds the association
+   additively.
+
+The planning package (spec/plan/research/data-model/contracts/tasks) is
+implementation-ready with no open Founder decision remaining.
+
+**Phase 2 product implementation is BLOCKED** until PR #57 is
+Founder-approved and merged. Do not begin Catalog/Scheduling/Booking
+application code before that merge.
 
 ## Workflow-efficiency setup
 

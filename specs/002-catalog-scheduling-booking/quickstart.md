@@ -6,6 +6,12 @@ lands**; none of the commands below are runnable against this planning PR
 verification mechanisms (Phase-1 precedent:
 `specs/001-platform-foundation-shell/quickstart.md`).
 
+Founder review note: the Booking state machine below is `Confirmed →
+Completed`/`Cancelled` only (no `Draft`/`Pending`), overlap protection is
+keyed on `workspace_id` alone (no resource/location), and no client-
+selection step exists in the create flow (`research.md` R-SCOPE,
+R-LOCATION, R-CLIENTS).
+
 ## Prerequisites
 
 - Node LTS via nvm (this repo pins Node 24; default shell Node may be
@@ -19,9 +25,9 @@ pnpm --filter @slotnova/api test -- catalog
 ```
 
 Confirms: service create/update/deactivate, duration/buffer/price
-validation, staff-service capability association, and RLS isolation for
-`catalog.services`/`catalog.service_categories`/`catalog.service_add_ons`/
-`catalog.staff_service_capabilities`.
+validation, optional category association, and RLS isolation for
+`catalog.services`/`catalog.service_categories`. No staff-capability or
+add-on table exists to test in Phase 2.
 
 ## 2. Scheduling interval algebra & DST (SC-002, SC-004)
 
@@ -31,7 +37,8 @@ pnpm --filter @slotnova/api test -- scheduling --run-property
 
 Confirms: normalize/merge/intersect/subtract property tests,
 half-open-adjacency property test, DST forward-gap and repeated-hour
-property tests (`research.md` R-DST).
+property tests (`research.md` R-DST), all evaluated against the
+workspace-scoped (no resource/location dimension) availability model.
 
 ## 3. Booking state machine (SC-006)
 
@@ -40,8 +47,11 @@ pnpm --filter @slotnova/api test -- booking --state-machine
 ```
 
 Confirms: table-driven valid/invalid transition coverage matching
-`data-model.md`'s state transition table, including terminal-state
-rejection and idempotent no-op transitions (re-cancel, re-complete).
+`data-model.md`'s state transition table — `confirmed → {completed,
+cancelled}` and `confirmed → confirmed` (reschedule) — including terminal-
+state rejection and idempotent no-op transitions (re-cancel, re-complete).
+Confirms there is no reachable `draft`/`pending` state and no `/confirm`
+endpoint.
 
 ## 4. Real-PostgreSQL overlap + concurrency proof (SC-001, SC-003)
 
@@ -50,12 +60,15 @@ pnpm --filter @slotnova/api test:pg -- booking-overlap
 ```
 
 Confirms (via Testcontainers + real PostgreSQL, **not** mocks):
-- exclusion constraint migration applies cleanly
+- exclusion constraint migration applies cleanly, keyed on
+  `(workspace_id, blocking_range)` only
 - two independent concurrent connections attempting overlapping blocking
-  bookings for the same resource → exactly one commits
+  bookings in the same workspace → exactly one commits
 - a booking whose buffer-only range overlaps another's buffer-only range
   is rejected (SC-003)
 - adjacent bookings (`end == start`) are accepted (SC-002)
+- two concurrent bookings in **different** workspaces for the same wall-
+  clock time both commit (proves the key is workspace-scoped, not global)
 
 ## 5. Optimistic concurrency (R-OCC)
 
@@ -72,7 +85,7 @@ receives `409 stale-write`, not a silent overwrite.
 pnpm --filter @slotnova/api test:pg -- rls-isolation --module=catalog,scheduling,booking
 ```
 
-Confirms 100% of the seven Phase-2 tenant-owned tables reject cross-
+Confirms 100% of the five Phase-2 tenant-owned tables reject cross-
 workspace read/write under RLS.
 
 ## 7. Contract generation determinism (SC-007)
@@ -94,8 +107,9 @@ pnpm --filter @slotnova/web test -- booking calendar --a11y
 
 Confirms: desktop + mobile (≤400px) layouts for booking create/review/
 detail/cancel and Calendar loading/empty/error/permission-restricted
-states; keyboard-only operation; zero critical axe violations; Light/Dark
-token correctness; reduced-motion path.
+states; the create flow has **no client-selection step**; keyboard-only
+operation; zero critical axe violations; Light/Dark token correctness;
+reduced-motion path.
 
 ## 9. Critical E2E journeys (issue #3 acceptance criteria)
 
@@ -103,10 +117,10 @@ token correctness; reduced-motion path.
 pnpm --filter @slotnova/web e2e -- --grep "booking"
 ```
 
-Confirms at minimum: create/confirm booking, cancel booking, workspace
-switch shows no cross-workspace Phase-2 data, and a user attempting to
-book an already-conflicted slot sees an explicit, recoverable conflict
-message (not a silent failure).
+Confirms at minimum: create booking (lands directly `Confirmed`), cancel
+booking, workspace switch shows no cross-workspace Phase-2 data, and a
+user attempting to book an already-conflicted slot sees an explicit,
+recoverable conflict message (not a silent failure).
 
 ## 10. Scope guard
 
@@ -115,12 +129,15 @@ git diff --stat origin/main...HEAD -- apps/ packages/
 ```
 
 Confirms no Recovery/Payments/Notifications/Messaging/Staff-product-UI/
-Inventory/Marketing/Analytics files were touched by any Phase-2 PR.
+Clients-persistence/Inventory/Marketing/Analytics files were touched by
+any Phase-2 PR, and no `resource_id`/`location_id`/`client_id`/
+`staff_service_capabilities`/`service_add_ons` artifact was introduced.
 
 ## Definition of done for Phase 2
 
-All ten checks above pass; every open product question in `spec.md` is
-either resolved by Founder decision and reflected in the merged code, or
-explicitly deferred with a recorded rationale; `.slotnova/CURRENT.md`
-reflects Phase 2 completion; Phase-2 exit decision records exist under
-`docs/decisions/` mirroring the Phase-1 precedent.
+All ten checks above pass; `.slotnova/CURRENT.md` reflects Phase 2
+completion; Phase-2 exit decision records exist under `docs/decisions/`
+mirroring the Phase-1 precedent, including a record of the Founder
+decisions applied in this planning revision (Draft/Confirmed lifecycle,
+workspace-scoped resource, deferred location, deferred Clients
+association).

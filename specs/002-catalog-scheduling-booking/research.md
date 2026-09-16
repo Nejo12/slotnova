@@ -1,94 +1,123 @@
 # Phase 2 Research — Catalog, Scheduling & Booking
 
 Each item: options considered, evidence, recommendation, rejected
-alternatives, ADR impact. Items that contradict an accepted ADR are called
-out explicitly and none were found to require reopening one.
+alternatives, ADR impact. Items marked **[Founder-resolved]** below reflect
+an explicit Founder decision made during review of the first planning
+draft, superseding this document's original recommendation on that point;
+the original options/evidence are kept for the record, with the
+disposition updated.
 
-## R-SCOPE — Resource/staff scope for the protected-resource key
+## R-SCOPE — Resource/staff scope for the protected-resource key [Founder-resolved]
 
 **Question**: What is the "protected resource" ADR-011's exclusion
 constraint protects — the whole workspace, a location, or a staff member?
 
-**Options**:
-1. Workspace-level single implicit resource (no staff dimension).
-2. `resource_id` = staff member, sourced from Identity/a future Staff
-   module, referenced-only by Booking/Scheduling.
-3. `resource_id` = staff member **and** `location_id`, for multi-location
-   workspaces.
+**Original options considered**: (1) workspace-level single implicit
+resource, (2) `resource_id` = staff member referenced-only from a future
+Staff module, (3) `resource_id` = staff member + `location_id`.
 
-**Evidence**: `docs/product-handoff.md` lists Staff as a distinct future
-product surface with representative Figma designs (`docs/product-handoff.md`
-line ~82), and ADR-012 explicitly reserves staff profile/schedule ownership
-for a later Staff phase, while Catalog is only permitted a "staff-service
-capability boundary" (issue #3, #56). This implies staff **identities**
-exist as a reference target before the Staff phase builds full profile
-management, but Phase 2 does not own or build that identity itself.
+**Original evidence**: `docs/product-handoff.md` lists Staff as a distinct
+future product surface, and ADR-012 reserves staff profile/schedule
+ownership for a later Staff phase, while Catalog is only permitted a
+"staff-service capability boundary." The first draft read this as implying
+staff identities already exist as a reference target.
 
-**Recommendation**: Model `resource_id` as an opaque reference (option 2)
-from day one — Scheduling/Booking store and key on it, but Phase 2 does not
-build staff profile CRUD. If no staff identity exists yet at implementation
-time, fall back to a single synthetic workspace-level resource row so the
-schema shape doesn't change later (avoids an expand-contract migration when
-Staff ships). Location scope (option 3) is deferred — see R-LOCATION.
+**Founder correction**: No concrete staff identity source exists on current
+`main` (confirmed by inspection — see `R-CLIENTS` for the equivalent
+Clients-side check, and the identity module inventory in `data-model.md`).
+Inventing a synthetic staff identity or a `staff_service_capabilities` table
+keyed against nothing real would smuggle Staff-phase modeling into Phase 2.
+The Founder decided: **Phase 2 uses a single implicit workspace-level
+blocking resource.** No staff profile rows, synthetic staff identities,
+staff CRUD, or multi-staff scheduling behavior. The staff-service capability
+requirement from issue #3/#56 is bounded as a documented future
+Catalog↔Staff **application-port integration point** (ADR-012), not a
+persisted Phase-2 table.
 
-**Rejected**: Pure workspace-level-only (option 1) — would require a
-breaking schema change the moment multi-staff scheduling is needed, which
-issue #3's own acceptance criteria (staff-service capability boundary)
-signals is imminent.
+**Disposition**: `workspace_id` alone is the protected-resource key
+(`R-EXCL`). No `resource_id` column exists on `bookings` or
+`availability_patterns` in Phase 2.
 
-**ADR impact**: None — consistent with ADR-012's module boundaries.
-**Founder decision required** (`plan.md` Q3) to confirm this is the
-intended sequencing rather than staff scope being explicitly out of Phase 2.
+**ADR impact**: None — consistent with ADR-012's module boundaries; this
+correction makes the plan *more* conservative about not pulling the Staff
+phase forward, not less.
 
-## R-LOCATION — Location scope
+## R-LOCATION — Location scope [Founder-resolved]
 
-**Options**: (1) no location dimension in Phase 2, (2) `location_id`
-included in the protected-resource key from the start.
+**Original options**: (1) no location dimension, (2) nullable `location_id`
+added speculatively to avoid a future migration.
 
-**Evidence**: Phase 1's `identity.locations` table already exists
-(`specs/001-platform-foundation-shell/data-model.md`) as tenant-owned, so
-the column is cheap to reference. No Figma evidence available this session
-confirming multi-location booking flows are in Phase 2 scope.
+**Founder correction**: Adding a speculative nullable column "to avoid a
+future migration" is itself the kind of premature abstraction constitution
+VI prohibits — a future additive migration is the correct tool when a real
+multi-location requirement exists, and Phase 1's migration tooling already
+supports additive/expand-contract changes safely. The Founder decided:
+**multi-location Scheduling/Booking is deferred entirely; no `location_id`
+column is added in Phase 2**, speculative or otherwise.
 
-**Recommendation**: Include `location_id` as a nullable reference on
-Booking/AvailabilityPattern (defaulting to a workspace's sole/primary
-location where only one exists) so the exclusion constraint can key on
-`(location_id, resource_id, blocking_range)` without a later migration, but
-do not build any multi-location UI/selection flow in Phase 2.
+**Disposition**: No `location_id` anywhere in the Phase-2 schema. The
+exclusion constraint does not depend on location.
 
-**Rejected**: Omitting the column entirely — would force an expand-contract
-migration + backfill the moment multi-location is needed, against
-`docs/architecture` migration guidance to plan additive changes.
+**ADR impact**: None.
 
-**ADR impact**: None. **Founder decision required** (Q7) only on whether
-multi-location *UI* enters Phase 2 scope, not on the schema shape.
+## R-EXCL — Exclusion constraint shape [Founder-resolved]
 
-## R-EXCL — Exclusion constraint shape
-
-**Options**:
-1. `EXCLUDE USING gist (workspace_id WITH =, resource_id WITH =, blocking_range WITH &&) WHERE (status IN (blocking states))`
-2. Same, keyed additionally on `location_id`.
-3. Partial unique index instead of exclusion constraint.
+**Options considered**: (1) `EXCLUDE USING gist (workspace_id WITH =,
+blocking_range WITH &&) WHERE (status = 'confirmed')`, (2) the same with an
+added `resource_id WITH =` component, (3) the same with an added
+`location_id WITH =` component, (4) a partial unique index instead of an
+exclusion constraint.
 
 **Evidence**: ADR-011 mandates `btree_gist` + an exclusion constraint over
 the blocking interval for blocking statuses; a partial unique index cannot
-express range-overlap rejection and is explicitly insufficient for this
-invariant.
+express range-overlap rejection and is explicitly insufficient (rules out
+option 4). With R-SCOPE and R-LOCATION both resolving to "no resource/
+location dimension in Phase 2," `workspace_id` is not merely *a* candidate
+key component — it is the *only* dimension Phase 2 actually models, because
+a workspace has exactly one implicit bookable resource and no location
+scope. Adding a `resource_id` or `location_id` column to the constraint
+when neither column exists on the table would be meaningless.
 
-**Recommendation**: Option 2 — `EXCLUDE USING gist (workspace_id WITH =,
-location_id WITH =, resource_id WITH =, blocking_range WITH &&) WHERE
-(status = ANY (ARRAY['pending','confirmed']))`. `blocking_range` is a
-generated `tstzrange` column (`[start, end)` — PostgreSQL's default range
-bound is already half-open on the right, matching ADR-010) computed from
-`start_at`, `service_duration + pre_buffer + post_buffer`. `Draft` and
-`Cancelled`/`Completed` are excluded from the predicate (non-blocking).
+**Why not a dedicated workspace-resource id instead of reusing
+`workspace_id` directly**: A separate `resource_id` column that always
+holds a single synthetic per-workspace value would be pure indirection —
+it could never take a second distinct value in Phase 2, so it carries no
+information `workspace_id` doesn't already carry, and it invites exactly
+the "unreachable enum value/speculative column" pattern the Founder just
+rejected for `location_id` and `staff_service_capabilities`. The simplest
+truthful invariant uses the column that already exists and already
+uniquely identifies the protected resource: `workspace_id`.
 
-**Rejected**: Option 3 (no overlap-rejection semantics); Option 1 without
-`location_id` (rejected pending R-LOCATION's answer, but the column is
-added regardless per that recommendation, so keeping it in the constraint
-now avoids a second migration).
+**Recommendation (final)**: Option 1 —
 
-**ADR impact**: None — directly implements ADR-011.
+```sql
+CREATE EXTENSION IF NOT EXISTS btree_gist;
+
+ALTER TABLE booking.bookings
+  ADD CONSTRAINT bookings_no_overlap
+  EXCLUDE USING gist (
+    workspace_id WITH =,
+    blocking_range WITH &&
+  ) WHERE (status = 'confirmed');
+```
+
+`blocking_range` is a generated `tstzrange` column (`[start, end)` —
+PostgreSQL's default range bound is already half-open on the right,
+matching ADR-010) computed from `start_at` and
+`service_duration + pre_buffer + post_buffer`. Only `confirmed` bookings
+are blocking in the Founder-corrected model (`Cancelled`/`Completed` are
+terminal and non-blocking; there is no persisted `draft`/`pending` state to
+exclude from the predicate because those states no longer exist — see
+`R-*` below and `data-model.md`).
+
+**Rejected**: Options 2/3 (no `resource_id`/`location_id` column exists to
+key on); option 4 (insufficient semantics).
+
+**ADR impact**: None — directly implements ADR-011 with the smallest
+truthful key for the Founder-approved Phase-2 model. If a future phase adds
+`resource_id`/`location_id` columns, the constraint is dropped and
+recreated with the added component(s) as part of that phase's own additive
+migration — not pre-declared here.
 
 ## R-OCC — Optimistic concurrency
 
@@ -96,9 +125,9 @@ now avoids a second migration).
 
 **Evidence**: Reschedule/cancel/complete are concurrent-edit-realistic —
 two operators can plausibly open the same booking. Creation is protected by
-the exclusion constraint already; edits to non-overlap fields (e.g., notes,
-resource reassignment that still passes the exclusion check) are not
-caught by that constraint alone.
+the exclusion constraint already; edits to non-overlap fields are not
+caught by that constraint alone. This item is unaffected by the Founder's
+Draft/resource/location/Clients decisions.
 
 **Recommendation**: Add an integer `version` column to Booking. Every
 mutating command (`reschedule`, `cancel`, `complete`) requires the caller's
@@ -112,8 +141,7 @@ guard on `UPDATE`.
 constitution II); full event-sourcing (violates constitution VI, no
 demonstrated need).
 
-**ADR impact**: None — consistent with "optimistic concurrency where
-editing races are plausible" in issue #3/#56.
+**ADR impact**: None.
 
 ## R-CAL — Calendar composition strategy
 
@@ -121,80 +149,66 @@ editing races are plausible" in issue #3/#56.
 1. Frontend composes Calendar entirely from existing Scheduling
    availability + Booking list/detail endpoints (two client-side fetches,
    merged in a query hook).
-2. A thin backend read-composition endpoint
-   (`GET /calendar/:resourceId?from&to`) that internally calls the
-   Scheduling and Booking application services and returns a merged view
-   model, still with no Calendar persistence.
+2. A thin backend read-composition endpoint (`GET /calendar?from&to` — no
+   `resourceId` query param now that the resource is workspace-implicit)
+   that internally calls the Scheduling and Booking application services
+   and returns a merged view model, still with no Calendar persistence.
 
 **Evidence**: ADR-012 forbids Calendar as a backend *bounded context* (no
 persistence, no ownership) but does not forbid a thin read-composition
 endpoint; Phase 1's API/contracts pipeline already supports adding a
 narrowly-scoped endpoint. Two separate client fetches risk visible
-loading-state flicker (availability resolves, then bookings resolve, or
-vice versa) which conflicts with the "no critical information exists only
-in animation"/layout-stability guidance in `docs/standards/motion.md` if
-handled naively.
+loading-state flicker, conflicting with the layout-stability guidance in
+`docs/standards/motion.md` if handled naively.
 
 **Recommendation**: Option 2 — one composition endpoint per module
-boundary rule (constitution III: cross-module access via explicit
-application ports, not ad hoc frontend fan-out logic reinventing merge
-rules). The endpoint lives in a thin `apps/api/src/modules/calendar-read`
-(or equivalent) directory that has **no table migrations**, only an
-application service composing Scheduling + Booking ports. This keeps a
-single loading/error/empty state on the frontend and satisfies FR-030–032.
+boundary rule (constitution III). The endpoint lives in a thin
+`apps/api/src/modules/calendar-read` (or equivalent) directory with **no
+table migrations**, only an application service composing Scheduling +
+Booking ports. This keeps a single loading/error/empty state on the
+frontend and satisfies FR-030–032. The endpoint's request shape drops the
+`resourceId` parameter from the first draft since the resource is now
+workspace-implicit, not selectable.
 
 **Rejected**: Option 1 — pushes overlap/merge logic into the frontend,
 duplicated per client, and produces harder-to-test composite loading
 states.
 
-**ADR impact**: None — a read-composition service is not a bounded
-context/owned schema, consistent with ADR-012.
+**ADR impact**: None.
 
-## R-CAT — Minimal category model
+## R-CAT — Minimal category model [Founder-finalized, non-blocking]
 
-**Options**: (1) no category concept in Phase 2, (2) a simple
-`service_categories` table with `name` + `sort_order`, (3) a richer
-category model with descriptions/icons/nested categories.
+**Options**: (1) no category concept, (2) a simple `service_categories`
+table with `name` + `sort_order`, (3) a richer category model with
+descriptions/icons/nested categories.
 
-**Evidence**: No Figma access this session to confirm whether category
-grouping appears in `06`/`07`. Issue #56 lists "categories where justified"
-as conditional, not mandatory.
+**Founder disposition**: Option 2 accepted as final for Phase 2. No
+nesting, icons, taxonomy framework, or rich category abstraction.
 
-**Recommendation**: Option 2, and only if a workspace's service list would
-otherwise be unusably flat — implemented as an optional foreign key on
-Service, not a required one. If `speckit-clarify`/Founder review of Figma
-later shows no category UI, this table is trivially unused/removable
-before Phase 2 implementation starts (additive, no migration cost yet
-since nothing is built).
+**Rejected**: Option 1 (workspaces with many services would have an
+unusably flat list); Option 3 (no evidence justifies it; violates
+constitution VI).
 
-**Rejected**: Option 3 — no evidence justifies nested/rich categories;
-violates constitution VI (rule of three, no speculative modeling).
+**ADR impact**: None.
 
-**ADR impact**: None. **Recommended default, not Founder-blocking** (Q6).
-
-## R-ADDON — Minimal add-on model
+## R-ADDON — Minimal add-on model [Founder-finalized, non-blocking]
 
 **Options**: (1) no add-ons in Phase 2, (2) a narrow `service_add_ons`
-table with a `price_delta_minor` and `duration_delta_minutes`, each
-independently nullable (so an add-on can affect price only, duration only,
-both, or — if both are null — function as a non-modifying informational
-add-on), (3) a generic modifier/discount engine.
+table with independently nullable `price_delta_minor` and
+`duration_delta_minutes`, (3) a generic modifier/discount engine.
 
-**Evidence**: Issue #3 does not require add-ons for its acceptance
-criteria (service selection, not add-on selection, is listed). Issue #56
-says "add-ons only to the degree Phase 2 booking requires them."
-
-**Recommendation**: Option 1 for Phase 2 MVP — do not build add-ons unless
-Figma review (once accessible) shows the booking flow requires add-on
-selection to satisfy a P1 user story. If later needed, option 2's shape
-(two independent nullable deltas) directly answers "price/duration/both/
-neither" without a generic commerce engine.
+**Founder disposition**: Option 1 (defer entirely) accepted as final for
+Phase 2 — add-ons are not implemented unless concrete Figma/product
+evidence later proves they are necessary for the Phase-2 booking MVP. If
+that evidence emerges, option 2's shape (recorded here for that future
+occasion) directly answers "price/duration/both/neither" without a generic
+commerce engine — it is not built now.
 
 **Rejected**: Option 3 — explicitly against constitution VI and AGENTS.md's
 prohibition on generic dumping-ground abstractions without demonstrated
 need.
 
-**ADR impact**: None. **Recommended default, not Founder-blocking** (Q5).
+**ADR impact**: None.
 
 ## R-IDS — Public/internal booking identifiers
 
@@ -202,18 +216,14 @@ need.
 (2) a separate short public-facing booking reference distinct from the
 internal id.
 
-**Evidence**: No Phase-2 requirement (client-facing lookup by human-typed
-reference, printed confirmation, etc.) was found in `docs/product-handoff.md`
-or issue #3/#56 that would justify a second identifier scheme. Phase 1's
-platform entities (`specs/001-platform-foundation-shell/data-model.md`) use
-opaque branded UUIDs throughout with no separate public reference.
+**Evidence**: No Phase-2 requirement was found in `docs/product-handoff.md`
+or issue #3/#56 justifying a second identifier scheme. Phase 1's platform
+entities use opaque branded UUIDs throughout with no separate public
+reference. Unaffected by the Founder's other decisions.
 
 **Recommendation**: Option 1 — reuse the Phase-1 convention (opaque branded
 `BookingId`, `ServiceId`, `AvailabilityPatternId`, etc.), consistent with
-existing entities and constitution VI (no speculative abstraction).
-Revisit only if a future phase (e.g., Recovery's public offer surface,
-ADR-018) demonstrates a real need for a separate public reference on
-Booking specifically.
+existing entities and constitution VI.
 
 **Rejected**: Option 2 — no demonstrated need yet.
 
@@ -231,22 +241,70 @@ instant), (2) always resolve to the second occurrence (later UTC instant),
 **Evidence**: Temporal's `PlainDateTime.toZonedDateTime` with
 `disambiguation: 'earlier'`/`'later'`/`'reject'` options directly implements
 options 1/2/3 without custom logic, per `@js-temporal/polyfill` (already
-the accepted library, ADR-010).
+the accepted library, ADR-010). Unaffected by the Founder's other
+decisions.
 
 **Recommendation**: Option 1 (`disambiguation: 'earlier'`) for recurring
-availability expansion — deterministic, no user-facing prompt needed for a
-recurring *pattern* (as opposed to a one-off booking time picked directly
-against a resolved instant, which is never ambiguous because the UI offers
-concrete instants, not local wall-time strings). Document this as the
-canonical rule so no second implementation invents a different tie-break.
+availability expansion — deterministic, no user-facing prompt needed.
 
-**Rejected**: Option 3 for recurring pattern expansion — would require
-surfacing a disambiguation UI for a background recurrence calculation with
-no natural moment to ask; acceptable only if evidence later shows a
-Figma-specified prompt for this exact case, which was not found.
+**Rejected**: Option 3 for recurring pattern expansion — no natural moment
+to surface a disambiguation prompt for a background recurrence calculation.
 
 **ADR impact**: None — this is an application of ADR-010's Temporal
 decision, not a new decision.
+
+## R-CLIENTS — Booking's dependency on a customer/client identity [new, Founder-resolved]
+
+**Question raised by independent review**: The first planning draft
+modeled `Booking.client_id` as a reference to a "Clients-owned identity,"
+but Clients is scheduled for Phase 3 (`docs/implementation-plan.md`
+Phase 3 — "Clients, Notifications & Messaging") and issue #3 does not list
+a Clients entity as Phase-2 scope. This is a real sequencing gap: Phase 2
+cannot honestly reference an entity that does not yet exist.
+
+**Investigation performed**: Inspected `apps/api/src/modules/` on current
+`main` for any existing canonical customer/client identity. Only three
+modules exist: `identity` (users, workspaces, locations, memberships,
+invitations, sessions — all operator/staff-side tenancy records, per
+`specs/001-platform-foundation-shell/data-model.md`), `platform` (outbox/
+scheduler), and `audit`. **No customer/client entity exists anywhere on
+current `main`.**
+
+**Options considered**: (1) reinterpret `identity.users` or workspace
+memberships as customer records, (2) reinterpret a future staff identity as
+a stand-in, (3) add a booking-local customer/contact/profile table or
+inline snapshot as a Phase-2 workaround, (4) omit `client_id` entirely from
+Phase-2 Booking and let Phase 3 add the association additively.
+
+**Evidence against options 1–3**: `identity.users` are authenticated
+operators/staff with workspace memberships and roles (ADR-007/008/009) —
+conflating them with customers would corrupt the authorization and
+tenancy model (a customer is not a workspace member). A booking-local
+customer/contact snapshot table (option 3) is exactly the kind of
+Phase-3-implementation-smuggled-into-Phase-2 the Founder's review flagged;
+it would also need its own RLS/validation/lifecycle treatment that
+duplicates work Phase 3 is explicitly scoped to do properly.
+
+**Founder decision**: Option 4. **Phase-2 Booking does not persist a
+`client_id` or any customer/contact/profile reference.** Phase 2 Booking is
+fully valid, creatable, and usable without a Clients-domain dependency.
+Phase 3 adds the Booking↔Client association through an **additive
+migration** (a new nullable `client_id` column plus an application-port
+integration to the Phase-3 Clients module) once that module exists — this
+is a forward-compatible, zero-cost deferral, not a design debt, because
+adding a nullable foreign-key-shaped column to an existing table is exactly
+the kind of expand-step migration this repository's migration discipline
+already supports.
+
+**Consequence for UI/contracts**: The authoritative Phase-2 booking flow
+does not require a client-selection step (`spec.md` User Story 3,
+Acceptance Scenario 5). If Figma evidence is later obtained showing a
+client-selection UI in `06`/`07`/`18`, it is labeled future/Phase-3
+integration in this spec, not implemented as Phase-2 scope.
+
+**ADR impact**: None — this is a scope-sequencing correction, not an
+architecture decision. It reinforces ADR-012's module-boundary discipline
+(no cross-module ownership grab) rather than conflicting with it.
 
 ## Reconciliations & flagged discrepancies (feed `/speckit-analyze`)
 
@@ -254,6 +312,10 @@ decision, not a new decision.
   (likely a transcription artifact); the actual accepted file is
   `docs/adr/012-domain-module-map.md`. This research and `data-model.md`
   cite the correct filename.
-- No contradiction found between issue #3, issue #56, the constitution, and
-  ADR-010/011/012 — all open items above are underspecification (missing
-  product detail), not conflicting sources.
+- The first planning draft's `Booking.client_id` and
+  `staff_service_capabilities`/`resource_id`/`location_id` modeling was
+  **evidence-unsupported speculation**, not a conflict between authoritative
+  sources — corrected in this revision per Founder decision. No
+  contradiction exists between issue #3, issue #56, the constitution, and
+  ADR-010/011/012; the corrected model is a strict subset of what those
+  sources actually require.

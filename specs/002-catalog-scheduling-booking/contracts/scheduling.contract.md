@@ -3,16 +3,23 @@
 Scheduling exposes availability *input* (patterns/exceptions) and a
 *query* boundary; it does not expose Booking data.
 
-## `GET /scheduling/availability-patterns?resourceId=`
+Founder review note: all endpoints below are workspace-scoped only — no
+`resourceId` or `locationId` parameter exists in Phase 2 (`research.md`
+R-SCOPE, R-LOCATION). A workspace has exactly one implicit availability
+pattern set.
+
+## `GET /scheduling/availability-patterns`
 
 - Auth: session + workspace. Capability: `scheduling:read`.
-- Response `200`: `AvailabilityPattern[]` for the resource.
+- Response `200`: `AvailabilityPattern[]` for the workspace (in practice at
+  most the workspace's single active pattern set, but returned as a list
+  to allow effective-dated pattern history without a breaking shape
+  change).
 
 ## `POST /scheduling/availability-patterns`
 
 - Auth/capability: `scheduling:manage`.
-- Input: `{ resourceId, locationId?, timezone (IANA), weeklyRule,
-  effectiveFrom?, effectiveUntil? }`.
+- Input: `{ timezone (IANA), weeklyRule, effectiveFrom?, effectiveUntil? }`.
 - Response `201`: created pattern.
 - Failures: `422` if `weeklyRule` intervals overlap within a day or
   `timezone` is not a valid IANA id.
@@ -20,8 +27,8 @@ Scheduling exposes availability *input* (patterns/exceptions) and a
 ## `POST /scheduling/availability-exceptions`
 
 - Auth/capability: `scheduling:manage`.
-- Input: `{ resourceId, startsAt, endsAt, reason? }` — always resolved
-  instants, never a recurring rule (FR-012).
+- Input: `{ startsAt, endsAt, reason? }` — always resolved instants, never
+  a recurring rule (FR-012).
 - Response `201`: created exception.
 - Failures: `422` if `startsAt >= endsAt`.
 
@@ -29,14 +36,14 @@ Scheduling exposes availability *input* (patterns/exceptions) and a
 
 State-changing-looking but actually a pure computation over existing
 input data with no persistence side effect; still `POST` (not `GET`)
-because the request body (resource id + date range + expansion horizon)
-exceeds comfortable query-string encoding and to leave room for future
-computation cost controls — documented exception, not a violation of the
-no-GET-for-mutation rule (this endpoint mutates nothing).
+because the request body (date range + expansion horizon) exceeds
+comfortable query-string encoding and to leave room for future computation
+cost controls — documented exception, not a violation of the no-GET-for-
+mutation rule (this endpoint mutates nothing).
 
 - Auth: session + workspace. Capability: `scheduling:read`.
-- Input: `{ resourceId, from, to }` (bounded by the documented expansion
-  horizon, `research.md`/`data-model.md`).
+- Input: `{ from, to }` (bounded by the documented expansion horizon,
+  `research.md`/`data-model.md`).
 - Response `200`: resolved open intervals (`[start,end)` UTC instants)
   after applying exceptions to the recurring pattern, within the requested
   range and horizon.
