@@ -14,6 +14,13 @@ no PR combines schema + API + UI for more than one module at a time.
 
 ## PR-01 — Catalog domain/schema foundation
 
+- **Status**: Complete (issue #58). Migration `0006_catalog.sql` (`services`,
+  `service_categories`, RLS+FORCE+policy, `services_category_workspace_fkey`
+  composite FK); domain invariants (`domain/service.ts`,
+  `domain/service-category.ts`, `domain/money.ts`); repository/application
+  layer (`infrastructure/repositories/`, `application/`); no HTTP/contracts
+  layer (PR-02 remains future work); no staff-service-capability or
+  add-on table persisted, per the Founder-approved planning constraints.
 - **Dependency**: none (starts from `main` post-Phase-1).
 - **Files/areas**: `apps/api/src/modules/catalog/{domain,infrastructure}`,
   migration for `services`, `service_categories`.
