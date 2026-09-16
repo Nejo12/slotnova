@@ -24,7 +24,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint . --max-warnings=0",
     "storybook": "storybook dev -p 6007",
-    "build-storybook": "storybook build"
+    "build-storybook": "storybook build",
+    "test:visual": "playwright test --config visual/playwright.visual.config.ts"
   },
   "dependencies": {
     "@nova-component/design-tokens": "0.1.1",
@@ -36,6 +37,7 @@
     "react-dom": "^19.3.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@slotnova/eslint-config": "workspace:*",
     "@slotnova/tsconfig": "workspace:*",
     "@storybook/addon-a11y": "^10.6.0",
@@ -46,6 +48,7 @@
     "@vitejs/plugin-react": "^6.1.1",
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-react-hooks": "^7.1.1",
+    "http-server": "^14.1.1",
     "jest-axe": "^11.0.0",
     "jsdom": "^30.0.1",
     "react": "^19.3.0",

@@ -9,14 +9,17 @@ and update this file.
 
 ## Current main
 
-`c05b54aed352a97e309bb68b263ef3b9d92c22c1` — merged PR #49 — PR-17 / T072-T075.
+`33aa0a6c98b7dd20e295daa1bda38a4eddd0cf41` — merged PR #51 — PR-18 / T076-T078 observability deepening.
 
 ## Current implementation state
 
-PR-17 is merged and complete.
+PR-18 is merged and complete.
 
-Next planned product work: PR-18 — T076-T078 observability deepening.
-PR-18 may now begin from verified current main.
+Active: PR-19 — T085-T089 architecture tightening, provider-smoke CI, heavy
+lane completion, visual regression, performance baselines (issue #52,
+branch `feat/pr-19-hardening-ci-visual-perf`). T085/T086/T087/T088
+implemented; T089 measurement/enforcement mechanism implemented, budget
+value pending founder approval per the founder gate.
 
 ## Workflow-efficiency setup
 

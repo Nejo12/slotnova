@@ -827,7 +827,7 @@ Each task carries a compact block:
 
 ## Phase 11: Polish & Cross-Cutting  ·  **PR-19, PR-20**
 
-- [ ] T085 Dependency-cruiser rule **tightening** (beyond the core set)
+- [x] T085 Dependency-cruiser rule **tightening** (beyond the core set)
   - **Dep**: T005, all module scaffolds (T029, T032, T022, …)
   - **Files**: `tooling/dependency-cruiser/.dependency-cruiser.cjs` (add narrower rules now that real modules exist: per-module public-entry allowlists, `packages/contracts` generated-only import direction, **`apps/web/src/test-harness` must never appear in the production import graph**)
   - **Accept**: tightened rules pass on real code; `docs/standards/ci-quality-gates.md`, FR-006
@@ -835,7 +835,7 @@ Each task carries a compact block:
   - **Constraints**: core rules (T005) already in force since Phase 1 — this is additive only
   - **Out**: n/a
 
-- [ ] T086 Provider-adapter mock enforcement in CI + separate provider smoke lane
+- [x] T086 Provider-adapter mock enforcement in CI + separate provider smoke lane
   - **Dep**: T016, T007, T073
   - **Files**: `.github/workflows/fast.yml` + `heavy.yml` (assert no real provider network egress in ordinary test runs — e.g. network-block wrapper / allowlist), `.github/workflows/provider-smoke.yml` (manual `workflow_dispatch` + scheduled `cron`; runs the narrow provider contract/sandbox smoke tests against real provider sandboxes)
   - **Accept**: ordinary fast/heavy lanes make **no** real external-provider calls (provider adapters mocked behind ports); a **separate** manual/scheduled lane exercises real provider sandboxes; FR-049, ADR-006 guardrails, `docs/testing/strategy.md` §7
@@ -843,19 +843,19 @@ Each task carries a compact block:
   - **Constraints**: provider credentials only in the smoke lane's scoped secrets; never in fast/heavy lane env
   - **Out**: production provider integration (roadmap)
 
-- [ ] T087 Heavy-lane workflow complete + required before merge
+- [x] T087 Heavy-lane workflow complete + required before merge
   - **Dep**: T033, T040, T047, T067, T070, T071, T062, T074, T078
   - **Files**: `.github/workflows/heavy.yml` (real-PG integration, migration, API integration, Playwright journeys 6/7 + smoke, axe, visual regression, security scans), sharding
   - **Accept**: required before merge; not bypassable for slowness; FR-007, FR-008
   - **Out**: n/a
 
-- [ ] T088 [P] Visual-regression stories for shell primitives + system states
+- [x] T088 [P] Visual-regression stories for shell primitives + system states
   - **Dep**: T056, T059
   - **Files**: Storybook stories + Playwright screenshot config for stable primitives/system states (Light + Dark)
   - **Accept**: targeted screenshots only; no full-route DOM snapshots; ADR-006 layer 10
   - **Out**: product screens
 
-- [ ] T089 Performance baselines recorded + heavy-lane pre-merge budget agreed
+- [x] T089 Performance baselines recorded + heavy-lane pre-merge budget agreed
   - **Dep**: T087
   - **Files**: `docs/runbooks/perf-baselines.md` (install/build/test times, **observed heavy-lane duration baseline**, route-bundle sizes), `docs/standards/ci-quality-gates.md` (record the **founder-agreed heavy-lane pre-merge time budget**)
   - **Accept**: (a) the observed heavy-lane duration is recorded as a baseline; (b) an explicit heavy-lane pre-merge time budget is agreed by the founder and recorded in `docs/standards/ci-quality-gates.md` **before Phase 1 exits**; thereafter the heavy lane must complete within that recorded budget; SC-002

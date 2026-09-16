@@ -140,6 +140,71 @@ module.exports = {
       from: {},
       to: { couldNotResolve: true },
     },
+
+    // --- T085 (PR-19) tightening: additive only, core rules above unchanged. ---
+
+    {
+      name: "module-public-entry-only",
+      comment:
+        "apps/api/src/modules/{audit,identity} have a settled public-entry " +
+        "convention (index.ts) — a sibling module or any outside caller must " +
+        "import through it, not reach into application/domain/infrastructure/http " +
+        "internals directly (T085, tightening no-cross-module-internals beyond " +
+        "infrastructure/repositories/repository/schema to all internal layers " +
+        "for the two modules that already have this convention). " +
+        "apps/api/src/modules/platform has no single public-entry file today " +
+        "(independent sub-features: database, health, outbox, security, tenancy) " +
+        "and is deliberately out of scope for this rule rather than having one " +
+        "invented for it.",
+      severity: "error",
+      from: {
+        path: "^apps/api/src/modules/(audit|identity)/",
+        pathNot: "/(__tests__|__fixtures__)/",
+      },
+      to: {
+        path: "^apps/api/src/modules/(audit|identity)/(application|domain|infrastructure|http)/",
+        pathNot: "^apps/api/src/modules/$1/(application|domain|infrastructure|http)/",
+      },
+    },
+    {
+      name: "test-harness-not-in-production-graph",
+      comment:
+        "apps/web/src/test-harness must never appear in the production import " +
+        "graph (T085; hard product invariant, docs/standards/ci-quality-gates.md). " +
+        "The only sanctioned entry point is the single dynamic import() in " +
+        "apps/web/src/app/router.tsx behind the VITE_E2E gate; any other file " +
+        "outside test-harness/ or e2e/ reaching in — especially a static import " +
+        "dependency-cruiser can see at analysis time — is forbidden. This is " +
+        "defense-in-depth alongside (not a replacement for) the build-output " +
+        "proof in apps/web/src/__tests__/production-bundle.test.ts, which " +
+        "remains the authoritative production-exclusion check.",
+      severity: "error",
+      from: {
+        path: "^apps/web/",
+        pathNot: [
+          "^apps/web/src/test-harness/",
+          "^apps/web/e2e/",
+          "^apps/web/src/app/router\\.tsx$",
+        ].join("|"),
+      },
+      to: { path: "^apps/web/src/test-harness/" },
+    },
+    {
+      name: "contracts-generated-import-direction",
+      comment:
+        "packages/contracts/src/generated/** is produced by `contracts:generate` " +
+        "and never hand-edited (ADR-013, T065) — it must not depend on the " +
+        "package's own hand-written internals (src/index.ts, src/msw/**, " +
+        "src/generate.ts). Other packages deep-importing generated/* directly " +
+        "are already blocked by no-deep-import-across-packages, since " +
+        "packages/contracts/package.json only exports '.' and './msw' (T085).",
+      severity: "error",
+      from: { path: "^packages/contracts/src/generated/" },
+      to: {
+        path: "^packages/contracts/src/",
+        pathNot: "^packages/contracts/src/generated/",
+      },
+    },
   ],
 
   options: {
@@ -147,7 +212,7 @@ module.exports = {
     exclude: {
       path: [
         "(^|/)node_modules/",
-        "(^|/)(dist|coverage|\\.turbo|\\.output)/",
+        "(^|/)(dist|coverage|\\.turbo|\\.output|storybook-static)/",
         "/__fixtures__/",
       ].join("|"),
     },
