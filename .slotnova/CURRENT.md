@@ -9,17 +9,26 @@ and update this file.
 
 ## Current main
 
-`33aa0a6c98b7dd20e295daa1bda38a4eddd0cf41` — merged PR #51 — PR-18 / T076-T078 observability deepening.
+`2a0dddb7d860debb6f8abe831b6bed439813d617` — merged PR #53 — PR-19 / T085-T089
+architecture tightening, provider-smoke CI, heavy lane, visual regression,
+performance baselines. Founder-approved 180s heavy-lane budget recorded and
+actively enforced in CI (`budget-check` job, `heavy.yml`).
 
 ## Current implementation state
 
-PR-18 is merged and complete.
+PR-19 is merged and complete.
 
-Active: PR-19 — T085-T089 architecture tightening, provider-smoke CI, heavy
-lane completion, visual regression, performance baselines (issue #52,
-branch `feat/pr-19-hardening-ci-visual-perf`). T085/T086/T087/T088
-implemented; T089 measurement/enforcement mechanism implemented, budget
-value pending founder approval per the founder gate.
+Active: PR-20 — T090-T091 final Phase-1 validation, documentation
+reconciliation and exit (issue #54, branch `feat/pr-20-phase-1-exit`).
+Full quickstart/SC-001...SC-018 validation executed; evidence matrix at
+`docs/phase-1-exit.md`. **Phase 1 is NOT yet exited/merged.** One narrow
+blocker remains: three Phase-1 exit decision records
+(`docs/decisions/0002-version-pins.md`, `0005-production-identity-provider.md`,
+`0006-csrf-mechanism.md`) were written in PR-20, consolidating already-shipped
+evidence, but require founder review/approval before T080/T083/T084/T090/T091
+can be checked complete and Phase 1 formally declared exited. Do not treat
+Phase 1 as exited until the founder has reviewed those three records and
+merged PR-20.
 
 ## Workflow-efficiency setup
 
