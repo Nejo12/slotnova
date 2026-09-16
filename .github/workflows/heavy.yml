@@ -1,4 +1,9 @@
-# T074 foundation only; not full T087 completion. Never deploys the application.
+# T087 complete: migration proof (T074 foundation) + targeted visual
+# regression (T088) + accessibility checks (axe, via the existing shell-a11y
+# Playwright spec). Real-PostgreSQL integration and Playwright journeys 6/7
+# remain in the separate required e2e.yml workflow; security scans remain in
+# the separate required security.yml workflow -- composed as distinct
+# required checks rather than duplicated here. Never deploys the application.
 name: heavy
 on:
   pull_request:
@@ -49,6 +54,49 @@ jobs:
         run: pnpm --filter @slotnova/db test:integration
       - name: Separate scheduler release and runtime role proof
         run: pnpm --filter @slotnova/worker exec vitest run --config vitest.integration.config.ts src/scheduler/__tests__/release.int.test.ts
+  visual-regression:
+    name: targeted visual regression (Storybook, Light/Dark)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @slotnova/ui build-storybook
+      - run: pnpm --filter @slotnova/ui exec playwright install --with-deps chromium
+      - name: Targeted Storybook visual regression (Light + Dark)
+        run: pnpm --filter @slotnova/ui test:visual
+  accessibility:
+    name: axe accessibility checks (Playwright journeys)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm --filter @slotnova/web exec playwright install --with-deps chromium
+      - name: Playwright journeys, including the shell-a11y axe spec (T062)
+        run: pnpm e2e
+  security-scan-reference:
+    name: security scans (see security.yml)
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: Security scanning runs in the separate required security.yml workflow
+        run: |
+          echo "Dependency vulnerability, secret, and static-analysis scanning" \
+               "run in the separate required 'security' workflow (security.yml)," \
+               "not duplicated here, per T087's 'do not duplicate work" \
+               "gratuitously' acceptance criterion."
   release-migrations:
     # Deliberately disabled until a private runner, secrets and release controls exist.
     # Dispatch is Founder-only, from reviewed main, bound to its exact SHA.
