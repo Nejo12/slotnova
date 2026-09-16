@@ -212,7 +212,7 @@ module.exports = {
     exclude: {
       path: [
         "(^|/)node_modules/",
-        "(^|/)(dist|coverage|\\.turbo|\\.output)/",
+        "(^|/)(dist|coverage|\\.turbo|\\.output|storybook-static)/",
         "/__fixtures__/",
       ].join("|"),
     },
