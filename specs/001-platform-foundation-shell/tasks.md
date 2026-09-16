@@ -855,7 +855,7 @@ Each task carries a compact block:
   - **Accept**: targeted screenshots only; no full-route DOM snapshots; ADR-006 layer 10
   - **Out**: product screens
 
-- [ ] T089 Performance baselines recorded + heavy-lane pre-merge budget agreed
+- [x] T089 Performance baselines recorded + heavy-lane pre-merge budget agreed
   - **Dep**: T087
   - **Files**: `docs/runbooks/perf-baselines.md` (install/build/test times, **observed heavy-lane duration baseline**, route-bundle sizes), `docs/standards/ci-quality-gates.md` (record the **founder-agreed heavy-lane pre-merge time budget**)
   - **Accept**: (a) the observed heavy-lane duration is recorded as a baseline; (b) an explicit heavy-lane pre-merge time budget is agreed by the founder and recorded in `docs/standards/ci-quality-gates.md` **before Phase 1 exits**; thereafter the heavy lane must complete within that recorded budget; SC-002

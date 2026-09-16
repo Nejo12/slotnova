@@ -110,9 +110,25 @@ Phase 1 records install/build/test and route-bundle baselines. Later phases add 
 
 ## Heavy-lane pre-merge time budget (T089)
 
-**Status: pending founder approval.** No budget value is recorded here yet.
-Per the PR-19/T089 founder gate, a budget must not be silently selected —
-it is set only after the founder reviews an actual observed heavy-lane
-duration from a completed GitHub Actions run and explicitly approves a
-number. `tooling/perf/check-heavy-budget.ts` implements the enforcement
-mechanism and is ready to wire into `heavy.yml` once a value lands here.
+**Founder-approved: 180 seconds (3 minutes).**
+
+Approved against the observed `heavy.yml` GitHub Actions run on PR #53
+(head `218cf73095d5ef21c1da27ea4a973c9151f023bf`): 93 seconds wall-clock
+(run `35119891244`, 2026-09-16T16:07:44Z–2026-09-16T16:09:17Z). See
+`docs/runbooks/perf-baselines.md` for the full observed-baseline record.
+
+Enforced by `tooling/perf/check-heavy-budget.ts`, invoked from a
+`budget-check` job in `heavy.yml` that runs only after every other heavy-lane
+job has completed and queries the GitHub Actions API for the current
+workflow run's own `run_started_at` to compute real elapsed wall-clock
+time — not a hard-coded number, and not any single parallel job's own
+duration standing in for the workflow's total.
+
+**This is a Phase-1 baseline budget, not a permanent ceiling.** It reflects
+the heavy lane's current job set (`migration-checklist`, `migration-proof`,
+`visual-regression`, `accessibility`, `security-scan-reference`). If the
+heavy lane's architecture or test scope materially changes — a new required
+job, a substantially heavier existing job, more Playwright journeys or
+visual-regression baselines, larger real-PostgreSQL suites — this budget
+must be deliberately revisited and re-approved by the founder. Do not widen
+or silently ignore this number to accommodate scope growth.

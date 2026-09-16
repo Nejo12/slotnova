@@ -61,18 +61,25 @@ Per-run wall time: `~17-21s` for all 18 screenshots.
 
 ## Heavy-lane duration baseline
 
-**Pending.** Per the T089 acceptance criteria, the heavy-lane duration
-baseline can only be recorded from an actual completed run of the finished
-`heavy.yml` workflow in GitHub Actions — not simulated locally, since it
-includes GitHub-hosted-runner characteristics (network, cache warmth,
-concurrent job scheduling across `migration-checklist`, `migration-proof`,
-`visual-regression`, `accessibility`, `security-scan-reference`) that a
-local run cannot reproduce. This section will be filled in once this PR's
-heavy workflow run completes, and the recorded number becomes evidence for
-the founder-approval decision below.
+**Recorded.** Observed GitHub Actions run of the completed `heavy.yml`
+workflow on this PR:
+
+- Repository: `Nejo12/slotnova`
+- PR: [#53](https://github.com/Nejo12/slotnova/pull/53)
+- Branch: `feat/pr-19-hardening-ci-visual-perf`
+- Head SHA: `218cf73095d5ef21c1da27ea4a973c9151f023bf`
+- Run: [`35119891244`](https://github.com/Nejo12/slotnova/actions/runs/35119891244), conclusion `success`
+- Started: `2026-09-16T16:07:44Z`
+- Completed: `2026-09-16T16:09:17Z`
+- **Observed duration: 93 seconds**
+
+This is the workflow's actual wall-clock duration (from the Actions API's
+own `createdAt`/`updatedAt` for the run), independently re-verified via
+`gh run list` against the live API rather than taken on faith, not a sum or
+estimate of the individual parallel jobs below.
 
 Locally-measured components that compose the heavy lane, for rough
-orientation only (not a substitute for the real CI run):
+orientation only (not a substitute for the real CI run measured above):
 
 - `pnpm --filter @slotnova/db test:integration` (real PostgreSQL,
   Testcontainers): `10.55s` (4 files, 14 tests)
@@ -90,17 +97,24 @@ the slowest job plus scheduling overhead, not a serial sum of the above.
 
 ## Founder-agreed heavy-lane pre-merge time budget
 
-**PENDING FOUNDER APPROVAL.** Do not treat any number here as agreed until
-the founder has reviewed the actual observed heavy-lane duration (above)
-from a completed GitHub Actions run and explicitly approved a budget. Once
-approved, the agreed value is recorded here AND in
-`docs/standards/ci-quality-gates.md`'s "Performance" section, and
-`tooling/perf/check-heavy-budget.ts` (T089 enforcement mechanism, added in
-this PR) is pointed at that value.
+**APPROVED: 180 seconds (3 minutes).**
 
-No recommendation is offered yet — the local component measurements above
-are too incomplete a substitute for a real parallel GitHub Actions run
-(different CPU/network characteristics, and the real total is bounded by
-the slowest parallel job, not a sum) to responsibly ground a number. Once
-this PR's heavy workflow has actually run in GitHub Actions, its reported
-duration is the number to bring to the founder for approval.
+The founder reviewed the observed GitHub Actions heavy-lane baseline above
+(93 seconds on PR #53, head `218cf73`) and approved a 180-second pre-merge
+budget — roughly 2x headroom over the observed baseline, room for slower
+GitHub-hosted-runner conditions (cold cache, contention) without the gate
+being trivially tight.
+
+This is a **Phase-1 baseline budget**, not a permanent ceiling: it reflects
+the current heavy-lane job set (`migration-checklist`, `migration-proof`,
+`visual-regression`, `accessibility`, `security-scan-reference`). If the
+architecture or test scope in the heavy lane materially changes — a new
+required job, a substantially heavier existing one, additional Playwright
+journeys, more visual-regression baselines, real-PG suites growing
+significantly — this budget must be deliberately revisited and re-approved
+by the founder, not silently left in place or silently widened by an
+implementer. Recorded identically in
+`docs/standards/ci-quality-gates.md`'s "Heavy-lane pre-merge time budget"
+section and enforced via `tooling/perf/check-heavy-budget.ts` (see that
+file and `.github/workflows/heavy.yml`'s `budget-check` job for the
+enforcement mechanism).

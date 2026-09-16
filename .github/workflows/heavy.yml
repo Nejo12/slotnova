@@ -97,6 +97,43 @@ jobs:
                "run in the separate required 'security' workflow (security.yml)," \
                "not duplicated here, per T087's 'do not duplicate work" \
                "gratuitously' acceptance criterion."
+  budget-check:
+    # T089: runs only after every other ordinary heavy-lane job has finished
+    # (release-migrations is founder-dispatch-only and excluded -- it is not
+    # part of the ordinary pre-merge lane this budget governs), so this job's
+    # own start time is a faithful proxy for "the heavy lane finished".
+    # Measures the actual workflow wall-clock duration via the GitHub Actions
+    # API's run_started_at for this run -- never a hard-coded number, never a
+    # single job's own duration standing in for the workflow's total. See
+    # tooling/perf/check-heavy-budget.ts and
+    # docs/standards/ci-quality-gates.md's "Heavy-lane pre-merge time budget".
+    name: heavy-lane time budget check (180s, T089)
+    if: always()
+    needs:
+      [
+        migration-checklist,
+        migration-proof,
+        visual-regression,
+        accessibility,
+        security-scan-reference,
+      ]
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Check heavy-lane wall-clock duration against the founder-approved 180s budget
+        run: pnpm exec tsx tooling/perf/check-heavy-budget.ts
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   release-migrations:
     # Deliberately disabled until a private runner, secrets and release controls exist.
     # Dispatch is Founder-only, from reviewed main, bound to its exact SHA.
