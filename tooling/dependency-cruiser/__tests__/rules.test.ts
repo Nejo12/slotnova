@@ -66,6 +66,9 @@ const VIOLATION_CASES: ReadonlyArray<readonly [fixture: string, rule: string]> =
   ["no-cross-module-internals", "no-cross-module-internals"],
   ["no-observability-server-in-browser", "no-observability-server-in-browser"],
   ["no-deep-import-across-packages", "no-deep-import-across-packages"],
+  ["module-public-entry-only", "module-public-entry-only"],
+  ["test-harness-not-in-production-graph", "test-harness-not-in-production-graph"],
+  ["contracts-generated-import-direction", "contracts-generated-import-direction"],
 ];
 
 /** Forbidden rules that are structural guardrails, not tied to one dedicated fixture. */
@@ -86,6 +89,14 @@ describe("dependency-cruiser core boundary ruleset", () => {
 
   it("the compliant fixture trips no rule", async () => {
     expect(await violatedRules("compliant")).toEqual([]);
+  });
+
+  it("the module-public-entry-only-compliant fixture trips no rule", async () => {
+    expect(await violatedRules("module-public-entry-only-compliant")).toEqual([]);
+  });
+
+  it("the test-harness-not-in-production-graph-compliant fixture trips no rule", async () => {
+    expect(await violatedRules("test-harness-not-in-production-graph-compliant")).toEqual([]);
   });
 
   it("every core forbidden rule is covered by a fixture", () => {

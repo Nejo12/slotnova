@@ -827,7 +827,7 @@ Each task carries a compact block:
 
 ## Phase 11: Polish & Cross-Cutting  ·  **PR-19, PR-20**
 
-- [ ] T085 Dependency-cruiser rule **tightening** (beyond the core set)
+- [x] T085 Dependency-cruiser rule **tightening** (beyond the core set)
   - **Dep**: T005, all module scaffolds (T029, T032, T022, …)
   - **Files**: `tooling/dependency-cruiser/.dependency-cruiser.cjs` (add narrower rules now that real modules exist: per-module public-entry allowlists, `packages/contracts` generated-only import direction, **`apps/web/src/test-harness` must never appear in the production import graph**)
   - **Accept**: tightened rules pass on real code; `docs/standards/ci-quality-gates.md`, FR-006
