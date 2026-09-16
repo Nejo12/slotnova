@@ -16,15 +16,19 @@
 
 import { createRequire } from "node:module";
 
+import type * as HttpTypes from "node:http";
+import type * as HttpsTypes from "node:https";
+
 // `import * as http from "node:http"` yields an immutable ESM namespace
 // object -- even though its property descriptors report `writable: true`,
 // Node refuses actual assignment/redefinition on it. Go through
 // `createRequire` to get the real, mutable CJS module object instead, which
 // is what every consumer (including MSW's own node interceptors) ultimately
-// patches too.
+// patches too. Types are imported separately (`import type`) since the
+// `require`d value is untyped.
 const require = createRequire(import.meta.url);
-const http = require("node:http") as typeof import("node:http");
-const https = require("node:https") as typeof import("node:https");
+const http = require("node:http") as typeof HttpTypes;
+const https = require("node:https") as typeof HttpsTypes;
 
 const LOCAL_HOSTS = new Set(["127.0.0.1", "localhost", "::1", "[::1]"]);
 
@@ -81,8 +85,8 @@ export function installNetworkDenylist(): NetworkDenylistHandle {
         host = hostFromUrlLike(first);
       } else {
         host =
-          (first as http.RequestOptions).hostname ??
-          (first as http.RequestOptions).host ??
+          (first as HttpTypes.RequestOptions).hostname ??
+          (first as HttpTypes.RequestOptions).host ??
           "localhost";
       }
       assertLocalHost(host);
