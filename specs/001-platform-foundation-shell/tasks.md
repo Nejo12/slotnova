@@ -843,7 +843,7 @@ Each task carries a compact block:
   - **Constraints**: provider credentials only in the smoke lane's scoped secrets; never in fast/heavy lane env
   - **Out**: production provider integration (roadmap)
 
-- [ ] T087 Heavy-lane workflow complete + required before merge
+- [x] T087 Heavy-lane workflow complete + required before merge
   - **Dep**: T033, T040, T047, T067, T070, T071, T062, T074, T078
   - **Files**: `.github/workflows/heavy.yml` (real-PG integration, migration, API integration, Playwright journeys 6/7 + smoke, axe, visual regression, security scans), sharding
   - **Accept**: required before merge; not bypassable for slowness; FR-007, FR-008
