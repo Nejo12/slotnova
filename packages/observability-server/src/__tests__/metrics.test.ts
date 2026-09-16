@@ -58,6 +58,7 @@ describe("metrics", () => {
   });
 
   it.each([
+    // identifier-shaped keys (FR-056: no high-cardinality IDs as labels)
     "requestId",
     "correlationId",
     "workspaceId",
@@ -66,8 +67,26 @@ describe("metrics", () => {
     "invitationId",
     "membershipId",
     "traceId",
+    "ID",
+    "Workspace_Id",
+    // sensitive keys reused from redaction.ts's canonical policy
     "email",
     "token",
+    "password",
+    "accessToken",
+    "refreshToken",
+    "secret",
+    "clientSecret",
+    "apiKey",
+    "x-api-key",
+    "privateKey",
+    "authorization",
+    "cookie",
+    "set-cookie",
+    "cardNumber",
+    "PAN",
+    "cvv",
+    "cvc",
   ])("refuses a high-cardinality/sensitive label %j", (key) => {
     const meter = createMeter({ namespace: "technical", exporter: createInMemoryExporter() });
     expect(() => meter.counter("x").add(1, { [key]: "value" })).toThrow(
@@ -75,7 +94,7 @@ describe("metrics", () => {
     );
   });
 
-  it("allows low-cardinality labels such as route, method, and outcome", () => {
+  it("allows low-cardinality labels such as route, method, outcome, status, queue, and operation", () => {
     const exporter = createInMemoryExporter();
     const meter = createMeter({ namespace: "technical", exporter });
     expect(() =>
@@ -84,6 +103,8 @@ describe("metrics", () => {
         method: "POST",
         outcome: "error",
         status: 500,
+        queue: "outbox",
+        operation: "dispatch",
       }),
     ).not.toThrow();
     expect(exporter.points).toHaveLength(1);

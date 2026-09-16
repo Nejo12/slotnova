@@ -16,7 +16,17 @@
  * wrapped as a {@link MetricExporter} later without this package taking a
  * dependency on it. Local/CI default to {@link createNoopExporter} — no
  * network call is ever made by this module.
+ *
+ * {@link MetricExporter.export} is deliberately synchronous-only for PR-18:
+ * there is no retry/buffering/error-handling infrastructure here, so an
+ * exporter that could reject asynchronously would risk an unhandled
+ * rejection with nothing to observe it. A future vendor/OTel exporter that is
+ * inherently asynchronous must adapt at its own adapter boundary (e.g. fire
+ * its network call and swallow/queue failures internally); it must not widen
+ * this interface back to `Promise<void>`.
  */
+
+import { isSensitiveFieldKey } from "./redaction.js";
 
 export type MetricNamespace = "technical" | "business";
 export type InstrumentKind = "counter" | "histogram" | "gauge";
@@ -37,9 +47,12 @@ export interface MetricPoint {
   readonly at: string;
 }
 
-/** Vendor-neutral export adapter. A concrete OTel/vendor exporter implements this. */
+/**
+ * Vendor-neutral export adapter. A concrete OTel/vendor exporter implements
+ * this. Synchronous-only by design for PR-18 — see the module doc.
+ */
 export interface MetricExporter {
-  export(points: readonly MetricPoint[]): void | Promise<void>;
+  export(points: readonly MetricPoint[]): void;
 }
 
 export interface Counter {
@@ -79,23 +92,25 @@ export const TECHNICAL_METRIC_NAMES = {
   dbPoolWaiting: "db.pool.waiting",
 } as const;
 
-/** Normalize a label key the same way {@link isHighCardinalityLabel} matches it. */
-const normalizeLabelKey = (key: string): string => key.toLowerCase().replace(/[^a-z0-9]/g, "");
-
-const EXACT_BLOCKED_LABELS: ReadonlySet<string> = new Set(["email", "token", "password"]);
-
 /**
  * A label is rejected when it is an identifier-shaped key (FR-056: "no
- * high-cardinality IDs as metric labels") or a secret-shaped one. This
- * mirrors, but intentionally does not import, `redaction.ts`'s denylist:
- * redaction *masks* log values; this *rejects* the metric call outright,
- * because a label is structural (cardinality), not a value to hide.
+ * high-cardinality IDs as metric labels" — any `*Id`-suffixed key such as
+ * `requestId`, `correlationId`, `workspaceId`, `userId`, `jobId`,
+ * `invitationId`, `membershipId`, `traceId`, …) or a secret-shaped one.
+ *
+ * The secret-shaped check reuses {@link isSensitiveFieldKey}, the exact same
+ * predicate `redaction.ts` uses to decide what to mask in logs, so metrics
+ * and log redaction never carry two independently-maintained secret lists
+ * that can drift apart. The two call sites choose different *consequences*
+ * for a match — redaction masks the value, this rejects the metric call
+ * outright, because a label is structural (cardinality), not a value to
+ * hide — but they agree on what counts as sensitive.
  */
-function isHighCardinalityLabel(key: string): boolean {
-  const normalized = normalizeLabelKey(key);
+function isUnsafeMetricLabel(key: string): boolean {
+  const normalized = key.toLowerCase().replace(/[^a-z0-9]/g, "");
   if (normalized === "") return false;
-  if (EXACT_BLOCKED_LABELS.has(normalized)) return true;
-  return normalized.endsWith("id");
+  if (normalized.endsWith("id")) return true;
+  return isSensitiveFieldKey(key);
 }
 
 function assertLowCardinalityAttributes(
@@ -103,7 +118,7 @@ function assertLowCardinalityAttributes(
   attributes: MetricAttributes | undefined,
 ): void {
   if (!attributes) return;
-  const blocked = Object.keys(attributes).filter(isHighCardinalityLabel);
+  const blocked = Object.keys(attributes).filter(isUnsafeMetricLabel);
   if (blocked.length > 0) {
     throw new Error(
       `metrics: refusing high-cardinality/sensitive label(s) on "${name}": ${blocked.join(", ")}`,
@@ -154,9 +169,7 @@ export function createMeter(options: MeterOptions): Meter {
     attributes?: MetricAttributes,
   ): void => {
     assertLowCardinalityAttributes(name, attributes);
-    void exporter.export([
-      { namespace, name, kind, value, attributes: attributes ?? {}, at: clock() },
-    ]);
+    exporter.export([{ namespace, name, kind, value, attributes: attributes ?? {}, at: clock() }]);
   };
 
   return {

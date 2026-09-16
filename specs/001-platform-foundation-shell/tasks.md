@@ -762,6 +762,17 @@ Each task carries a compact block:
   - **Tests**: this is the test task
   - **Constraints**: no network; deterministic
   - **Out**: n/a
+  - **Repair note (PR-18 review)**: the original T078 "request → worker" test called `runWithChildContext`
+    directly inside the API test to simulate the worker half rather than running the real worker
+    consumer/dispatch. Fixed: `correlation-propagation.int.test.ts` now forks the worker's actual
+    `startConsumer`/`dispatch`/`handleIdentityEvent` path (`apps/worker/src/outbox/__fixtures__/consume-one.ts`)
+    as its own OS process against the same real Postgres database, and asserts the correlation/request id in
+    that REAL worker process's own structured log line — closing the loop without `apps/api` taking a static
+    dependency on `@slotnova/worker`. Also hardened `metrics.ts`'s label-safety check to reuse `redaction.ts`'s
+    canonical sensitive-key predicate (previously a narrower, independently-maintained list) and narrowed
+    `MetricExporter.export` to synchronous-only to remove a fire-and-forget rejecting-promise risk. Added a
+    focused worker test proving no ALS correlation-context leakage between two sequentially processed outbox
+    jobs (`consumer.int.test.ts`, "does not leak correlation context between sequentially processed jobs").
 
 **Checkpoint**: a single request/job is traceable end to end; redaction proven. US7 independently testable.
 

@@ -1,3 +1,7 @@
+import { fork, type ChildProcess } from "node:child_process";
+import { once } from "node:events";
+import { fileURLToPath } from "node:url";
+
 import type { NestFastifyApplication } from "@nestjs/platform-fastify";
 import { Client, Pool, runMigrations } from "@slotnova/db";
 import { DEFAULT_POSTGRES_IMAGE, startPostgres, type PostgresHarness } from "@slotnova/db/testing";
@@ -5,7 +9,6 @@ import {
   createInMemoryExporter,
   createLogger,
   createTechnicalMeter,
-  runWithChildContext,
   TECHNICAL_METRIC_NAMES,
   type LogRecord,
 } from "@slotnova/observability-server";
@@ -24,21 +27,70 @@ import { SessionsRepository } from "../../modules/identity/infrastructure/reposi
 /**
  * T078 — observability integration coverage (correlation, redaction, event
  * assertion). Real PostgreSQL; no arbitrary sleeps (every wait is a direct
- * query against already-committed state, never a poll for eventual state).
+ * query against already-committed state, never a poll for eventual state,
+ * except the subprocess drain below which polls the child's own exit/output).
  *
- * The worker's own restoration of a job's correlation context (including on
- * the retry/dead-letter path) is exercised end-to-end by the real consumer in
- * `apps/worker/src/outbox/__tests__/consumer.int.test.ts` ("propagates
- * correlation") — this suite is not a redundant copy of that. What it proves
- * is the API-side half of the contract: a request id is generated or
- * preserved (FR-054), it is the exact value written into the outbox record's
- * payload (T076 plumb-through), and restoring it via the shared
- * `runWithChildContext` primitive — the identical function
- * `apps/worker/src/outbox/dispatch.ts` calls to restore a job's context —
- * reproduces that same id in a structured log line, closing the loop between
- * the two independently-tested halves without introducing a new cross-app
- * dependency (`apps/api` must not depend on `@slotnova/worker`).
+ * The true request → outbox → REAL worker proof forks the worker's actual
+ * consumer/dispatch code (`apps/worker/src/outbox/__fixtures__
+ * /consume-one.ts`, which calls the same `startConsumer` used in production
+ * and in `apps/worker/src/outbox/__tests__/consumer.int.test.ts`) as its own
+ * OS process against this same real Postgres database, rather than
+ * simulating the worker half by calling `runWithChildContext` directly in
+ * this file. `apps/api` never statically imports `@slotnova/worker` —
+ * `fork()` is handed a filesystem path, not a module specifier, so it creates
+ * no dependency-graph edge and no production dependency
+ * (`tooling/dependency-cruiser` has no rule permitting `apps/api` →
+ * `apps/worker`, and none is added here). The worker's own retry/dead-letter
+ * correlation-preservation behavior (including across sequential jobs, with
+ * no ALS context leakage) stays proven by the existing worker-side suite in
+ * `consumer.int.test.ts` ("propagates correlation") — this test is not a
+ * redundant copy of that; it is the missing half that runs a real API request
+ * against the real worker binary.
  */
+
+/** Absolute path to the real-worker-consumer test fixture, resolved once. */
+const WORKER_CONSUME_ONE_FIXTURE = fileURLToPath(
+  new URL("../../../../worker/src/outbox/__fixtures__/consume-one.ts", import.meta.url),
+);
+
+/**
+ * Fork the worker's real `startConsumer`/`dispatch`/`handleIdentityEvent`
+ * path as its own OS process against `adminUri`, collect every structured
+ * log line it prints to stdout, and wait for it to exit. This is the
+ * smallest test-only executable-boundary harness that runs the real worker
+ * binary without `apps/api` statically importing `@slotnova/worker`
+ * (dependency-cruiser forbids that production edge; `fork()` with a
+ * filesystem path creates no import edge at all).
+ */
+async function runRealWorkerAgainst(adminUri: string): Promise<LogRecord[]> {
+  const child: ChildProcess = fork(WORKER_CONSUME_ONE_FIXTURE, [], {
+    execArgv: ["--import", "tsx"],
+    env: { ...process.env, TEST_DATABASE_URL: adminUri, TEST_TIMEOUT_MS: "15000" },
+    stdio: ["ignore", "pipe", "pipe", "ipc"],
+  });
+  const stdout: string[] = [];
+  child.stdout?.on("data", (chunk: Buffer) => stdout.push(chunk.toString("utf8")));
+  const stderr: string[] = [];
+  child.stderr?.on("data", (chunk: Buffer) => stderr.push(chunk.toString("utf8")));
+
+  const [exitCode] = (await once(child, "exit", {
+    signal: AbortSignal.timeout(30_000),
+  })) as [number | null];
+
+  if (exitCode !== 0) {
+    throw new Error(
+      `real worker fixture exited ${exitCode}; stderr:\n${stderr.join("")}\nstdout:\n${stdout.join("")}`,
+    );
+  }
+
+  return stdout
+    .join("")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+    .map((line) => JSON.parse(line) as LogRecord);
+}
+
 describe("observability: correlation propagation (real PostgreSQL)", () => {
   let harness: PostgresHarness;
   let admin: Client;
@@ -136,8 +188,8 @@ describe("observability: correlation propagation (real PostgreSQL)", () => {
   });
 
   it(
-    "propagates the request id into the outbox record it writes, and restoring it " +
-      "via the shared context primitive reproduces the same id in a structured log",
+    "propagates the request id into the outbox record the real API path writes, and the " +
+      "REAL worker consumer/dispatch reproduces the same id in its own structured log",
     async () => {
       const actor = await createActor();
       const suppliedId = `req-${unique("propagation")}`;
@@ -160,19 +212,23 @@ describe("observability: correlation propagation (real PostgreSQL)", () => {
       expect(outbox.rows).toHaveLength(1);
       expect(outbox.rows[0]!.payload.requestId).toBe(suppliedId);
 
-      const restoredRequestId = outbox.rows[0]!.payload.requestId;
-      const lines: string[] = [];
-      const workerLogger = createLogger({ sink: (line) => lines.push(line) });
-      await runWithChildContext(
-        { correlationId: restoredRequestId, requestId: restoredRequestId },
-        () => {
-          workerLogger.info("outbox.dispatch", { meta: { eventName: "invitation.issued" } });
-        },
-      );
+      // Run the REAL worker consumer/dispatch as its own OS process against
+      // this same database and this same outbox row — not a simulation.
+      const workerLines = await runRealWorkerAgainst(harness.adminUri);
+      const dispatched = workerLines.filter((line) => line.event === "outbox.dispatch");
+      expect(dispatched.length).toBeGreaterThan(0);
+      const thisJob = dispatched.find((line) => line.correlationId === suppliedId);
+      expect(
+        thisJob,
+        `expected a real worker "outbox.dispatch" log for correlationId ${suppliedId}`,
+      ).toBeDefined();
+      expect(thisJob!.requestId).toBe(suppliedId);
 
-      const workerRecord = JSON.parse(lines[0]!) as LogRecord;
-      expect(workerRecord.correlationId).toBe(suppliedId);
-      expect(workerRecord.requestId).toBe(suppliedId);
+      const processedRow = await admin.query<{ processed_at: string | null }>(
+        "SELECT processed_at FROM public.outbox_records WHERE payload->>'invitationId' = $1",
+        [invitationId],
+      );
+      expect(processedRow.rows[0]!.processed_at).not.toBeNull();
     },
   );
 

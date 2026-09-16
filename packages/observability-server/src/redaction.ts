@@ -37,6 +37,7 @@ const EXACT_KEYS: ReadonlySet<string> = new Set([
   "cvc",
   "pan",
   "cardnumber",
+  "email",
 ]);
 
 /**
@@ -61,6 +62,22 @@ const isSensitiveKey = (key: string, extra: ReadonlySet<string>): boolean => {
   if (SENSITIVE_SUFFIXES.some((suffix) => n.endsWith(suffix))) return true;
   return false;
 };
+
+/**
+ * Canonical sensitive-key predicate (FR-057), exposed so callers outside this
+ * module — e.g. `metrics.ts`'s label-safety check (FR-056) — can recognize
+ * the same secret-shaped keys `redact` masks, without maintaining a second,
+ * divergent denylist. `redact` MASKS a value under a matching key; a caller
+ * like the metrics seam may instead choose to REJECT the call outright — the
+ * policy of which keys are sensitive is shared either way.
+ *
+ * `additionalKeys` mirrors {@link RedactOptions.additionalKeys}: extra
+ * normalized key names the caller wants treated as sensitive alongside the
+ * built-in set.
+ */
+export function isSensitiveFieldKey(key: string, additionalKeys: readonly string[] = []): boolean {
+  return isSensitiveKey(key, new Set(additionalKeys.map(normalizeKey)));
+}
 
 const isPlainRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" &&
