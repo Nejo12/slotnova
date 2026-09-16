@@ -30,13 +30,13 @@
     "test:integration": "vitest run --config vitest.integration.config.ts"
   },
   "dependencies": {
-    "pg": "^8.22.0",
+    "pg": "8.23.0",
     "@slotnova/deployment-config": "workspace:*"
   },
   "devDependencies": {
     "@slotnova/tsconfig": "workspace:*",
-    "@testcontainers/postgresql": "^12.0.4",
-    "@types/pg": "^8.20.4",
-    "testcontainers": "^12.0.4"
+    "@testcontainers/postgresql": "12.1.0",
+    "@types/pg": "8.23.1",
+    "testcontainers": "12.1.0"
   }
 }

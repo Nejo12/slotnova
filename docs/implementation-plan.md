@@ -4,7 +4,7 @@ Slotnova is specification-led. Product implementation begins only after Phase 0 
 
 ## Phase 0 — Architecture & Engineering Foundation
 
-Status: in progress in PR #10.
+Status: **Approved.** `docs/architecture/phase-0-gate.md` records founder approval on 2026-09-08.
 
 Deliverables include modular-monolith boundaries, monorepo structure, domain map/tiering, auth/tenancy/time/money/API/async/security/testing/motion/observability/CI decisions, Spec Kit constitution, agent workflow, independent architecture review and reconciliation.
 
@@ -13,6 +13,8 @@ Exit: every required item in `docs/architecture/phase-0-gate.md` is approved and
 ---
 
 ## Phase 1 — Platform Foundation & Shell
+
+Status: **Exit complete (T001–T091 all shipped and verified; PR-01 through PR-20).** All 18 success criteria (SC-001…SC-018) demonstrably pass — see `docs/phase-1-exit.md` for the full evidence matrix. All six Phase 1 exit decision records (`docs/decisions/0001`–`0006`) exist and are founder-approved. Formal Phase 1 exit is contingent only on the founder's manual merge of PR-20 (`feat/pr-20-phase-1-exit`) into `main`, per this repository's merge policy — no further validation or documentation work remains.
 
 ### Repository/platform
 

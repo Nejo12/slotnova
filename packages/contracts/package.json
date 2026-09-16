@@ -29,16 +29,16 @@
     "contracts:generate": "tsx src/generate.ts"
   },
   "dependencies": {
-    "msw": "^2.15.0",
+    "msw": "2.15.0",
     "openapi-fetch": "0.17.0",
     "openapi-msw": "2.0.0"
   },
   "devDependencies": {
     "@slotnova/tsconfig": "workspace:*",
     "openapi-typescript": "7.13.0",
-    "prettier": "^3.9.6",
-    "tsx": "^4.23.13",
-    "typescript": "~6.0.3",
-    "vitest": "^5.0.0"
+    "prettier": "3.9.6",
+    "tsx": "4.23.13",
+    "typescript": "6.0.3",
+    "vitest": "5.0.0"
   }
 }
