@@ -36,12 +36,16 @@ than faking in-memory replay.
 
 **Phase 2 PR-02A — Durable API idempotency foundation (issue #61) is
 under implementation** on branch `phase-2/pr-02a-durable-api-idempotency`:
-`apps/api/src/modules/platform/idempotency/` (`claim`/`complete`/
-`executeIdempotently`, canonical request fingerprinting) + migration
-`0007_platform_idempotency.sql` (`public.idempotent_requests`, RLS
-enabled+forced+policy, `UNIQUE (workspace_id, operation,
-idempotency_key)`). Provider-neutral — knows nothing about Catalog. No
-Catalog controller/endpoint work is included here.
+`apps/api/src/modules/platform/idempotency/` (`executeIdempotently` — the
+only exported entry point — plus canonical request fingerprinting) +
+migration `0007_platform_idempotency.sql` (`public.idempotent_requests`,
+RLS enabled+forced+policy, `UNIQUE (workspace_id, operation,
+idempotency_key)`). Supports only mutations whose protected database
+write and replay record commit atomically in one PostgreSQL transaction —
+an earlier split-transaction claim/lease/reclaim design was found unsafe
+by independent review and removed rather than patched. Provider-neutral —
+knows nothing about Catalog. No Catalog controller/endpoint work is
+included here.
 
 **PR-02 resumes once PR-02A merges**, consuming `executeIdempotently`
 directly with no further schema change for Catalog idempotency. No

@@ -11,8 +11,8 @@ import {
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { withWorkspaceContext } from "../../tenancy/with-workspace-context.js";
-import { IdempotencyConflictError, IdempotencyInProgressError } from "../idempotency-errors.js";
-import { claim, complete, executeIdempotently } from "../idempotent-execution.js";
+import { IdempotencyConflictError } from "../idempotency-errors.js";
+import { executeIdempotently } from "../idempotent-execution.js";
 import { fingerprintRequest } from "../request-fingerprint.js";
 
 /**
@@ -20,6 +20,12 @@ import { fingerprintRequest } from "../request-fingerprint.js";
  * against real PostgreSQL. Not a single line here is Catalog-specific: the
  * `operation` string below is an arbitrary example a future consumer would
  * supply.
+ *
+ * `executeIdempotently` is the ONLY supported entry point (correctness
+ * repair, independent review): the claim, the business mutation, and the
+ * completion write always happen inside one caller-supplied transaction.
+ * There is no split-transaction claim/complete API to test here — it was
+ * removed for an unsafe completion-fencing gap.
  */
 describe("idempotent_requests migration (real PostgreSQL)", () => {
   let harness: PostgresHarness;
@@ -328,140 +334,14 @@ describe("idempotent execution semantics (real PostgreSQL)", () => {
     }
   });
 
-  it("executeIdempotently throws IdempotencyInProgressError while another execution still owns the key", async () => {
-    const key = "req-key-006b";
-    const fingerprint = fingerprintRequest({ name: "Widget F2" });
-
-    const claimClient = new Client({ connectionString: harness.appUri });
-    await claimClient.connect();
-    await claimClient.query("BEGIN");
-    await claimClient.query("SELECT set_config('app.workspace_id', $1, true)", [workspaceAId]);
-    const claimed = await claim(
-      claimClient,
-      {
-        workspaceId: workspaceAId,
-        operation: OPERATION,
-        idempotencyKey: key,
-        requestFingerprint: fingerprint,
-      },
-      60_000,
-    );
-    expect(claimed.outcome).toBe("claimed");
-    await claimClient.query("COMMIT");
-
-    try {
-      await expect(
-        withWorkspaceContext(pool, { workspaceId: workspaceAId }, (tx) =>
-          executeIdempotently(
-            tx,
-            {
-              workspaceId: workspaceAId,
-              operation: OPERATION,
-              idempotencyKey: key,
-              requestFingerprint: fingerprint,
-            },
-            async () => ({ status: 201, body: { id: "should-not-run" } }),
-          ),
-        ),
-      ).rejects.toBeInstanceOf(IdempotencyInProgressError);
-    } finally {
-      await claimClient.end();
-    }
-  });
-
-  it("a still-live claim (unexpired lease) reports in-progress, not replay, to a concurrent duplicate", async () => {
+  it("regression: a failed/rolled-back attempt does not poison the key for a later legitimate attempt", async () => {
     const key = "req-key-006";
     const fingerprint = fingerprintRequest({ name: "Widget F" });
 
-    // Simulates a consumer whose business logic cannot fit in one
-    // transaction: commit the claim on its own, leaving a genuinely
-    // committed 'in_progress' row (unreachable via the single-transaction
-    // executeIdempotently path used elsewhere in this file).
-    const claimClient = new Client({ connectionString: harness.appUri });
-    await claimClient.connect();
-    await claimClient.query("BEGIN");
-    await claimClient.query("SELECT set_config('app.workspace_id', $1, true)", [workspaceAId]);
-    const claimResult = await claim(
-      claimClient,
-      {
-        workspaceId: workspaceAId,
-        operation: OPERATION,
-        idempotencyKey: key,
-        requestFingerprint: fingerprint,
-      },
-      60_000, // long-lived lease -- still valid for this test
-    );
-    expect(claimResult.outcome).toBe("claimed");
-    await claimClient.query("COMMIT");
-
-    try {
-      const secondClient = new Client({ connectionString: harness.appUri });
-      await secondClient.connect();
-      try {
-        await secondClient.query("BEGIN");
-        await secondClient.query("SELECT set_config('app.workspace_id', $1, true)", [workspaceAId]);
-        const second = await claim(secondClient, {
-          workspaceId: workspaceAId,
-          operation: OPERATION,
-          idempotencyKey: key,
-          requestFingerprint: fingerprint,
-        });
-        expect(second.outcome).toBe("in-progress");
-        await secondClient.query("ROLLBACK");
-      } finally {
-        await secondClient.end();
-      }
-    } finally {
-      await claimClient.end();
-    }
-  });
-
-  it("recovers an abandoned claim once its lease expires, without permanently poisoning the key", async () => {
-    const key = "req-key-007";
-    const fingerprint = fingerprintRequest({ name: "Widget G" });
-
-    const claimClient = new Client({ connectionString: harness.appUri });
-    await claimClient.connect();
-    await claimClient.query("BEGIN");
-    await claimClient.query("SELECT set_config('app.workspace_id', $1, true)", [workspaceAId]);
-    // A lease that is already expired by the time we look at it -- simulates
-    // a process that claimed the key and then died before completing it.
-    const abandoned = await claim(
-      claimClient,
-      {
-        workspaceId: workspaceAId,
-        operation: OPERATION,
-        idempotencyKey: key,
-        requestFingerprint: fingerprint,
-      },
-      -1,
-    );
-    expect(abandoned.outcome).toBe("claimed");
-    await claimClient.query("COMMIT");
-    await claimClient.end();
-
-    const recoveryPool = new Pool({ connectionString: harness.appUri });
-    try {
-      const recovered = await withWorkspaceContext(
-        recoveryPool,
-        { workspaceId: workspaceAId },
-        (tx) =>
-          executeIdempotently(
-            tx,
-            {
-              workspaceId: workspaceAId,
-              operation: OPERATION,
-              idempotencyKey: key,
-              requestFingerprint: fingerprint,
-            },
-            async () => ({ status: 201, body: { id: "widget-recovered" } }),
-          ),
-      );
-      expect(recovered.replayed).toBe(false);
-      expect(recovered.response.body).toEqual({ id: "widget-recovered" });
-
-      // A subsequent call now replays the recovered, completed result.
-      const replay = await withWorkspaceContext(recoveryPool, { workspaceId: workspaceAId }, (tx) =>
+    // Transaction A begins idempotent execution and its business logic
+    // throws before the surrounding transaction commits.
+    await expect(
+      withWorkspaceContext(pool, { workspaceId: workspaceAId }, (tx) =>
         executeIdempotently(
           tx,
           {
@@ -470,35 +350,32 @@ describe("idempotent execution semantics (real PostgreSQL)", () => {
             idempotencyKey: key,
             requestFingerprint: fingerprint,
           },
-          async () => ({ status: 201, body: { id: "widget-should-not-run" } }),
+          async () => {
+            throw new Error("business mutation failed");
+          },
         ),
-      );
-      expect(replay.replayed).toBe(true);
-      expect(replay.response.body).toEqual({ id: "widget-recovered" });
-    } finally {
-      await recoveryPool.end();
-    }
-  });
+      ),
+    ).rejects.toThrow("business mutation failed");
 
-  it("complete() is a no-op once a record is already completed (defense in depth)", async () => {
-    const key = "req-key-008";
-    const fingerprint = fingerprintRequest({ name: "Widget H" });
+    // The claim row from the failed attempt must have rolled back together
+    // with the (never-happened) business write -- proven by observing zero
+    // rows for this key from a fresh, unrelated read.
+    const seenAfterFailure = await withWorkspaceContext(
+      pool,
+      { workspaceId: workspaceAId },
+      async (tx) => {
+        const { rows } = await tx.query(
+          `SELECT id FROM public.idempotent_requests
+            WHERE workspace_id = $1 AND operation = $2 AND idempotency_key = $3`,
+          [workspaceAId, OPERATION, key],
+        );
+        return rows;
+      },
+    );
+    expect(seenAfterFailure).toHaveLength(0);
 
-    await withWorkspaceContext(pool, { workspaceId: workspaceAId }, async (tx) => {
-      const result = await claim(tx, {
-        workspaceId: workspaceAId,
-        operation: OPERATION,
-        idempotencyKey: key,
-        requestFingerprint: fingerprint,
-      });
-      if (result.outcome !== "claimed") throw new Error("expected a fresh claim");
-      await complete(tx, result.recordId, { status: 201, body: { id: "first" } });
-      // A second completion attempt on the same (now-completed) record must
-      // not overwrite the stored response.
-      await complete(tx, result.recordId, { status: 201, body: { id: "second-should-not-apply" } });
-    });
-
-    const replay = await withWorkspaceContext(pool, { workspaceId: workspaceAId }, (tx) =>
+    // Transaction B can now execute normally for the exact same key.
+    const second = await withWorkspaceContext(pool, { workspaceId: workspaceAId }, (tx) =>
       executeIdempotently(
         tx,
         {
@@ -507,9 +384,10 @@ describe("idempotent execution semantics (real PostgreSQL)", () => {
           idempotencyKey: key,
           requestFingerprint: fingerprint,
         },
-        async () => ({ status: 201, body: { id: "should-not-run" } }),
+        async () => ({ status: 201, body: { id: "widget-after-rollback" } }),
       ),
     );
-    expect(replay.response.body).toEqual({ id: "first" });
+    expect(second.replayed).toBe(false);
+    expect(second.response.body).toEqual({ id: "widget-after-rollback" });
   });
 });
