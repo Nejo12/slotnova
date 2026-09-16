@@ -1,0 +1,44 @@
+# Provider-smoke lane (task T086). Manual + scheduled only -- never runs on
+# pull_request or push, so provider secrets never reach fast/heavy CI.
+#
+# Phase 1 has no real provider adapter/sandbox yet (no billing/notifications
+# module exists). This workflow does not fabricate one: it proves the
+# isolated-credential lane mechanism via tooling/provider-smoke/check-seam.ts
+# and documents its current no-provider state truthfully. Extend
+# check-seam.ts with a real sandbox contract call once a Phase-1 provider
+# adapter exists.
+name: provider-smoke
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: "0 6 * * 1" # weekly, Monday 06:00 UTC
+
+permissions:
+  contents: read
+
+env:
+  SLOTNOVA_ENV: preview
+
+jobs:
+  smoke:
+    name: provider-smoke seam check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: provider-smoke
+    env:
+      # Marker proving this job's scoped environment/secrets are reachable.
+      # Real provider credentials, when a Phase-1 adapter exists, will live
+      # only in this job's `environment: provider-smoke` secrets context --
+      # never in fast.yml or heavy.yml.
+      PROVIDER_SMOKE_SEAM: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Provider-smoke seam check
+        run: pnpm exec tsx tooling/provider-smoke/check-seam.ts
