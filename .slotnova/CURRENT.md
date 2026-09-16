@@ -9,45 +9,34 @@ and update this file.
 
 ## Current main
 
-`2d556dec48e6203320b323ccfd6f62790b735304` — merged PR #55 (PR-20 /
-T090-T091 final Phase-1 validation, documentation reconciliation and
-exit). Phase 1 is formally complete.
+`7cc30a3863d4ad2359062cb17d4638e381e0bb1b` — merged PR #57 (Phase 2
+planning gate — Catalog, Scheduling & Booking spec/plan/tasks). Planning
+issue #56 is closed.
 
 ## Current implementation state
 
 **Phase 1 is formally exited.** PR #55 is merged. Issues #2 (Phase 1
 parent) and #54 (PR-20) are closed. All 18 Phase-1 success criteria
-demonstrably passed — evidence matrix at `docs/phase-1-exit.md`. All six
-Phase-1 exit decision records (`docs/decisions/0001`-`0006`) exist and are
-founder-approved.
+demonstrably passed — evidence matrix at `docs/phase-1-exit.md`.
 
-**Phase 2 — Catalog, Scheduling & Booking (issue #3) is active.** Planning
-issue #56 is active; the authoritative Spec Kit package lives at
-`specs/002-catalog-scheduling-booking/` (spec, plan, research, data model,
-contracts, quickstart, tasks) on branch
-`phase-2/catalog-scheduling-booking-planning`, open as PR #57.
+**Phase 2 — Catalog, Scheduling & Booking (issue #3) planning is merged
+and Founder-resolved.** The authoritative Spec Kit package at
+`specs/002-catalog-scheduling-booking/` is implementation-ready with no
+open Founder decision (single implicit workspace-level resource, no
+persisted Draft/Pending, direct `Confirmed` creation, no location scope,
+no Clients dependency on Booking).
 
-**Founder review resolved all four originally Founder-blocking decisions**,
-plus one Clients-sequencing gap found by independent review, on
-2026-09-16:
+**Phase 2 PR-01 — Catalog domain/schema foundation (issue #58) is under
+implementation** on branch `phase-2/pr-01-catalog-foundation`: `services`/
+`service_categories` domain invariants, repositories, and migration
+`0006_catalog.sql` (RLS enabled+forced+policy, cross-workspace category
+association rejected by a composite FK). No HTTP/contracts layer yet
+(PR-02), no staff-service-capability or add-on persistence, no
+Scheduling/Booking/Calendar/Staff/Clients work.
 
-1. `Draft`/`Review` are client/UI-only — not persisted.
-2. Operator-created Bookings are created directly `Confirmed` — no
-   Phase-2 `Pending` producer.
-3. Phase 2 uses a single implicit workspace-level bookable resource — no
-   staff identity/CRUD/capability table; staff-service capability is a
-   documented future integration port.
-4. Location scope is deferred entirely — no speculative `location_id`.
-5. Phase-2 Booking does not persist a `client_id` — no customer/client
-   entity exists on current `main`; Phase 3 adds the association
-   additively.
-
-The planning package (spec/plan/research/data-model/contracts/tasks) is
-implementation-ready with no open Founder decision remaining.
-
-**Phase 2 product implementation is BLOCKED** until PR #57 is
-Founder-approved and merged. Do not begin Catalog/Scheduling/Booking
-application code before that merge.
+**Later Phase-2 slices (PR-02 through PR-10) remain not implemented.**
+Do not begin Scheduling/Booking/Calendar/HTTP-contracts work before their
+own bounded PR.
 
 ## Workflow-efficiency setup
 
