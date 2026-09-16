@@ -29,3 +29,23 @@ export {
 } from "./logger.js";
 
 export { redact, REDACTED, type RedactOptions } from "./redaction.js";
+
+export {
+  createBusinessMeter,
+  createInMemoryExporter,
+  createMeter,
+  createNoopExporter,
+  createTechnicalMeter,
+  TECHNICAL_METRIC_NAMES,
+  type Counter,
+  type Gauge,
+  type Histogram,
+  type InMemoryMetricExporter,
+  type InstrumentKind,
+  type Meter,
+  type MeterOptions,
+  type MetricAttributes,
+  type MetricExporter,
+  type MetricNamespace,
+  type MetricPoint,
+} from "./metrics.js";

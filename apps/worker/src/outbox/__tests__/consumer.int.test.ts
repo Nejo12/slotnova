@@ -172,6 +172,72 @@ describe("outbox durability", () => {
   });
 });
 
+it("does not leak correlation context between sequentially processed jobs", async () => {
+  // Two records with distinct requestIds, processed one after another by the
+  // SAME consumer instance/process (batchSize 1 forces strict sequencing).
+  // Real worker ALS state must be scoped per job: neither job's structured
+  // log may ever show the other job's correlationId/requestId (T076 FR-054;
+  // repair for the T078 blocker requiring explicit sequential-leak proof).
+  const first = (
+    await pool.query<{ id: string }>(
+      `INSERT INTO public.outbox_records(event_name, payload)
+       VALUES ('membership.created', '{"requestId":"job-a-request","membershipId":"member-a","role":"staff"}'::jsonb)
+       RETURNING id`,
+    )
+  ).rows[0]!;
+  const second = (
+    await pool.query<{ id: string }>(
+      `INSERT INTO public.outbox_records(event_name, payload)
+       VALUES ('membership.created', '{"requestId":"job-b-request","membershipId":"member-b","role":"staff"}'::jsonb)
+       RETURNING id`,
+    )
+  ).rows[0]!;
+
+  const lines: string[] = [];
+  const consumer = await startConsumer({
+    pool,
+    instanceId: "sequential-no-leak",
+    batchSize: 1,
+    maxAttempts: 3,
+    pollIntervalMs: 10,
+    logger: createLogger({ sink: (line) => lines.push(line) }),
+    handler: async () => {},
+  });
+  try {
+    await expect
+      .poll(
+        async () =>
+          (
+            await pool.query(
+              "SELECT count(*)::int n FROM outbox_records WHERE processed_at IS NOT NULL AND id IN ($1, $2)",
+              [first.id, second.id],
+            )
+          ).rows[0].n,
+        { timeout: 15000 },
+      )
+      .toBe(2);
+  } finally {
+    await consumer.stop();
+  }
+
+  const dispatchLogs = lines
+    .map((line) => JSON.parse(line))
+    .filter((line) => line.event === "outbox.dispatch");
+  expect(dispatchLogs).toHaveLength(2);
+
+  const jobA = dispatchLogs.find((line) => line.meta?.eventId === first.id);
+  const jobB = dispatchLogs.find((line) => line.meta?.eventId === second.id);
+  expect(jobA?.correlationId).toBe("job-a-request");
+  expect(jobA?.requestId).toBe("job-a-request");
+  expect(jobB?.correlationId).toBe("job-b-request");
+  expect(jobB?.requestId).toBe("job-b-request");
+  // Neither job's log line carries the other job's correlation/request id.
+  expect(jobA?.correlationId).not.toBe(jobB?.correlationId);
+  expect(
+    dispatchLogs.every((line) => ["job-a-request", "job-b-request"].includes(line.requestId)),
+  ).toBe(true);
+});
+
 it("malformed JSON payloads exhaust safely without terminating the consumer", async () => {
   await pool.query(
     "INSERT INTO outbox_records(event_name,payload) VALUES('membership.created','null'::jsonb)",
