@@ -183,6 +183,27 @@ no PR combines schema + API + UI for more than one module at a time.
 
 ## PR-05 — Booking aggregate/schema/state machine
 
+- **Status**: Complete (issue #68). Migration
+  `packages/db/migrations/0009_booking.sql` creates the `booking_status` enum
+  (exactly `confirmed`/`completed`/`cancelled`), the immutable
+  `public.booking_blocking_range()` helper and `public.bookings` — with the
+  STORED GENERATED half-open `blocking_range`, the snapshot columns, the
+  `version` column, RLS enabled + FORCE + workspace policy, and the app role
+  granted SELECT + INSERT + UPDATE (never DELETE; cancellation is a state
+  transition that keeps the historical row). `apps/api/src/modules/booking/`
+  holds the pure aggregate (`domain/`), one workspace-scoped repository whose
+  three mutating statements each carry `AND version = $expectedVersion`, and
+  four use cases. **Same-command idempotent no-ops are implemented** —
+  `cancel` on `cancelled` and `complete` on `completed`, each only when the
+  caller's version matches the CURRENT row — because the command rows'
+  Idempotency cells in `data-model.md`, `contracts/booking.contract.md`'s
+  explicit cancel bullet and this task's own "including idempotent no-ops"
+  requirement all say so; the blanket terminal-state row governs every other
+  combination, which is rejected. No HTTP/OpenAPI/contracts, no
+  `BookingModule` (PR-07 adds both), no `btree_gist`, no exclusion
+  constraint, no outbox/audit emission (no Phase-2 consumer exists —
+  `research.md`, FR-027), and no `resource_id`/`location_id`/`staff_id`/
+  `client_id` column.
 - **Dependency**: PR-01 (Service reference), PR-03 (interval algebra
   reused for blocking-range computation).
 - **Files/areas**: `apps/api/src/modules/booking/domain`, migration for

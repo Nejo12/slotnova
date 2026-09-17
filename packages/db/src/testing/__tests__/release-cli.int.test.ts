@@ -46,7 +46,7 @@ describe("explicit migration release CLI", () => {
   it("applies all real migrations on a clean database using a separate ordinary migration role", async () => {
     await withIsolatedDatabase(pg.adminUri, async ({ databaseName, databaseUri }) => {
       const uri = await ordinaryMigrator(databaseName, databaseUri);
-      expect((await migrate(uri)).stdout).toContain("applied 8 migration(s)");
+      expect((await migrate(uri)).stdout).toContain("applied 9 migration(s)");
       expect((await migrate(uri)).stdout).toContain("no migrations applied");
       expect((await migrate(uri, ["--dry-run"])).stdout).toContain("no pending migrations");
       const appUri = new URL(pg.appUri);
@@ -64,7 +64,7 @@ describe("explicit migration release CLI", () => {
         await admin.query(
           "INSERT INTO users(id,email,display_name) VALUES ('10000000-0000-4000-8000-000000000001','release@example.test','Release'); INSERT INTO workspaces(id,name,slug) VALUES ('20000000-0000-4000-8000-000000000001','Release','release'); INSERT INTO memberships(workspace_id,user_id,role) VALUES ('20000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000001','owner')",
         );
-        expect((await migrate(uri)).stdout).toContain("applied 5 migration(s)");
+        expect((await migrate(uri)).stdout).toContain("applied 6 migration(s)");
         expect((await admin.query("SELECT count(*)::int AS n FROM memberships")).rows[0].n).toBe(1);
         const appUri = new URL(pg.appUri);
         appUri.pathname = new URL(databaseUri).pathname;
