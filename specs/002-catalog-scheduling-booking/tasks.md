@@ -35,9 +35,55 @@ no PR combines schema + API + UI for more than one module at a time.
   first draft proposed one.
 - **Out of scope**: API endpoints (PR-02), Scheduling, Booking.
 
+## PR-02A — Durable API idempotency foundation
+
+- **Status**: Complete (issue #61). A corrective, unplanned insertion
+  discovered mid-PR-02: the merged `contracts/catalog.contract.md`'s
+  `POST /catalog/services` `Idempotency-Key` replay contract requires a
+  durable, workspace-scoped claim/replay primitive that did not exist on
+  `main` (no idempotency table, Redis, or dedup plugin). Adding it silently
+  inside PR-02 would have been an unauthorized, undiscussed schema change
+  in an API-only PR — this slice adds it deliberately and narrowly instead.
+- **Dependency**: none (starts from `main` post-PR-01).
+- **Files/areas**: `apps/api/src/modules/platform/idempotency/**`
+  (`executeIdempotently` — the only exported entry point — plus canonical
+  request fingerprinting), migration `packages/db/migrations/
+  0007_platform_idempotency.sql` (`public.idempotent_requests`, RLS+FORCE+
+  policy, `UNIQUE (workspace_id, operation, idempotency_key)`).
+- **Acceptance criteria**: same workspace+operation+key+fingerprint runs the
+  caller's business logic at most once and durably replays the stored
+  result on retry; a different fingerprint under the same key/scope is a
+  deterministic conflict; two independent DB connections racing the same
+  key cannot both execute; a failed/rolled-back attempt does not poison the
+  key for a later legitimate attempt. **Supports only mutations whose
+  protected database side effects and replay record can be committed
+  atomically in the same PostgreSQL transaction** — an earlier revision
+  additionally supported a claim committed separately from its completion
+  (with lease-based reclaim for an abandoned one); independent review found
+  that split-transaction path unsafe (a caller that lost its claim to a
+  reclaimer could still overwrite the reclaimer's result) and it was
+  removed rather than patched. A future endpoint whose protected mutation
+  cannot fit in one database transaction needs its own separately reviewed
+  idempotency design.
+- **Required tests**: canonical-fingerprint unit tests; real-PG migration
+  clean/forward + RLS-coverage tests; true-concurrency test (two
+  independent connections); durable-replay-across-a-new-process test;
+  rollback/retry regression test (a failed attempt does not poison the key).
+- **Constraints**: knows nothing about Catalog/Booking/Payments — only an
+  opaque `operation` string; no Redis/distributed-lock framework; no
+  lease/claim-expiry/reclaim mechanism; no Catalog controller/endpoint work
+  (that remains PR-02).
+- **Out of scope**: `POST /catalog/services` itself and every other Catalog
+  endpoint (PR-02, which resumes once this merges), Scheduling, Booking.
+
 ## PR-02 — Catalog API/contracts
 
-- **Dependency**: PR-01.
+- **Status**: Paused pending PR-02A (issue #61) — do not resume until that
+  foundation merges. See PR-02A above for why.
+- **Dependency**: PR-01, **PR-02A** (durable API idempotency foundation —
+  `POST /catalog/services`'s `Idempotency-Key` contract consumes
+  `apps/api/src/modules/platform/idempotency/executeIdempotently`; PR-02
+  does not add its own idempotency persistence).
 - **Files/areas**: `apps/api/src/modules/catalog/http`, runtime schemas,
   generated OpenAPI delta, `packages/contracts` regeneration.
 - **Acceptance criteria**: endpoints per `contracts/catalog.contract.md`
