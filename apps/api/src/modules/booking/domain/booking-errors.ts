@@ -71,6 +71,26 @@ export class StaleBookingVersionError extends Error {
 }
 
 /**
+ * The booking's blocking interval overlaps another `confirmed` booking in the
+ * same workspace (issue #70, ADR-011, FR-022, SC-001/SC-003).
+ *
+ * Raised ONLY when PostgreSQL rejects the write with the
+ * `bookings_no_overlap` exclusion constraint — the database is the
+ * authoritative overlap boundary, and there is deliberately no application
+ * check that could raise this speculatively. It is a pure domain error like
+ * its neighbours: PR-07 will map it to
+ * `409 .../problems/booking-overlap` at the HTTP boundary
+ * (`contracts/booking.contract.md`); no transport vocabulary appears here.
+ */
+export class BookingOverlapError extends Error {
+  override readonly name = "BookingOverlapError";
+
+  constructor() {
+    super("the booking's blocking interval overlaps an existing confirmed booking");
+  }
+}
+
+/**
  * No booking with that id is visible in the active workspace. RLS makes "does
  * not exist" and "belongs to another workspace" indistinguishable by
  * construction, so this single error covers both — there is deliberately no

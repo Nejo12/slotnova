@@ -6,8 +6,13 @@
  * every forbidden column, RLS enabled + FORCE + policy, cross-workspace
  * isolation for reads AND writes, fail-closed behaviour with no workspace
  * context, the generated half-open `blocking_range` under every buffer
- * combination, and the continued ABSENCE of `btree_gist`/any exclusion
- * constraint (PR-06 owns those).
+ * combination.
+ *
+ * Updated by PR-06 (issue #70): the two assertions that pinned the ABSENCE of
+ * `btree_gist` and of any exclusion constraint now pin their PRESENCE, because
+ * `0010_booking_overlap_exclusion.sql` is the migration that legitimately adds
+ * them. The overlap/concurrency BEHAVIOUR is proved separately in
+ * `overlap-concurrency.int.test.ts`.
  *
  * Real PostgreSQL is mandatory here, not a convenience: RLS, CHECK
  * constraints, enum labels and `tstzrange` generation are database behaviour,
@@ -168,7 +173,11 @@ describe("booking migration (real PostgreSQL)", () => {
           WHERE schemaname = 'public' AND tablename = 'bookings'
           ORDER BY indexname`,
       );
+      // `bookings_no_overlap` is PR-06's exclusion constraint; the GiST index
+      // listed here IS that constraint's index, not a separate one
+      // (data-model.md's RLS matrix: "(see exclusion constraint)").
       expect(indexes.map((row) => row.indexname)).toEqual([
+        "bookings_no_overlap",
         "bookings_pkey",
         "bookings_workspace_id_idx",
       ]);
@@ -186,20 +195,26 @@ describe("booking migration (real PostgreSQL)", () => {
     }
   });
 
-  it("does NOT install btree_gist or any exclusion constraint — that is PR-06", async () => {
+  it("gains exactly one Booking exclusion constraint once PR-06's migration is applied", async () => {
     await runMigrations({ connectionString: harness.adminUri });
     const admin = new Client({ connectionString: harness.adminUri });
     await admin.connect();
     try {
+      // PR-05 asserted the ABSENCE of these; PR-06 (issue #70,
+      // `0010_booking_overlap_exclusion.sql`) is where they legitimately
+      // arrive. The behavioural proof lives in
+      // `overlap-concurrency.int.test.ts`; this is the schema-shape guard.
       const { rows: extensions } = await admin.query(
         `SELECT 1 FROM pg_extension WHERE extname = 'btree_gist'`,
       );
-      expect(extensions).toHaveLength(0);
+      expect(extensions).toHaveLength(1);
 
       const { rows: exclusions } = await admin.query<{ conname: string }>(
-        `SELECT conname FROM pg_constraint WHERE contype = 'x'`,
+        `SELECT conname FROM pg_constraint
+          WHERE conrelid = 'public.bookings'::regclass AND contype = 'x'
+          ORDER BY conname`,
       );
-      expect(exclusions).toHaveLength(0);
+      expect(exclusions.map((row) => row.conname)).toEqual(["bookings_no_overlap"]);
     } finally {
       await admin.end();
     }

@@ -1,0 +1,203 @@
+-- booking + scheduling overlap exclusion constraints (Phase 2 PR-06, issue
+-- #70, ADR-011, ADR-008, ADR-010, ADR-012, data-model.md, research.md R-EXCL).
+-- Ownership: the Booking constraint belongs to
+-- apps/api/src/modules/booking; the Scheduling constraint belongs to
+-- apps/api/src/modules/scheduling (packages/db defines no domain schema
+-- itself, ADR-004). They share ONE file because they share one prerequisite
+-- extension and must not be installed twice.
+--
+-- PURELY ADDITIVE. No column is added, altered or dropped, no row is written,
+-- read or deleted, no grant, policy or RLS setting changes, and migrations
+-- 0001-0009 are untouched. Everything this file does is an invariant
+-- promotion: behaviour that was already true of the data becomes something
+-- PostgreSQL enforces.
+--
+-- ---------------------------------------------------------------------------
+-- PRODUCTION SAFETY -- what actually happens on a populated table
+-- ---------------------------------------------------------------------------
+--
+-- `ALTER TABLE ... ADD CONSTRAINT ... EXCLUDE` is NOT a cheap catalogue edit.
+-- For each statement below PostgreSQL:
+--
+--   1. takes an ACCESS EXCLUSIVE lock on the table -- every concurrent read
+--      AND write on it blocks for the duration. There is no `NOT VALID` /
+--      `VALIDATE CONSTRAINT` two-step for exclusion constraints and no
+--      `CONCURRENTLY` form, because the constraint IS its index: the lock
+--      cannot be avoided by staging it;
+--   2. builds a GiST index over the whole table (btree_gist supplies the
+--      `=` operator class for `uuid`, which core GiST does not have). Cost and
+--      duration scale with row count, so the ACCESS EXCLUSIVE window scales
+--      with table size;
+--   3. validates every existing row while building. If ANY pair of rows
+--      violates the predicate the statement fails with SQLSTATE 23P01 and
+--      names the constraint.
+--
+-- Failure behaviour is safe by construction: this file has no
+-- `-- slotnova:no-transaction` directive, so the gated runner executes it
+-- inside ONE transaction (packages/db/migrations/README.md). A violation
+-- therefore rolls the WHOLE file back -- no half-installed extension, no
+-- orphan index, version 0010 not recorded in `schema_migrations`, and every
+-- previously committed migration untouched. Recovery is roll-forward only
+-- (ADR-020, docs/runbooks/migration-release.md): resolve the offending rows
+-- under a reviewed decision, then re-run the SAME file. There is no down
+-- migration and this file contains NO cleanup, backfill or data-repair step
+-- -- deciding which of two conflicting real bookings loses is a product
+-- decision, not something a migration may make silently.
+--
+-- Lock-budget guidance for a real release: take the ACCESS EXCLUSIVE window
+-- in a low-traffic slot behind a `lock_timeout`, and pre-flight the two
+-- validation queries below against production BEFORE the release so a
+-- conflict is found by a SELECT rather than by a blocking DDL statement:
+--
+--   SELECT a.id, b.id FROM public.bookings a JOIN public.bookings b
+--     ON a.workspace_id = b.workspace_id AND a.id < b.id
+--    AND a.blocking_range && b.blocking_range
+--   WHERE a.status = 'confirmed' AND b.status = 'confirmed';
+--
+--   SELECT a.id, b.id FROM public.availability_patterns a
+--     JOIN public.availability_patterns b
+--       ON a.workspace_id = b.workspace_id AND a.id < b.id
+--      AND daterange(a.effective_from, a.effective_until, '[)')
+--       && daterange(b.effective_from, b.effective_until, '[)');
+--
+-- At the time this migration was written both queries return zero rows in
+-- every environment that exists (no production deployment has occurred;
+-- ADR-020's hosted release path is gated behind a repository variable that is
+-- deliberately disabled). That is a verified fact about today's data, NOT a
+-- claim that the constraints are risk-free on a populated table -- the
+-- locking and validation behaviour above applies regardless of current row
+-- counts, and `assertForwardMigration` proves the populated-forward path in
+-- apps/api/src/modules/{booking,scheduling}/__tests__.
+--
+-- pg-boss impact: none. The scheduler owns a separate `pgboss` schema with a
+-- separate release credential (docs/runbooks/migration-release.md); neither
+-- table below is a pg-boss table and no queue/partition function is touched.
+--
+-- Compatibility window: the previous application binary keeps working
+-- unchanged against this schema -- it simply never produced an overlapping
+-- `confirmed` booking pair or an overlapping pattern window in the first
+-- place (PR-05's aggregate, PR-04's advisory-lock guard). Application
+-- rollback across 0010 is therefore safe; the constraint would merely remain
+-- installed, which is the intended end state anyway. There is no contract /
+-- removal step to schedule, because nothing is being deprecated.
+
+-- ---------------------------------------------------------------------------
+-- btree_gist
+--
+-- Core GiST has no operator class for scalar equality on `uuid`, so
+-- `workspace_id WITH =` cannot be part of a GiST exclusion key without it
+-- (ADR-011). This is the single shared prerequisite for BOTH constraints
+-- below, which is why tasks.md assigns the extension to this PR rather than
+-- to PR-04 or PR-05 -- installing a shared extension inside an unrelated
+-- slice would be the speculative scope creep constitution VI prohibits.
+--
+-- `IF NOT EXISTS` so a database that already has it (a shared server, a
+-- restored snapshot) is not a hard failure. The extension is installed into
+-- the default schema and requires the migration role's ordinary CREATE
+-- privilege -- `postgres:18-alpine` and every supported managed provider ship
+-- btree_gist as a contrib module; it is NOT a superuser-only extension.
+-- ---------------------------------------------------------------------------
+
+CREATE EXTENSION IF NOT EXISTS btree_gist;
+
+-- ---------------------------------------------------------------------------
+-- bookings_no_overlap -- THE authoritative booking-overlap boundary
+--
+-- data-model.md "Booking" / research.md R-EXCL / ADR-011 / SC-001 / SC-003.
+--
+-- Key:
+--   workspace_id   WITH =   -- the constraint is workspace-SCOPED, never
+--                              global: the identical absolute range in two
+--                              workspaces is perfectly legal.
+--   blocking_range WITH &&  -- the STORED GENERATED half-open range
+--                              [starts_at - pre, starts_at + duration + post)
+--                              computed by 0009's IMMUTABLE
+--                              public.booking_blocking_range(). Because the
+--                              database computes it, the exclusion key cannot
+--                              drift from the snapshot columns, and an
+--                              overlap caused ONLY by a buffer is caught
+--                              exactly like an overlap of the services
+--                              themselves.
+--
+-- `&&` on two `tstzrange` values is true only for a POSITIVE overlap, so
+-- half-open adjacency (`upper(a) = lower(b)`) is NOT a conflict -- the range
+-- bounds themselves carry that semantics, with no epsilon/microsecond
+-- fudging anywhere.
+--
+-- Partial: `WHERE (status = 'confirmed')`. Only blocking rows participate, so
+-- a `cancelled` or `completed` booking keeps its historical row and its
+-- historical range while occupying no capacity, and cancelling a confirmed
+-- booking releases its slot through the state change alone (0009 grants no
+-- DELETE for exactly this reason).
+--
+-- Deliberately NOT in the key: resource_id / location_id / staff_id /
+-- client_id. No such column exists (Founder decisions 3-5) and
+-- `workspace_id` is the complete Phase-2 protected-resource key
+-- (research.md R-EXCL). A Phase-3 resource dimension widens the key in its
+-- own additive migration.
+--
+-- This constraint -- not any application check -- is the protection. There is
+-- deliberately no check-then-insert companion in application code (AGENTS.md
+-- hard prohibition); the application only TRANSLATES the resulting 23P01 into
+-- `BookingOverlapError`, matching on this constraint name.
+-- ---------------------------------------------------------------------------
+
+ALTER TABLE public.bookings
+  ADD CONSTRAINT bookings_no_overlap
+  EXCLUDE USING gist (
+    workspace_id   WITH =,
+    blocking_range WITH &&
+  )
+  WHERE (status = 'confirmed');
+
+-- ---------------------------------------------------------------------------
+-- availability_patterns_no_overlapping_effective_window
+--
+-- Promotes the FOUNDER-RATIFIED pattern-history invariant (PR #67, recorded
+-- in .slotnova/CURRENT.md) to the strongest boundary now that btree_gist
+-- legitimately exists: at most one AvailabilityPattern may be effective for a
+-- workspace on any given date. Windows are half-open
+-- `[effective_from, effective_until)`, so adjacent windows are valid and
+-- overlapping ones are not. There is NO precedence / newest-wins /
+-- highest-id-wins rule, and this migration introduces none -- the whole point
+-- of forbidding simultaneity is that `resolve` never has to choose.
+--
+-- The expression is `daterange(effective_from, effective_until, '[)')`, which
+-- is EXACTLY the expression PR-04's
+-- `AvailabilityPatternsRepository.existsOverlappingEffectiveWindow` and
+-- `listOverlappingEffectiveWindow` already use -- the semantics are copied,
+-- not redesigned. PostgreSQL's own NULL-endpoint rule gives the required
+-- behaviour with no special-casing:
+--
+--   effective_from  IS NULL -> unbounded lower bound
+--   effective_until IS NULL -> unbounded upper bound
+--   both NULL               -> every date, so nothing else can coexist
+--
+-- A three-argument `daterange(date, date, text)` is IMMUTABLE (it consults no
+-- session setting -- unlike a `timestamptz` cast), which is what makes it
+-- legal as an index expression at all. `daterange` normalises to `[)` for the
+-- discrete `date` type regardless, but the bound flags are stated explicitly
+-- so the file reads as the ratified semantics rather than relying on that.
+--
+-- No partial predicate: `availability_patterns` has no status column, so
+-- every row participates. 0008's existing
+-- `availability_patterns_effective_window_ordered` CHECK keeps `from < until`
+-- whenever both bounds are present, so no row can produce an empty range that
+-- would silently escape `&&`.
+--
+-- This is DEFENSE IN DEPTH, not a replacement: PR-04's per-workspace
+-- transaction advisory lock plus same-transaction overlap read stays exactly
+-- as it is, because it is what produces the friendly deterministic 422 an
+-- operator sees. The constraint covers the residual cases the application
+-- guard cannot -- a direct SQL write, a future writer that forgets the lock,
+-- or a window that commits underneath an in-flight transaction -- and the use
+-- case maps that 23P01 back onto the SAME domain condition rather than
+-- leaking SQL detail.
+-- ---------------------------------------------------------------------------
+
+ALTER TABLE public.availability_patterns
+  ADD CONSTRAINT availability_patterns_no_overlapping_effective_window
+  EXCLUDE USING gist (
+    workspace_id WITH =,
+    (daterange(effective_from, effective_until, '[)')) WITH &&
+  );

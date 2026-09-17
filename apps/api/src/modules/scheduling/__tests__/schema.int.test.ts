@@ -114,9 +114,13 @@ describe("scheduling migration (real PostgreSQL)", () => {
             AND tablename IN ('availability_patterns', 'availability_exceptions')
           ORDER BY indexname`,
       );
+      // `availability_patterns_no_overlapping_effective_window` is PR-06's
+      // exclusion constraint (issue #70); the GiST index listed here IS that
+      // constraint's index, not a separately declared one.
       expect(indexes.map((row) => row.indexname)).toEqual([
         "availability_exceptions_pkey",
         "availability_exceptions_workspace_id_starts_at_idx",
+        "availability_patterns_no_overlapping_effective_window",
         "availability_patterns_pkey",
         "availability_patterns_workspace_id_idx",
       ]);
@@ -129,11 +133,14 @@ describe("scheduling migration (real PostgreSQL)", () => {
       );
       expect(columns).toHaveLength(0);
 
-      // btree_gist belongs to PR-06 (Booking overlap), not to this slice.
+      // btree_gist belonged to PR-06 (issue #70), not to the PR-04 slice, and
+      // PR-06 has since installed it in `0010_booking_overlap_exclusion.sql`
+      // together with the ratified pattern-history exclusion constraint —
+      // proved behaviourally in `pattern-history-exclusion.int.test.ts`.
       const { rows: extensions } = await admin.query(
         `SELECT 1 FROM pg_extension WHERE extname = 'btree_gist'`,
       );
-      expect(extensions).toHaveLength(0);
+      expect(extensions).toHaveLength(1);
     } finally {
       await admin.end();
     }
@@ -380,9 +387,16 @@ describe("scheduling tenant isolation & repository behavior (real PostgreSQL)", 
     });
 
     it("cannot be mutated cross-workspace: the app role holds no UPDATE/DELETE grant at all", async () => {
-      const created = await withWorkspaceContext(pool, { workspaceId: workspaceAId }, (tx) =>
+      // Its own workspace, not the shared `workspaceAId`: a neighbouring test
+      // already gives A an UNBOUNDED effective window, and PR-06's
+      // `availability_patterns_no_overlapping_effective_window` constraint
+      // (correctly) forbids a second window overlapping it. The grant
+      // assertion below is about privileges, so it must not depend on the
+      // pattern-history invariant at all.
+      const ownerWorkspaceId = await seedWorkspace("grants");
+      const created = await withWorkspaceContext(pool, { workspaceId: ownerWorkspaceId }, (tx) =>
         patterns.create(tx, {
-          workspaceId: asWorkspaceId(workspaceAId),
+          workspaceId: asWorkspaceId(ownerWorkspaceId),
           timezone: "Europe/London",
           weeklyRule: MON_9_TO_5,
           effectiveFrom: date("2027-01-04"),
@@ -397,7 +411,7 @@ describe("scheduling tenant isolation & repository behavior (real PostgreSQL)", 
       // the statement is refused before any row is even considered. RLS
       // remains the tenant boundary for the SELECT/INSERT paths that DO
       // exist, asserted by the neighbouring visibility/WITH CHECK tests.
-      for (const workspaceId of [workspaceBId, workspaceAId]) {
+      for (const workspaceId of [workspaceBId, ownerWorkspaceId]) {
         await expect(
           withWorkspaceContext(pool, { workspaceId }, (tx) =>
             tx.query(
