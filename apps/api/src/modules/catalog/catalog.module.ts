@@ -1,34 +1,50 @@
 import { Module } from "@nestjs/common";
 
+import { IdentityModule } from "../identity/identity.module.js";
 import { CreateServiceCategoryUseCase } from "./application/create-service-category.use-case.js";
+import { CreateServiceIdempotentlyUseCase } from "./application/create-service-idempotently.use-case.js";
 import { CreateServiceUseCase } from "./application/create-service.use-case.js";
 import { DeactivateServiceUseCase } from "./application/deactivate-service.use-case.js";
+import {
+  GetServiceUseCase,
+  ListServiceCategoriesUseCase,
+  ListServicesUseCase,
+} from "./application/read-catalog.use-case.js";
 import { UpdateServiceUseCase } from "./application/update-service.use-case.js";
+import { ServiceCategoriesController } from "./http/service-categories.controller.js";
+import { ServicesController } from "./http/services.controller.js";
 import { ServiceCategoriesRepository } from "./infrastructure/repositories/service-categories.repository.js";
 import { ServicesRepository } from "./infrastructure/repositories/services.repository.js";
 
 /**
- * `catalog` module domain/repository foundation (Phase 2 PR-01, issue #58).
- * No controllers — the HTTP/contracts layer is PR-02. Not yet imported into
- * `AppModule`: registering routeless providers ahead of any consumer would
- * be premature; PR-02 wires this module in alongside its controllers.
+ * `catalog` module (PR-01 domain/repository foundation + PR-02 HTTP layer,
+ * issues #58/#60). PR-01 deliberately left this module unwired because it
+ * had no controllers; PR-02 adds them and imports it into `AppModule`.
+ *
+ * `IdentityModule` is imported for `CapabilityGuard` only — the
+ * server-authoritative authorization guard both controllers gate their
+ * routes with (ADR-009). Nothing here reaches into identity's
+ * application/infrastructure internals; the guard and `@RequireCapability`
+ * are part of identity's exported public surface.
+ *
+ * Repositories stay providers of this module and are exported to nobody:
+ * `index.ts` remains ports/types only, so no other module can acquire a
+ * Catalog repository (constitution III).
  */
 @Module({
+  imports: [IdentityModule],
+  controllers: [ServicesController, ServiceCategoriesController],
   providers: [
     ServicesRepository,
     ServiceCategoriesRepository,
     CreateServiceUseCase,
+    CreateServiceIdempotentlyUseCase,
     UpdateServiceUseCase,
     DeactivateServiceUseCase,
     CreateServiceCategoryUseCase,
-  ],
-  exports: [
-    ServicesRepository,
-    ServiceCategoriesRepository,
-    CreateServiceUseCase,
-    UpdateServiceUseCase,
-    DeactivateServiceUseCase,
-    CreateServiceCategoryUseCase,
+    ListServicesUseCase,
+    GetServiceUseCase,
+    ListServiceCategoriesUseCase,
   ],
 })
 export class CatalogModule {}

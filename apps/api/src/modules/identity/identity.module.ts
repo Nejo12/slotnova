@@ -62,5 +62,22 @@ import {
       },
     },
   ],
+  /**
+   * `CapabilityGuard` is exported so another module's controllers can gate
+   * their routes with the same server-authoritative guard (Phase-2 PR-02's
+   * Catalog endpoints) instead of re-implementing authorization locally.
+   *
+   * `SessionService`/`SessionContextService` are exported ONLY because Nest
+   * constructs a referenced guard inside the *consuming* module's injector,
+   * so the guard's own constructor dependencies must be resolvable there —
+   * without them, importing this module and using `@UseGuards(CapabilityGuard)`
+   * fails at boot with `UndefinedDependencyException`. They are not an
+   * invitation for another module to use identity's session machinery
+   * directly: `module-public-entry-only`
+   * (`tooling/dependency-cruiser/.dependency-cruiser.cjs`) still forbids
+   * importing `identity/application/**`, so no other module can even name
+   * these classes.
+   */
+  exports: [CapabilityGuard, SessionService, SessionContextService],
 })
 export class IdentityModule {}

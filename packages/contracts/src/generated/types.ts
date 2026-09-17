@@ -163,6 +163,54 @@ export interface paths {
     patch: operations["InvitationsController_revoke"];
     trace?: never;
   };
+  "/v1/catalog/services": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["ServicesController_list"];
+    put?: never;
+    post: operations["ServicesController_create"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/catalog/services/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["ServicesController_detail"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch: operations["ServicesController_update"];
+    trace?: never;
+  };
+  "/v1/catalog/categories": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["ServiceCategoriesController_list"];
+    put?: never;
+    post: operations["ServiceCategoriesController_create"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -240,6 +288,68 @@ export interface components {
     RevokeInvitationRequestDto: {
       /** @enum {string} */
       status: "revoked";
+    };
+    ServiceListResponseDto_Output: {
+      items: {
+        id: string;
+        name: string;
+        categoryId: string | null;
+        durationMinutes: number;
+        preBufferMinutes: number;
+        postBufferMinutes: number;
+        priceAmountMinor: number;
+        priceCurrency: string;
+        active: boolean;
+      }[];
+      nextCursor: string[];
+    };
+    ServiceResponseDto_Output: {
+      id: string;
+      name: string;
+      categoryId: string[];
+      durationMinutes: number;
+      preBufferMinutes: number;
+      postBufferMinutes: number;
+      priceAmountMinor: number;
+      priceCurrency: string;
+      active: boolean;
+    };
+    CreateServiceRequestDto: {
+      name: string;
+      /** Format: uuid */
+      categoryId?: string;
+      durationMinutes: number;
+      preBufferMinutes?: number;
+      postBufferMinutes?: number;
+      priceAmountMinor: number;
+      priceCurrency: string;
+    };
+    UpdateServiceRequestDto: {
+      name?: string;
+      /** Format: uuid */
+      categoryId?: string | null;
+      durationMinutes?: number;
+      preBufferMinutes?: number;
+      postBufferMinutes?: number;
+      priceAmountMinor?: number;
+      priceCurrency?: string;
+      active?: boolean;
+    };
+    ServiceCategoryListResponseDto_Output: {
+      items: {
+        id: string;
+        name: string;
+        sortOrder: number;
+      }[];
+    };
+    CreateServiceCategoryRequestDto: {
+      name: string;
+      sortOrder?: number;
+    };
+    ServiceCategoryResponseDto_Output: {
+      id: string;
+      name: string;
+      sortOrder: number;
     };
     ProblemDetailsDto: {
       type: string;
@@ -697,6 +807,341 @@ export interface operations {
       };
       /** @description No pending invitation with that id in the active workspace (`not-found`). */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+    };
+  };
+  ServicesController_list: {
+    parameters: {
+      query?: {
+        limit?: number;
+        cursor?: string;
+        active?: "true" | "false";
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ServiceListResponseDto_Output"];
+        };
+      };
+      /** @description Malformed query parameter (`validation`). */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description No/invalid session (`session-invalid`). */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description Missing `catalog:read`, or no active workspace (`forbidden`). */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+    };
+  };
+  ServicesController_create: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Client-supplied replay key. Retrying with the same key and the same body returns the original 201 response and creates no second service; the same key with a materially different body is a 409 conflict. */
+        "Idempotency-Key": string;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateServiceRequestDto"];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ServiceResponseDto_Output"];
+        };
+      };
+      /** @description Malformed body, unknown property, or missing `Idempotency-Key` (`validation`). */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description No/invalid session (`session-invalid`). */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description Missing `catalog:manage`, or no active workspace (`forbidden`). */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description `Idempotency-Key` reused with a different request (`idempotency-conflict`). */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description Duration/buffer/price/currency invariant violated, or an unavailable category (`validation`). */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+    };
+  };
+  ServicesController_detail: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ServiceResponseDto_Output"];
+        };
+      };
+      /** @description No/invalid session (`session-invalid`). */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description Missing `catalog:read`, or no active workspace (`forbidden`). */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description No such service in the active workspace (`not-found`). A service belonging to another workspace is indistinguishable from one that does not exist. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+    };
+  };
+  ServicesController_update: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateServiceRequestDto"];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ServiceResponseDto_Output"];
+        };
+      };
+      /** @description Malformed body or unknown property (`validation`). */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description No/invalid session (`session-invalid`). */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description Missing `catalog:manage`, or no active workspace (`forbidden`). */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description No such service in the active workspace (`not-found`). */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description Duration/buffer/price/currency invariant violated, or an unavailable category (`validation`). */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+    };
+  };
+  ServiceCategoriesController_list: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ServiceCategoryListResponseDto_Output"];
+        };
+      };
+      /** @description No/invalid session (`session-invalid`). */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description Missing `catalog:read`, or no active workspace (`forbidden`). */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+    };
+  };
+  ServiceCategoriesController_create: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateServiceCategoryRequestDto"];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ServiceCategoryResponseDto_Output"];
+        };
+      };
+      /** @description Malformed body or unknown property (`validation`). */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description No/invalid session (`session-invalid`). */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description Missing `catalog:manage`, or no active workspace (`forbidden`). */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description Blank name or non-integer sort order (`validation`). */
+      422: {
         headers: {
           [name: string]: unknown;
         };

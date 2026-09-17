@@ -27,6 +27,17 @@ export const PROBLEM_CATALOGUE: Readonly<Record<ProblemSlug, { title: string; st
   },
   "already-member": { title: "This user is already a member of the workspace.", status: 409 },
   "workspace-unavailable": { title: "The workspace is not available.", status: 409 },
+  /**
+   * A client-supplied `Idempotency-Key` was replayed with a materially
+   * different request body (Phase-2 PR-02,
+   * `apps/api/src/modules/platform/idempotency/idempotency-errors.ts`). 409
+   * matches the catalogue's existing "your request conflicts with durable
+   * state" slugs rather than inventing a new status class.
+   */
+  "idempotency-conflict": {
+    title: "This idempotency key was already used with a different request.",
+    status: 409,
+  },
   "rate-limited": { title: "Too many requests.", status: 429 },
   "not-found": { title: "The requested resource could not be found.", status: 404 },
   internal: { title: "An unexpected error occurred.", status: 500 },

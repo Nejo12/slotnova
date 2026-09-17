@@ -379,6 +379,338 @@
         },
         "tags": ["Invitations"]
       }
+    },
+    "/v1/catalog/services": {
+      "get": {
+        "operationId": "ServicesController_list",
+        "parameters": [
+          { "name": "limit", "required": false, "in": "query", "schema": { "type": "integer" } },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "name": "active",
+            "required": false,
+            "in": "query",
+            "schema": { "enum": ["true", "false"], "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ServiceListResponseDto_Output" }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed query parameter (`validation`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "401": {
+            "description": "No/invalid session (`session-invalid`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing `catalog:read`, or no active workspace (`forbidden`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          }
+        },
+        "tags": ["Services"]
+      },
+      "post": {
+        "operationId": "ServicesController_create",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Client-supplied replay key. Retrying with the same key and the same body returns the original 201 response and creates no second service; the same key with a materially different body is a 409 conflict.",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateServiceRequestDto" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ServiceResponseDto_Output" }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed body, unknown property, or missing `Idempotency-Key` (`validation`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "401": {
+            "description": "No/invalid session (`session-invalid`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing `catalog:manage`, or no active workspace (`forbidden`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "409": {
+            "description": "`Idempotency-Key` reused with a different request (`idempotency-conflict`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "422": {
+            "description": "Duration/buffer/price/currency invariant violated, or an unavailable category (`validation`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          }
+        },
+        "tags": ["Services"]
+      }
+    },
+    "/v1/catalog/services/{id}": {
+      "get": {
+        "operationId": "ServicesController_detail",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ServiceResponseDto_Output" }
+              }
+            }
+          },
+          "401": {
+            "description": "No/invalid session (`session-invalid`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing `catalog:read`, or no active workspace (`forbidden`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "404": {
+            "description": "No such service in the active workspace (`not-found`). A service belonging to another workspace is indistinguishable from one that does not exist.",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          }
+        },
+        "tags": ["Services"]
+      },
+      "patch": {
+        "operationId": "ServicesController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateServiceRequestDto" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ServiceResponseDto_Output" }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed body or unknown property (`validation`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "401": {
+            "description": "No/invalid session (`session-invalid`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing `catalog:manage`, or no active workspace (`forbidden`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "404": {
+            "description": "No such service in the active workspace (`not-found`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "422": {
+            "description": "Duration/buffer/price/currency invariant violated, or an unavailable category (`validation`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          }
+        },
+        "tags": ["Services"]
+      }
+    },
+    "/v1/catalog/categories": {
+      "get": {
+        "operationId": "ServiceCategoriesController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ServiceCategoryListResponseDto_Output" }
+              }
+            }
+          },
+          "401": {
+            "description": "No/invalid session (`session-invalid`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing `catalog:read`, or no active workspace (`forbidden`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          }
+        },
+        "tags": ["ServiceCategories"]
+      },
+      "post": {
+        "operationId": "ServiceCategoriesController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateServiceCategoryRequestDto" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ServiceCategoryResponseDto_Output" }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed body or unknown property (`validation`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "401": {
+            "description": "No/invalid session (`session-invalid`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing `catalog:manage`, or no active workspace (`forbidden`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "422": {
+            "description": "Blank name or non-integer sort order (`validation`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          }
+        },
+        "tags": ["ServiceCategories"]
+      }
     }
   },
   "info": {
@@ -547,6 +879,181 @@
         "type": "object",
         "properties": { "status": { "type": "string", "enum": ["revoked"] } },
         "required": ["status"]
+      },
+      "ServiceListResponseDto_Output": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "string" },
+                "name": { "type": "string" },
+                "categoryId": { "type": ["string", "null"] },
+                "durationMinutes": { "type": "number" },
+                "preBufferMinutes": { "type": "number" },
+                "postBufferMinutes": { "type": "number" },
+                "priceAmountMinor": { "type": "number" },
+                "priceCurrency": { "type": "string" },
+                "active": { "type": "boolean" }
+              },
+              "required": [
+                "id",
+                "name",
+                "categoryId",
+                "durationMinutes",
+                "preBufferMinutes",
+                "postBufferMinutes",
+                "priceAmountMinor",
+                "priceCurrency",
+                "active"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "nextCursor": { "type": "array", "items": { "type": "string" } }
+        },
+        "required": ["items", "nextCursor"],
+        "additionalProperties": false
+      },
+      "ServiceResponseDto_Output": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "categoryId": { "type": "array", "items": { "type": "string" } },
+          "durationMinutes": { "type": "number" },
+          "preBufferMinutes": { "type": "number" },
+          "postBufferMinutes": { "type": "number" },
+          "priceAmountMinor": { "type": "number" },
+          "priceCurrency": { "type": "string" },
+          "active": { "type": "boolean" }
+        },
+        "required": [
+          "id",
+          "name",
+          "categoryId",
+          "durationMinutes",
+          "preBufferMinutes",
+          "postBufferMinutes",
+          "priceAmountMinor",
+          "priceCurrency",
+          "active"
+        ],
+        "additionalProperties": false
+      },
+      "CreateServiceRequestDto": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "categoryId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "durationMinutes": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "preBufferMinutes": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "postBufferMinutes": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "priceAmountMinor": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "priceCurrency": { "type": "string", "minLength": 3, "maxLength": 3 }
+        },
+        "required": ["name", "durationMinutes", "priceAmountMinor", "priceCurrency"],
+        "additionalProperties": false
+      },
+      "UpdateServiceRequestDto": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "categoryId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "nullable": true
+          },
+          "durationMinutes": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "preBufferMinutes": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "postBufferMinutes": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "priceAmountMinor": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "priceCurrency": { "type": "string", "minLength": 3, "maxLength": 3 },
+          "active": { "type": "boolean" }
+        },
+        "additionalProperties": false
+      },
+      "ServiceCategoryListResponseDto_Output": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "string" },
+                "name": { "type": "string" },
+                "sortOrder": { "type": "number" }
+              },
+              "required": ["id", "name", "sortOrder"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["items"],
+        "additionalProperties": false
+      },
+      "CreateServiceCategoryRequestDto": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "sortOrder": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": ["name"],
+        "additionalProperties": false
+      },
+      "ServiceCategoryResponseDto_Output": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "sortOrder": { "type": "number" }
+        },
+        "required": ["id", "name", "sortOrder"],
+        "additionalProperties": false
       },
       "ProblemDetailsDto": {
         "type": "object",

@@ -26,6 +26,7 @@ import { SessionContextService } from "../../application/session/session-context
 import { SessionService } from "../../application/session/session.service.js";
 import { authorize } from "./authorize.js";
 import { REQUIRE_CAPABILITY_KEY } from "./require-capability.decorator.js";
+import { setRequestWorkspaceContext } from "./request-workspace-context.js";
 
 @Injectable()
 export class CapabilityGuard implements CanActivate {
@@ -66,6 +67,12 @@ export class CapabilityGuard implements CanActivate {
     if (!authorized) {
       throw new ProblemException("forbidden", { requiredCapability });
     }
+    // Publish the server-resolved ids for the authorized handler (PR-02) —
+    // never read from client input. See `request-workspace-context.ts`.
+    setRequestWorkspaceContext(request, {
+      workspaceId: sessionContext.activeWorkspace.id,
+      userId: session.userId,
+    });
     return true;
   }
 }

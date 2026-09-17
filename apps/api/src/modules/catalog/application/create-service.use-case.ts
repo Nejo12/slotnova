@@ -6,7 +6,7 @@
  * `services_category_workspace_fkey` constraint, ADR-008/ADR-011 pattern).
  */
 import { Inject, Injectable } from "@nestjs/common";
-import type { Pool } from "@slotnova/db";
+import type { Pool, PoolClient } from "@slotnova/db";
 
 import { asWorkspaceId } from "../../identity/index.js";
 import { DB_POOL } from "../../platform/database/database.tokens.js";
@@ -30,23 +30,40 @@ export class CreateServiceUseCase {
   ) {}
 
   async execute(context: WorkspaceContext, input: ServiceCreateInput): Promise<ServiceRecord> {
+    return withWorkspaceContext(this.pool, context, (tx) =>
+      this.executeInTransaction(tx, context, input),
+    );
+  }
+
+  /**
+   * The same creation, run on a transaction the caller already owns.
+   * Extracted in PR-02 so `CreateServiceIdempotentlyUseCase` can place the
+   * idempotency claim, this write, and the stored replay response in ONE
+   * transaction — the mandatory contract of
+   * `platform/idempotency/executeIdempotently` — instead of duplicating the
+   * creation logic. `execute` above is unchanged behaviorally: it simply
+   * opens the transaction itself and delegates here.
+   */
+  async executeInTransaction(
+    tx: PoolClient,
+    context: WorkspaceContext,
+    input: ServiceCreateInput,
+  ): Promise<ServiceRecord> {
     assertValidServiceCreateInput(input);
 
-    return withWorkspaceContext(this.pool, context, async (tx) => {
-      if (input.categoryId !== undefined) {
-        const category = await this.categories.findById(tx, input.categoryId);
-        this.services.assertCategoryResolved(input.categoryId, category);
-      }
+    if (input.categoryId !== undefined) {
+      const category = await this.categories.findById(tx, input.categoryId);
+      this.services.assertCategoryResolved(input.categoryId, category);
+    }
 
-      return this.services.create(tx, {
-        workspaceId: asWorkspaceId(context.workspaceId),
-        categoryId: input.categoryId ?? null,
-        name: input.name,
-        durationMinutes: input.durationMinutes,
-        preBufferMinutes: input.preBufferMinutes ?? 0,
-        postBufferMinutes: input.postBufferMinutes ?? 0,
-        price: input.price,
-      });
+    return this.services.create(tx, {
+      workspaceId: asWorkspaceId(context.workspaceId),
+      categoryId: input.categoryId ?? null,
+      name: input.name,
+      durationMinutes: input.durationMinutes,
+      preBufferMinutes: input.preBufferMinutes ?? 0,
+      postBufferMinutes: input.postBufferMinutes ?? 0,
+      price: input.price,
     });
   }
 }

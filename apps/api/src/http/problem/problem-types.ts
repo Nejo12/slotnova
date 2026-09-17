@@ -27,6 +27,7 @@ export type ProblemSlug =
   | "invitation-exists"
   | "already-member"
   | "workspace-unavailable"
+  | "idempotency-conflict"
   | "rate-limited"
   | "not-found"
   | "internal";

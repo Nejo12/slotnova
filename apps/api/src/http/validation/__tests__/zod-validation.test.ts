@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { ProblemException } from "../../../../http/problem/problem.exception.js";
+import { ProblemException } from "../../problem/problem.exception.js";
 import { toValidationProblem } from "../zod-validation.js";
 
 /**
