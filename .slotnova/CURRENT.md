@@ -9,9 +9,10 @@ and update this file.
 
 ## Current main
 
-`2804df494b4761aaf660f223c91fe500aed9922c` — merged PR #63 (Phase 2 PR-02 —
-Catalog API/contracts). Issue #60 is closed. PR #62 (PR-02A, issue #61) and
-PR #59 (PR-01, issue #58) merged before it.
+`5740fa00a7dbdc4d86e13f6fea5e7cadbb953b8e` — merged PR #65 (Phase 2 PR-03 —
+Scheduling interval/recurrence domain). Issue #64 is closed. PR #63 (PR-02,
+issue #60), PR #62 (PR-02A, issue #61) and PR #59 (PR-01, issue #58) merged
+before it.
 
 ## Current implementation state
 
@@ -67,8 +68,8 @@ specifies that mapping, and inventing one would be unauthorized product
 policy. Until it is decided, Catalog capabilities must be granted by
 writing them onto a membership's `permissions`.
 
-**Phase 2 PR-03 — Scheduling interval/recurrence domain (issue #64) is under
-implementation** on branch `phase-2/pr-03-scheduling-domain`. It is pure
+**Phase 2 PR-03 — Scheduling interval/recurrence domain (issue #64) is
+merged** (PR #65). It is pure
 domain only: `apps/api/src/modules/scheduling/domain/` holds the half-open
 `[start,end)` interval value over `Temporal.Instant`, the
 normalize/union/intersect/subtract algebra, IANA-zone validation with a
@@ -83,11 +84,53 @@ the merged planning authorises only per-local-day wall-time intervals.
 `docs/decisions/0002-version-pins.md`); the only other manifest change is a
 `@slotnova/testing/property` alias in the root `vitest.config.ts` so the
 fast lane resolves that subpath from source like every other workspace
-import. **No Scheduling migration, repository, HTTP/OpenAPI layer or NestJS
-module exists** — PR-04 owns persistence/API.
+import.
+
+**Two Founder-approved continuations from PR-03, now authoritative:**
+(1) `effectiveUntil` is **EXCLUSIVE** — persisted recurrence bounds are
+`[effectiveFrom, effectiveUntil)`, so `effective_until = 2026-10-01`
+produces no availability on 2026-10-01; (2)
+`MAX_EXPANSION_HORIZON_DAYS = 370` is an operational/safety cap only, not a
+product promise of one-year booking visibility, and must not be silently
+widened.
+
+**Phase 2 PR-04 — Scheduling persistence/API (issue #66) is complete** on
+branch `phase-2/pr-04-scheduling-persistence-api`. Migration
+`0008_scheduling.sql` adds `availability_patterns` and
+`availability_exceptions` — workspace-scoped only (no
+`resource_id`/`location_id`/`staff_id`), RLS enabled + FORCE + workspace
+policy on both, app role granted SELECT + INSERT only because the approved
+contract exposes no update/delete endpoint. No `btree_gist` and no
+exclusion constraint: those belong to PR-06. Four endpoints under
+`/v1/scheduling`: `GET|POST /availability-patterns`,
+`POST /availability-exceptions`, `POST /availability/resolve`, gated by
+`scheduling:read` (list/resolve) and `scheduling:manage` (writes) through
+the existing `CapabilityGuard`. `resolve` is a pure query that composes the
+merged PR-03 domain and reimplements none of its recurrence/DST/interval
+logic; it rejects an inverted range or one above 370 days with a 422 before
+any database access. `SchedulingModule` is wired into `AppModule`.
+
+**Open Founder decisions carried by PR-04:**
+1. **Pattern-history precedence (new).** PR-04 found no accepted artifact
+   defining precedence between two simultaneously-effective availability
+   patterns, and did not invent one. It instead **proposes** the invariant
+   the approved model already implies (`spec.md` Key Entities "one pattern
+   set per workspace"; `contracts/scheduling.contract.md` "at most the
+   workspace's single active pattern set"; `tasks.md` PR-04 "the
+   workspace's single pattern"): creating a pattern whose effective window
+   overlaps an existing one is rejected with 422, so precedence never
+   arises. Enforced in the application layer under a per-workspace
+   transaction advisory lock; promoting it to a database `EXCLUDE`
+   constraint is a one-line additive migration once PR-06 installs
+   `btree_gist`. **Needs Founder ratification.**
+2. **Role→capability mapping.** Which membership roles receive
+   `scheduling:read`/`scheduling:manage` by default is unspecified, exactly
+   like the still-open `catalog:read`/`catalog:manage` question. PR-04
+   deliberately left `identity`'s `DEFAULT_ROLE_PERMISSIONS` untouched;
+   grant by writing the capability onto a membership's `permissions`.
 
 No Booking/Calendar/Staff/Clients work exists yet; later Phase-2 slices
-(PR-04 through PR-10) remain not implemented.
+(PR-05 through PR-10) remain not implemented.
 
 ## Workflow-efficiency setup
 

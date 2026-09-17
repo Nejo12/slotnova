@@ -162,6 +162,29 @@ function localMidnight(date: Temporal.PlainDate): Temporal.PlainDateTime {
 }
 
 /**
+ * Assert that `range` is a non-empty half-open local-date window no wider than
+ * {@link MAX_EXPANSION_HORIZON_DAYS} (FR-015).
+ *
+ * Extracted from {@link expandWeeklyAvailability} (which still calls it, so the
+ * rule has exactly one implementation) and exported so a caller can reject an
+ * out-of-bounds request *before* doing any work on its behalf — PR-04's
+ * `resolve` use case runs this guard before it touches the database, so an
+ * absurd range costs one comparison rather than a pattern load plus an
+ * expansion attempt. It performs no recurrence, timezone or DST reasoning:
+ * that all stays below, in this module.
+ */
+export function assertValidExpansionRange(range: ExpansionRange): void {
+  if (Temporal.PlainDate.compare(range.from, range.to) >= 0) {
+    throw new InvalidExpansionRangeError(range.from.toString(), range.to.toString());
+  }
+
+  const requestedDays = range.from.until(range.to, { largestUnit: "day" }).days;
+  if (requestedDays > MAX_EXPANSION_HORIZON_DAYS) {
+    throw new ExpansionHorizonExceededError(requestedDays, MAX_EXPANSION_HORIZON_DAYS);
+  }
+}
+
+/**
  * Expand a weekly pattern into absolute half-open intervals over an explicit,
  * bounded local-date range `[from, to)` (FR-015 — there is no unbounded
  * expansion API).
@@ -174,14 +197,7 @@ export function expandWeeklyAvailability(
   pattern: WeeklyAvailabilityPattern,
   range: ExpansionRange,
 ): readonly Interval[] {
-  if (Temporal.PlainDate.compare(range.from, range.to) >= 0) {
-    throw new InvalidExpansionRangeError(range.from.toString(), range.to.toString());
-  }
-
-  const requestedDays = range.from.until(range.to, { largestUnit: "day" }).days;
-  if (requestedDays > MAX_EXPANSION_HORIZON_DAYS) {
-    throw new ExpansionHorizonExceededError(requestedDays, MAX_EXPANSION_HORIZON_DAYS);
-  }
+  assertValidExpansionRange(range);
 
   if (pattern.rules.length === 0) return [];
 

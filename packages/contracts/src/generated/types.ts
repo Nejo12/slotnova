@@ -211,6 +211,70 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/v1/scheduling/availability-patterns": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List this workspace's availability patterns
+     * @description Returned as a list to allow effective-dated pattern history. Ordered oldest effective window first; effective windows never overlap, so at most one pattern applies to any given date.
+     */
+    get: operations["SchedulingController_list"];
+    put?: never;
+    /**
+     * Create an availability pattern
+     * @description `effectiveUntil` is EXCLUSIVE: `2026-10-01` produces no availability on 2026-10-01. The effective window must not overlap an existing pattern's.
+     */
+    post: operations["SchedulingController_createAvailabilityPattern"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/scheduling/availability-exceptions": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Create a time-off exception
+     * @description Always resolved instants — `[startsAt, endsAt)`, half-open, never a recurring rule. An exception always subtracts from the recurring pattern for its overlapping span.
+     */
+    post: operations["SchedulingController_createAvailabilityException"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/scheduling/availability/resolve": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Resolve availability over a bounded date range
+     * @description Pure computation — persists nothing. Expands the effective recurring pattern(s) over the half-open local-date window `[from, to)`, subtracts overlapping exceptions, and returns normalised half-open UTC instant intervals. The window may not exceed 370 days.
+     */
+    post: operations["SchedulingController_resolve"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -350,6 +414,64 @@ export interface components {
       id: string;
       name: string;
       sortOrder: number;
+    };
+    AvailabilityPatternListResponseDto_Output: {
+      items: {
+        id: string;
+        timezone: string;
+        weeklyRule: {
+          /** @enum {number} */
+          dayOfWeek: 1 | 2 | 3 | 4 | 5 | 6 | 7;
+          startMinuteOfDay: number;
+          endMinuteOfDay: number;
+        }[];
+        effectiveFrom: string | null;
+        effectiveUntil: string | null;
+      }[];
+    };
+    CreateAvailabilityPatternRequestDto: {
+      timezone: string;
+      weeklyRule: {
+        /** @enum {number} */
+        dayOfWeek: 1 | 2 | 3 | 4 | 5 | 6 | 7;
+        startMinuteOfDay: number;
+        endMinuteOfDay: number;
+      }[];
+      effectiveFrom?: string;
+      effectiveUntil?: string;
+    };
+    AvailabilityPatternResponseDto_Output: {
+      id: string;
+      timezone: string;
+      weeklyRule: {
+        /** @enum {number} */
+        dayOfWeek: 1 | 2 | 3 | 4 | 5 | 6 | 7;
+        startMinuteOfDay: number;
+        endMinuteOfDay: number;
+      }[];
+      effectiveFrom: string[];
+      effectiveUntil: string[];
+    };
+    CreateAvailabilityExceptionRequestDto: {
+      startsAt: string;
+      endsAt: string;
+      reason?: string;
+    };
+    AvailabilityExceptionResponseDto_Output: {
+      id: string;
+      startsAt: string;
+      endsAt: string;
+      reason: string[];
+    };
+    ResolveAvailabilityRequestDto: {
+      from: string;
+      to: string;
+    };
+    ResolveAvailabilityResponseDto_Output: {
+      intervals: {
+        start: string;
+        end: string;
+      }[];
     };
     ProblemDetailsDto: {
       type: string;
@@ -1141,6 +1263,220 @@ export interface operations {
         };
       };
       /** @description Blank name or non-integer sort order (`validation`). */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+    };
+  };
+  SchedulingController_list: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AvailabilityPatternListResponseDto_Output"];
+        };
+      };
+      /** @description No/invalid session (`session-invalid`). */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description Missing `scheduling:read`, or no active workspace (`forbidden`). */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+    };
+  };
+  SchedulingController_createAvailabilityPattern: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateAvailabilityPatternRequestDto"];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AvailabilityPatternResponseDto_Output"];
+        };
+      };
+      /** @description Malformed body or unknown property (`validation`). */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description No/invalid session (`session-invalid`). */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description Missing `scheduling:manage`, or no active workspace (`forbidden`). */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description Invalid IANA timezone, weekly rules overlapping within a day, an inverted effective window, or an effective window overlapping an existing pattern (`validation`). */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+    };
+  };
+  SchedulingController_createAvailabilityException: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateAvailabilityExceptionRequestDto"];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AvailabilityExceptionResponseDto_Output"];
+        };
+      };
+      /** @description Malformed body or unknown property (`validation`). */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description No/invalid session (`session-invalid`). */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description Missing `scheduling:manage`, or no active workspace (`forbidden`). */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description `startsAt` is not strictly before `endsAt` (`validation`). */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+    };
+  };
+  SchedulingController_resolve: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ResolveAvailabilityRequestDto"];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ResolveAvailabilityResponseDto_Output"];
+        };
+      };
+      /** @description Malformed body or unknown property (`validation`). */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description No/invalid session (`session-invalid`). */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description Missing `scheduling:read`, or no active workspace (`forbidden`). */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description `from` is not strictly before `to`, or the window exceeds 370 days (`validation`). */
       422: {
         headers: {
           [name: string]: unknown;

@@ -938,6 +938,266 @@
           "ServiceCategories"
         ]
       }
+    },
+    "/v1/scheduling/availability-patterns": {
+      "get": {
+        "description": "Returned as a list to allow effective-dated pattern history. Ordered oldest effective window first; effective windows never overlap, so at most one pattern applies to any given date.",
+        "operationId": "SchedulingController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AvailabilityPatternListResponseDto_Output"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No/invalid session (`session-invalid`).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing `scheduling:read`, or no active workspace (`forbidden`).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "List this workspace's availability patterns",
+        "tags": [
+          "Scheduling"
+        ]
+      },
+      "post": {
+        "description": "`effectiveUntil` is EXCLUSIVE: `2026-10-01` produces no availability on 2026-10-01. The effective window must not overlap an existing pattern's.",
+        "operationId": "SchedulingController_createAvailabilityPattern",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAvailabilityPatternRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AvailabilityPatternResponseDto_Output"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed body or unknown property (`validation`).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No/invalid session (`session-invalid`).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing `scheduling:manage`, or no active workspace (`forbidden`).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid IANA timezone, weekly rules overlapping within a day, an inverted effective window, or an effective window overlapping an existing pattern (`validation`).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Create an availability pattern",
+        "tags": [
+          "Scheduling"
+        ]
+      }
+    },
+    "/v1/scheduling/availability-exceptions": {
+      "post": {
+        "description": "Always resolved instants — `[startsAt, endsAt)`, half-open, never a recurring rule. An exception always subtracts from the recurring pattern for its overlapping span.",
+        "operationId": "SchedulingController_createAvailabilityException",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAvailabilityExceptionRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AvailabilityExceptionResponseDto_Output"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed body or unknown property (`validation`).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No/invalid session (`session-invalid`).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing `scheduling:manage`, or no active workspace (`forbidden`).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`startsAt` is not strictly before `endsAt` (`validation`).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Create a time-off exception",
+        "tags": [
+          "Scheduling"
+        ]
+      }
+    },
+    "/v1/scheduling/availability/resolve": {
+      "post": {
+        "description": "Pure computation — persists nothing. Expands the effective recurring pattern(s) over the half-open local-date window `[from, to)`, subtracts overlapping exceptions, and returns normalised half-open UTC instant intervals. The window may not exceed 370 days.",
+        "operationId": "SchedulingController_resolve",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveAvailabilityRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResolveAvailabilityResponseDto_Output"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed body or unknown property (`validation`).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No/invalid session (`session-invalid`).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing `scheduling:read`, or no active workspace (`forbidden`).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`from` is not strictly before `to`, or the window exceeds 370 days (`validation`).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Resolve availability over a bounded date range",
+        "tags": [
+          "Scheduling"
+        ]
+      }
     }
   },
   "info": {
@@ -1526,6 +1786,305 @@
           "id",
           "name",
           "sortOrder"
+        ],
+        "additionalProperties": false
+      },
+      "AvailabilityPatternListResponseDto_Output": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "timezone": {
+                  "type": "string"
+                },
+                "weeklyRule": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "dayOfWeek": {
+                        "type": "number",
+                        "enum": [
+                          1,
+                          2,
+                          3,
+                          4,
+                          5,
+                          6,
+                          7
+                        ]
+                      },
+                      "startMinuteOfDay": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 1439
+                      },
+                      "endMinuteOfDay": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 1440
+                      }
+                    },
+                    "required": [
+                      "dayOfWeek",
+                      "startMinuteOfDay",
+                      "endMinuteOfDay"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "effectiveFrom": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "effectiveUntil": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "timezone",
+                "weeklyRule",
+                "effectiveFrom",
+                "effectiveUntil"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "additionalProperties": false
+      },
+      "CreateAvailabilityPatternRequestDto": {
+        "type": "object",
+        "properties": {
+          "timezone": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "weeklyRule": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "dayOfWeek": {
+                  "type": "number",
+                  "enum": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7
+                  ]
+                },
+                "startMinuteOfDay": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 1439
+                },
+                "endMinuteOfDay": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 1440
+                }
+              },
+              "required": [
+                "dayOfWeek",
+                "startMinuteOfDay",
+                "endMinuteOfDay"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "effectiveFrom": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "effectiveUntil": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          }
+        },
+        "required": [
+          "timezone",
+          "weeklyRule"
+        ],
+        "additionalProperties": false
+      },
+      "AvailabilityPatternResponseDto_Output": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "weeklyRule": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "dayOfWeek": {
+                  "type": "number",
+                  "enum": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7
+                  ]
+                },
+                "startMinuteOfDay": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 1439
+                },
+                "endMinuteOfDay": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 1440
+                }
+              },
+              "required": [
+                "dayOfWeek",
+                "startMinuteOfDay",
+                "endMinuteOfDay"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "effectiveFrom": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "effectiveUntil": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "timezone",
+          "weeklyRule",
+          "effectiveFrom",
+          "effectiveUntil"
+        ],
+        "additionalProperties": false
+      },
+      "CreateAvailabilityExceptionRequestDto": {
+        "type": "object",
+        "properties": {
+          "startsAt": {
+            "type": "string"
+          },
+          "endsAt": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "startsAt",
+          "endsAt"
+        ],
+        "additionalProperties": false
+      },
+      "AvailabilityExceptionResponseDto_Output": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "startsAt": {
+            "type": "string"
+          },
+          "endsAt": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "startsAt",
+          "endsAt",
+          "reason"
+        ],
+        "additionalProperties": false
+      },
+      "ResolveAvailabilityRequestDto": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "to": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          }
+        },
+        "required": [
+          "from",
+          "to"
+        ],
+        "additionalProperties": false
+      },
+      "ResolveAvailabilityResponseDto_Output": {
+        "type": "object",
+        "properties": {
+          "intervals": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "start": {
+                  "type": "string"
+                },
+                "end": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "start",
+                "end"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "intervals"
         ],
         "additionalProperties": false
       },
