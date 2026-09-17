@@ -9,9 +9,9 @@ and update this file.
 
 ## Current main
 
-`ac49545adaa164051babb36ffc7e277822bf6d71` — merged PR #62 (Phase 2 PR-02A
-— durable API idempotency foundation). Issue #61 is closed. PR #59 (PR-01,
-issue #58) merged before it.
+`2804df494b4761aaf660f223c91fe500aed9922c` — merged PR #63 (Phase 2 PR-02 —
+Catalog API/contracts). Issue #60 is closed. PR #62 (PR-02A, issue #61) and
+PR #59 (PR-01, issue #58) merged before it.
 
 ## Current implementation state
 
@@ -40,8 +40,8 @@ claim/lease/reclaim design was found unsafe by independent review and
 removed rather than patched. Provider-neutral — knows nothing about
 Catalog.
 
-**Phase 2 PR-02 — Catalog API/contracts (issue #60) is complete** and
-delivered on branch `phase-2/pr-02-catalog-api-contracts`. Six endpoints
+**Phase 2 PR-02 — Catalog API/contracts (issue #60) is merged** (PR #63).
+Six endpoints
 under `/v1/catalog`: `GET|POST /services`, `GET|PATCH /services/{id}`,
 `GET|POST /categories`. `catalog:read` gates the reads and
 `catalog:manage` the writes, enforced by the existing server-authoritative
@@ -67,8 +67,27 @@ specifies that mapping, and inventing one would be unauthorized product
 policy. Until it is decided, Catalog capabilities must be granted by
 writing them onto a membership's `permissions`.
 
-No Scheduling/Booking/Calendar/Staff/Clients work exists yet; later Phase-2
-slices (PR-03 through PR-10) remain not implemented.
+**Phase 2 PR-03 — Scheduling interval/recurrence domain (issue #64) is under
+implementation** on branch `phase-2/pr-03-scheduling-domain`. It is pure
+domain only: `apps/api/src/modules/scheduling/domain/` holds the half-open
+`[start,end)` interval value over `Temporal.Instant`, the
+normalize/union/intersect/subtract algebra, IANA-zone validation with a
+single documented DST resolution policy, and bounded weekly recurrence
+expansion (`MAX_EXPANSION_HORIZON_DAYS = 370`); `scheduling/index.ts` is the
+module public entry. DST: the repeated local hour resolves to the earlier
+occurrence (`research.md` R-DST) and a missing local hour clamps to the
+offset transition so the non-existent hour is skipped, never shifted
+(FR-014). Cross-midnight recurrence is deliberately **not** implemented —
+the merged planning authorises only per-local-day wall-time intervals.
+`@js-temporal/polyfill@0.5.1` was added to `apps/api` (exact pin,
+`docs/decisions/0002-version-pins.md`); the only other manifest change is a
+`@slotnova/testing/property` alias in the root `vitest.config.ts` so the
+fast lane resolves that subpath from source like every other workspace
+import. **No Scheduling migration, repository, HTTP/OpenAPI layer or NestJS
+module exists** — PR-04 owns persistence/API.
+
+No Booking/Calendar/Staff/Clients work exists yet; later Phase-2 slices
+(PR-04 through PR-10) remain not implemented.
 
 ## Workflow-efficiency setup
 
