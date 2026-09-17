@@ -43,6 +43,7 @@ export {
 
 export {
   BookingNotFoundError,
+  BookingOverlapError,
   InvalidBookingBufferError,
   InvalidBookingDurationError,
   InvalidBookingTransitionError,

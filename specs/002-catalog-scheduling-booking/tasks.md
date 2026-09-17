@@ -227,6 +227,28 @@ no PR combines schema + API + UI for more than one module at a time.
 
 ## PR-06 — Booking overlap/concurrency
 
+- **Status**: Complete (issue #70). Migration
+  `packages/db/migrations/0010_booking_overlap_exclusion.sql` is the single
+  additive migration: `CREATE EXTENSION IF NOT EXISTS btree_gist`,
+  `bookings_no_overlap` (`EXCLUDE USING gist (workspace_id WITH =,
+  blocking_range WITH &&) WHERE (status = 'confirmed')`) and
+  `availability_patterns_no_overlapping_effective_window`
+  (`EXCLUDE USING gist (workspace_id WITH =,
+  (daterange(effective_from, effective_until, '[)')) WITH &&)`). Migrations
+  0001–0009 are untouched and no backfill/cleanup step exists. The Booking
+  constraint — not any application check — is the overlap authority; the only
+  application code added is a narrow translation of SQLSTATE `23P01` **plus**
+  `constraint = 'bookings_no_overlap'` into the new pure-domain
+  `BookingOverlapError` (PR-07 maps it to `409 booking-overlap`; no HTTP,
+  OpenAPI, contracts, `BookingModule` or problem filter was added here).
+  **Scheduling invariant promotion**: the Founder-ratified pattern-history
+  invariant from PR #67 is now enforced by the database as well. Semantics are
+  unchanged — half-open `[effective_from, effective_until)`, adjacent windows
+  valid, overlapping invalid, NULL bounds unbounded, and still no
+  precedence/newest-wins rule. PR-04's per-workspace advisory-lock check stays
+  as the friendly deterministic 422 path, and a violation that still reaches
+  the database is mapped back onto the same
+  `OverlappingEffectivePatternError`.
 - **Dependency**: PR-05.
 - **Files/areas**: migration adding `btree_gist` + the exclusion
   constraint keyed on `(workspace_id, blocking_range)`
@@ -242,6 +264,15 @@ no PR combines schema + API + UI for more than one module at a time.
   proves the optimistic-concurrency `version` guard (PR-05) under
   concurrent edits to the same row. Sequential-call tests are explicitly
   insufficient and will be rejected in review.
+  *Delivered in `booking/__tests__/overlap-concurrency.int.test.ts` and
+  `scheduling/__tests__/pattern-history-exclusion.int.test.ts`: every race uses
+  `openIndependentConnections` (separate `pg.Client` sessions), drives both
+  transactions to an explicit barrier, and polls `pg_stat_activity` from a
+  third connection until PostgreSQL itself reports the second backend as
+  waiting on a Lock — so a race that silently degraded into sequential calls
+  would fail rather than pass. A companion test issues both statements
+  simultaneously with no ordering at all and accepts either `23P01` or a
+  `40P01` deadlock-victim outcome, because both are the database arbitrating.*
 - **Constraints**: no check-then-insert as the sole protection (AGENTS.md
   hard prohibition) — this PR is exactly where that prohibition is load-
   bearing.

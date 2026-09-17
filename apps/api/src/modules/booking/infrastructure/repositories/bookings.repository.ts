@@ -33,6 +33,7 @@ import { Injectable } from "@nestjs/common";
 import type { Queryable } from "@slotnova/db";
 
 import type { WorkspaceId } from "../../../identity/index.js";
+import { BookingOverlapError } from "../../domain/booking-errors.js";
 import type { Booking } from "../../domain/booking.js";
 import type { BookingStatus } from "../../domain/booking-status.js";
 import type { BookingId, ServiceReferenceId } from "../../domain/ids.js";
@@ -89,6 +90,42 @@ const COLUMNS = `
   to_json(upper(blocking_range)) #>> '{}' AS blocking_range_end,
   status, version, cancelled_reason`;
 
+/**
+ * PostgreSQL's `exclusion_violation` class (SQLSTATE 23P01). Named rather
+ * than inlined so the one place that matches on it is greppable.
+ */
+const EXCLUSION_VIOLATION = "23P01";
+
+/**
+ * The ONE constraint whose violation means "this booking overlaps another
+ * confirmed booking in this workspace" (`0010_booking_overlap_exclusion.sql`).
+ */
+const OVERLAP_CONSTRAINT = "bookings_no_overlap";
+
+/**
+ * Narrow translation of the Booking overlap conflict, and nothing else.
+ *
+ * Matching is on PostgreSQL's STRUCTURED error metadata — `code` plus the
+ * `constraint` field the server itself populates — never on message text,
+ * which is localisable and not a contract. Both must match:
+ *
+ *   - mapping every `23P01` to a Booking overlap would misreport any other
+ *     exclusion constraint added later (Scheduling already has one);
+ *   - mapping on the constraint name alone would trust a field that is only
+ *     meaningful for integrity errors.
+ *
+ * Every other failure — a CHECK violation, the tenant foreign key, an RLS
+ * refusal, a connection error — is rethrown untouched. An unrelated integrity
+ * failure must never be laundered into a domain conflict.
+ */
+function translateOverlapViolation(error: unknown): never {
+  const candidate = error as { code?: unknown; constraint?: unknown };
+  if (candidate.code === EXCLUSION_VIOLATION && candidate.constraint === OVERLAP_CONSTRAINT) {
+    throw new BookingOverlapError();
+  }
+  throw error;
+}
+
 export interface RescheduleBookingRow {
   readonly startsAt: Temporal.Instant;
   readonly expectedVersion: number;
@@ -123,29 +160,36 @@ export class BookingsRepository {
    *
    * `blocking_range` is NOT inserted: it is a STORED GENERATED column the
    * database computes from the snapshot, which is what makes it trustworthy
-   * as PR-06's exclusion key.
+   * as the exclusion key of `bookings_no_overlap`.
+   *
+   * A `confirmed` insert whose range collides with another confirmed booking
+   * in the same workspace is rejected by that constraint, and only that
+   * rejection becomes {@link BookingOverlapError}. No overlap check runs
+   * before the INSERT — the database is the boundary (ADR-011).
    */
   async create(tx: Queryable, workspaceId: WorkspaceId, booking: Booking): Promise<BookingRecord> {
-    const { rows } = await tx.query(
-      `INSERT INTO public.bookings
+    const result = await tx
+      .query(
+        `INSERT INTO public.bookings
          (id, workspace_id, service_id, starts_at, service_duration_minutes,
           pre_buffer_minutes, post_buffer_minutes, status, version, cancelled_reason)
        VALUES ($1, $2, $3, $4::timestamptz, $5, $6, $7, $8::booking_status, $9, $10)
        RETURNING ${COLUMNS}`,
-      [
-        booking.id,
-        workspaceId,
-        booking.serviceId,
-        booking.startsAt.toString(),
-        booking.serviceDurationMinutes,
-        booking.preBufferMinutes,
-        booking.postBufferMinutes,
-        booking.status,
-        booking.version,
-        booking.cancelledReason,
-      ],
-    );
-    return toRecord(rows[0] as BookingRow);
+        [
+          booking.id,
+          workspaceId,
+          booking.serviceId,
+          booking.startsAt.toString(),
+          booking.serviceDurationMinutes,
+          booking.preBufferMinutes,
+          booking.postBufferMinutes,
+          booking.status,
+          booking.version,
+          booking.cancelledReason,
+        ],
+      )
+      .catch(translateOverlapViolation);
+    return toRecord(result.rows[0] as BookingRow);
   }
 
   /** RLS-scoped point lookup. Returns `null` for another workspace's booking. */
@@ -155,27 +199,40 @@ export class BookingsRepository {
     return row ? toRecord(row) : null;
   }
 
-  /** `confirmed` -> `confirmed` at a new `starts_at`; the range follows automatically. */
+  /**
+   * `confirmed` -> `confirmed` at a new `starts_at`; the range follows
+   * automatically. Moving a booking on top of another confirmed booking in the
+   * same workspace violates `bookings_no_overlap` exactly like a colliding
+   * insert does, so the same narrow translation applies. Nothing re-checks
+   * availability in TypeScript first.
+   */
   async reschedule(
     tx: Queryable,
     id: BookingId,
     input: RescheduleBookingRow,
   ): Promise<GuardedUpdateResult> {
-    const { rows } = await tx.query(
-      `UPDATE public.bookings
+    const { rows } = await tx
+      .query(
+        `UPDATE public.bookings
           SET starts_at = $2::timestamptz, version = $3, updated_at = now()
         WHERE id = $1 AND version = $4 AND status = 'confirmed'
        RETURNING ${COLUMNS}`,
-      [id, input.startsAt.toString(), input.nextVersion, input.expectedVersion],
-    );
+        [id, input.startsAt.toString(), input.nextVersion, input.expectedVersion],
+      )
+      .catch(translateOverlapViolation);
     const row = rows[0] as BookingRow | undefined;
     return row ? toRecord(row) : null;
   }
 
   /**
    * `confirmed` -> `cancelled`. The row and its `blocking_range` are kept
-   * intact — PR-06's exclusion predicate is `WHERE (status = 'confirmed')`,
-   * so the state change alone releases the capacity.
+   * intact — `bookings_no_overlap`'s predicate is `WHERE (status =
+   * 'confirmed')`, so the state change alone releases the capacity.
+   *
+   * No overlap translation here or in {@link complete}: both transitions move
+   * the row OUT of the constraint's partial predicate, so neither can raise
+   * an exclusion violation. Adding a `.catch` for an unreachable branch would
+   * be speculative.
    */
   async cancel(
     tx: Queryable,

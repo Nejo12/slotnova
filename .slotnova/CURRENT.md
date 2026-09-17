@@ -9,10 +9,13 @@ and update this file.
 
 ## Current main
 
-`75babdc88aefe8100dbf39ff2f656709f6b5d9e5` — merged PR #67 (Phase 2 PR-04 —
-Scheduling persistence/API). Issue #66 is closed. PR #65 (PR-03, issue #64),
-PR #63 (PR-02, issue #60), PR #62 (PR-02A, issue #61) and PR #59 (PR-01,
-issue #58) merged before it.
+`cfdf680c5008ac87aa0f8188d9d7285589a149f4` — merged PR #69 (Phase 2 PR-05 —
+Booking aggregate/schema/state machine). Issue #68 is closed. PR #67 (PR-04,
+issue #66), PR #65 (PR-03, issue #64), PR #63 (PR-02, issue #60), PR #62
+(PR-02A, issue #61) and PR #59 (PR-01, issue #58) merged before it.
+
+Issue #70 (Phase 2 PR-06 — Booking overlap/concurrency) is the active slice.
+Issue #71 is a **closed duplicate of #70** and carries no separate work.
 
 ## Current implementation state
 
@@ -146,7 +149,7 @@ for the record):**
    grant by writing the capability onto a membership's `permissions`.
 
 **Phase 2 PR-05 — Booking aggregate/schema/state machine (issue #68) is
-complete** on branch `phase-2/pr-05-booking-aggregate-schema`. Migration
+merged** (PR #69). Migration
 `0009_booking.sql` adds the `booking_status` enum (exactly `confirmed`,
 `completed`, `cancelled` — no `draft`, no `pending`), the IMMUTABLE
 `public.booking_blocking_range()` helper and `public.bookings`: snapshotted
@@ -186,7 +189,57 @@ pre-transition version is a stale write, not a no-op. The version check runs
 before the state check. If the Founder intended a blanket 409 on every
 terminal-state command, only the two no-op branches need removing.
 
-Later Phase-2 slices (PR-06 through PR-10) remain not implemented; no
+**Founder-ratified from PR-05 (now authoritative, do not revisit):** Booking
+terminal-state retry semantics — a same-command no-op retry on an already
+`cancelled`/`completed` booking succeeds only when the caller's version matches
+the CURRENT row version; anything else is a 409 / stale-write.
+
+**Phase 2 PR-06 — Booking overlap/concurrency (issue #70) is complete** on
+branch `phase-2/pr-06-booking-overlap-concurrency`. One additive migration,
+`0010_booking_overlap_exclusion.sql`, adds `btree_gist` plus TWO exclusion
+constraints and touches nothing else (0001–0009 unmodified, no backfill, no
+cleanup, no grant/policy/RLS change):
+
+- `bookings_no_overlap` — `EXCLUDE USING gist (workspace_id WITH =,
+  blocking_range WITH &&) WHERE (status = 'confirmed')`. Workspace-scoped, not
+  global; partial, so `cancelled`/`completed` rows keep their history while
+  occupying no capacity; keyed on 0009's STORED GENERATED half-open range, so
+  a buffer-only overlap is caught exactly like a service overlap and half-open
+  adjacency (`upper(a) = lower(b)`) is not a conflict. No
+  `resource_id`/`location_id`/`staff_id`/`client_id` in the key — `workspace_id`
+  remains the complete Phase-2 protected-resource key.
+- `availability_patterns_no_overlapping_effective_window` — `EXCLUDE USING
+  gist (workspace_id WITH =, (daterange(effective_from, effective_until,
+  '[)')) WITH &&)`. This is the **promotion of the Founder-ratified PR #67
+  pattern-history invariant** to the strongest boundary, with semantics
+  unchanged: adjacent windows valid, overlapping invalid, NULL bounds
+  unbounded, and still NO precedence/newest-wins rule anywhere.
+
+The database — not application code — is the Booking overlap authority: no
+check-then-insert companion exists. The only application change is a narrow
+translation of SQLSTATE `23P01` **plus** the structured `constraint` field
+into `BookingOverlapError` (new pure-domain error, exported from
+`booking/index.ts`) in `bookings.repository.ts` `create`/`reschedule`;
+`cancel`/`complete` move the row out of the partial predicate and so cannot
+raise it. Scheduling's PR-04 advisory-lock check REMAINS as the friendly
+deterministic 422 path, and a constraint violation that still reaches the
+database is mapped onto the same `OverlappingEffectivePatternError`. Unrelated
+integrity failures (23514, 23503, 42501) are rethrown untouched.
+
+Concurrency is proved with genuinely independent `pg.Client` sessions driven to
+an explicit barrier, with `pg_stat_activity` polled from a third connection
+until PostgreSQL reports the second backend as waiting on a Lock; a companion
+test issues both statements with no ordering at all and accepts either `23P01`
+or a `40P01` deadlock-victim outcome. `0010` also has a clean-apply proof, a
+populated-forward proof seeding bookings (confirmed/cancelled/completed) and
+pattern windows, and an explicit production-safety proof that pre-existing
+violating rows make the whole file roll back with 0010 unrecorded.
+
+**No HTTP in PR-06**: no `booking.controller`, runtime schemas, OpenAPI paths,
+generated contracts, `BookingModule` wiring, capability annotations or
+problem+json filter — PR-07 owns all of them.
+
+Later Phase-2 slices (PR-07 through PR-10) remain not implemented; no
 Calendar/Staff/Clients work exists yet.
 
 ## Workflow-efficiency setup
