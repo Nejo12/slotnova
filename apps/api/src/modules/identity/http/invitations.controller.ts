@@ -46,7 +46,7 @@ import {
   type IssueInvitationRequestBody,
 } from "./invitations.schema.js";
 import { MeResponseDto, type MeResponseBody } from "./me.schema.js";
-import { ZodValidationPipe } from "./zod-validation.js";
+import { ZodValidationPipe } from "../../../http/validation/zod-validation.js";
 
 const PROBLEM_JSON_CONTENT = {
   "application/problem+json": { schema: { $ref: getSchemaPath(ProblemDetailsDto) } },

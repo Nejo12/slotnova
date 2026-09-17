@@ -72,6 +72,20 @@ export class ServiceCategoryNotInWorkspaceError extends Error {
   }
 }
 
+/**
+ * No service with that id is visible in the active workspace. RLS makes
+ * "does not exist" and "belongs to another workspace" indistinguishable by
+ * construction, so this single error covers both — there is deliberately no
+ * separate cross-workspace error that a caller could use to probe for the
+ * existence of another tenant's data (`contracts/catalog.contract.md`).
+ */
+export class ServiceNotFoundError extends Error {
+  override readonly name = "ServiceNotFoundError";
+  constructor(readonly serviceId: ServiceId) {
+    super(`service ${serviceId} was not found in the active workspace`);
+  }
+}
+
 export interface ServiceCreateRow {
   readonly workspaceId: WorkspaceId;
   readonly categoryId?: ServiceCategoryId | null | undefined;
@@ -80,6 +94,15 @@ export interface ServiceCreateRow {
   readonly preBufferMinutes: number;
   readonly postBufferMinutes: number;
   readonly price: Money;
+}
+
+export interface ServiceListQuery {
+  /** Omitted: both active and inactive services. */
+  readonly active?: boolean | undefined;
+  /** Exclusive keyset cursor — the last `id` of the previous page. */
+  readonly cursor?: ServiceId | undefined;
+  /** Always supplied by the caller; this repository never pages unbounded. */
+  readonly limit: number;
 }
 
 export interface ServiceUpdateFields {
@@ -129,6 +152,39 @@ export class ServicesRepository {
     return toRecord(rows[0] as ServiceRow);
   }
 
+  /**
+   * Workspace-scoped keyset page (PR-02, `contracts/catalog.contract.md`
+   * "pagination cursor"). NOT an unrestricted `findAll()`: it is bounded by
+   * `limit`, and like every other method here it can only ever see the rows
+   * RLS exposes for the transaction's active `app.workspace_id` (issue #58).
+   *
+   * Keyset on `id` rather than `OFFSET`, matching the only cursor convention
+   * this repository already has (`identity/application/maintenance.ts`,
+   * `apps/worker/src/outbox/claim.ts` both page `WHERE id > $cursor ORDER BY
+   * id`). `id` is a total order and never changes, so a page boundary cannot
+   * shift or duplicate a row when another row is inserted or updated
+   * mid-pagination — which `OFFSET` cannot promise.
+   */
+  async list(tx: Queryable, query: ServiceListQuery): Promise<ServiceRecord[]> {
+    const conditions: string[] = [];
+    const params: unknown[] = [];
+    let i = 1;
+
+    if (query.active !== undefined) {
+      conditions.push(`active = $${i++}`);
+      params.push(query.active);
+    }
+    if (query.cursor !== undefined) {
+      conditions.push(`id > $${i++}`);
+      params.push(query.cursor);
+    }
+    const where = conditions.length > 0 ? ` WHERE ${conditions.join(" AND ")}` : "";
+    params.push(query.limit);
+
+    const { rows } = await tx.query(`${SELECT}${where} ORDER BY id ASC LIMIT $${i}`, params);
+    return (rows as ServiceRow[]).map(toRecord);
+  }
+
   async findById(tx: Queryable, id: ServiceId): Promise<ServiceRecord | null> {
     const { rows } = await tx.query(`${SELECT} WHERE id = $1`, [id]);
     const row = rows[0] as ServiceRow | undefined;
@@ -174,7 +230,7 @@ export class ServicesRepository {
 
     if (sets.length === 0) {
       const existing = await this.findById(tx, id);
-      if (!existing) throw new Error(`service ${id} not found in the active workspace`);
+      if (!existing) throw new ServiceNotFoundError(id);
       return existing;
     }
 
@@ -189,7 +245,7 @@ export class ServicesRepository {
       params,
     );
     const row = rows[0] as ServiceRow | undefined;
-    if (!row) throw new Error(`service ${id} not found in the active workspace`);
+    if (!row) throw new ServiceNotFoundError(id);
     return toRecord(row);
   }
 

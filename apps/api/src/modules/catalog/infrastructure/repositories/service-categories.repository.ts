@@ -51,6 +51,21 @@ export class ServiceCategoriesRepository {
     return toRecord(rows[0] as ServiceCategoryRow);
   }
 
+  /**
+   * Every category in the active workspace, in the contract's deterministic
+   * order (`contracts/catalog.contract.md`: "deterministic sort_order
+   * behavior"). `sort_order` is not unique, so `name` then `id` break ties —
+   * without them two rows sharing a `sort_order` could come back in either
+   * order between calls. Scoped by the transaction's RLS context, so this is
+   * a per-workspace listing, never an unrestricted `findAll()`; the contract
+   * defines no cursor for categories (unlike services), and inventing one
+   * would be API surface this PR was not asked to add.
+   */
+  async list(tx: Queryable): Promise<ServiceCategoryRecord[]> {
+    const { rows } = await tx.query(`${SELECT} ORDER BY sort_order ASC, name ASC, id ASC`);
+    return (rows as ServiceCategoryRow[]).map(toRecord);
+  }
+
   /** Scoped by the transaction's active RLS context — never cross-workspace. */
   async findById(tx: Queryable, id: ServiceCategoryId): Promise<ServiceCategoryRecord | null> {
     const { rows } = await tx.query(`${SELECT} WHERE id = $1`, [id]);

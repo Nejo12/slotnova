@@ -9,8 +9,9 @@ and update this file.
 
 ## Current main
 
-`a54d3cfcc9bf984cdc103172fa96f4b5e1db1252` — merged PR #59 (Phase 2 PR-01
-— Catalog domain/schema foundation). Issue #58 is closed.
+`ac49545adaa164051babb36ffc7e277822bf6d71` — merged PR #62 (Phase 2 PR-02A
+— durable API idempotency foundation). Issue #61 is closed. PR #59 (PR-01,
+issue #58) merged before it.
 
 ## Current implementation state
 
@@ -27,29 +28,46 @@ merged** (PR #59): `services`/`service_categories` domain invariants,
 repositories, and migration `0006_catalog.sql` (RLS enabled+forced+policy,
 cross-workspace category association rejected by a composite FK).
 
-**Phase 2 PR-02 — Catalog API/contracts (issue #60) is PAUSED.** Its
-authoritative contract requires durable `Idempotency-Key` replay semantics
-for `POST /catalog/services`, and no durable API-request-idempotency
-facility existed on `main`. Silently adding one inside an API-only PR
-would have been an unauthorized schema change, so PR-02 was paused rather
-than faking in-memory replay.
-
 **Phase 2 PR-02A — Durable API idempotency foundation (issue #61) is
-under implementation** on branch `phase-2/pr-02a-durable-api-idempotency`:
-`apps/api/src/modules/platform/idempotency/` (`executeIdempotently` — the
-only exported entry point — plus canonical request fingerprinting) +
-migration `0007_platform_idempotency.sql` (`public.idempotent_requests`,
-RLS enabled+forced+policy, `UNIQUE (workspace_id, operation,
-idempotency_key)`). Supports only mutations whose protected database
-write and replay record commit atomically in one PostgreSQL transaction —
-an earlier split-transaction claim/lease/reclaim design was found unsafe
-by independent review and removed rather than patched. Provider-neutral —
-knows nothing about Catalog. No Catalog controller/endpoint work is
-included here.
+merged** (PR #62): `apps/api/src/modules/platform/idempotency/`
+(`executeIdempotently` — the only exported entry point — plus canonical
+request fingerprinting) + migration `0007_platform_idempotency.sql`
+(`public.idempotent_requests`, RLS enabled+forced+policy,
+`UNIQUE (workspace_id, operation, idempotency_key)`). It supports only
+mutations whose protected database write and replay record commit
+atomically in one PostgreSQL transaction — an earlier split-transaction
+claim/lease/reclaim design was found unsafe by independent review and
+removed rather than patched. Provider-neutral — knows nothing about
+Catalog.
 
-**PR-02 resumes once PR-02A merges**, consuming `executeIdempotently`
-directly with no further schema change for Catalog idempotency. No
-Scheduling/Booking/Calendar/Staff/Clients work exists yet; later Phase-2
+**Phase 2 PR-02 — Catalog API/contracts (issue #60) is complete** and
+delivered on branch `phase-2/pr-02-catalog-api-contracts`. Six endpoints
+under `/v1/catalog`: `GET|POST /services`, `GET|PATCH /services/{id}`,
+`GET|POST /categories`. `catalog:read` gates the reads and
+`catalog:manage` the writes, enforced by the existing server-authoritative
+`CapabilityGuard`. `POST /v1/catalog/services` requires an
+`Idempotency-Key` and consumes `executeIdempotently` with the claim, the
+`services` insert and the stored replay response in ONE transaction; no
+Catalog idempotency persistence and **no schema migration** were added
+(PR-02 consumes migrations `0006` + `0007` as-is). `CatalogModule` is now
+wired into `AppModule`.
+
+Supporting changes PR-02 made deliberately, each with a single
+justification: `zod-validation.ts` moved from `identity/http` to the shared
+`apps/api/src/http/validation/` HTTP boundary now that a second module
+consumes it; an `idempotency-conflict` (409) slug added to the problem
+catalogue; `CapabilityGuard` now publishes the workspace/user ids it
+already resolved so a gated handler in another module never re-implements
+authentication.
+
+**Open Founder decision:** which membership roles receive
+`catalog:read`/`catalog:manage` by default. PR-02 deliberately left
+`identity`'s `DEFAULT_ROLE_PERMISSIONS` untouched — no accepted artifact
+specifies that mapping, and inventing one would be unauthorized product
+policy. Until it is decided, Catalog capabilities must be granted by
+writing them onto a membership's `permissions`.
+
+No Scheduling/Booking/Calendar/Staff/Clients work exists yet; later Phase-2
 slices (PR-03 through PR-10) remain not implemented.
 
 ## Workflow-efficiency setup

@@ -1,6 +1,17 @@
 /**
- * Identity HTTP boundary's Zod <-> `problem+json` wiring (T064,
+ * The API's HTTP-boundary Zod <-> `problem+json` wiring (T064,
  * `docs/decisions/0004-validation-contract-integration.md`).
+ *
+ * Originally `modules/identity/http/zod-validation.ts` when `identity` was
+ * the only HTTP module. Relocated (verbatim — no behavior change) to
+ * `apps/api/src/http/validation/` in Phase-2 PR-02, alongside the shared
+ * `http/problem/` boundary it already depended on, because `catalog/http`
+ * became its second consumer and `module-public-entry-only`
+ * (`tooling/dependency-cruiser/.dependency-cruiser.cjs`) correctly forbids
+ * one module reaching into another module's `http/` internals. This is the
+ * API's HTTP boundary layer, not a `common/shared/utils` dumping ground:
+ * it sits next to `http/problem` and `http/correlation`, which follow the
+ * same convention.
  *
  * Per the decision record's resolved guidance (Risk 3 / "Implementation
  * follow-through"), this extends the existing `ProblemExceptionFilter`
@@ -22,8 +33,8 @@ import type { PipeTransform } from "@nestjs/common";
 import { createZodValidationPipe, type ZodDto } from "nestjs-zod";
 import type { ZodError, ZodType } from "zod";
 
-import { ProblemException } from "../../../http/problem/problem.exception.js";
-import type { ProblemValidationError } from "../../../http/problem/problem-types.js";
+import { ProblemException } from "../problem/problem.exception.js";
+import type { ProblemValidationError } from "../problem/problem-types.js";
 
 /**
  * Maps a Zod validation failure into the exact `problem+json` `validation`

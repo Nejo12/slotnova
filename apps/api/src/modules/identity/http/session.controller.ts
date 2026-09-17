@@ -50,7 +50,7 @@ import {
   type SignInRequestBody,
   type SignInResponseBody,
 } from "./session.schema.js";
-import { ZodValidationPipe } from "./zod-validation.js";
+import { ZodValidationPipe } from "../../../http/validation/zod-validation.js";
 
 const PROBLEM_JSON_CONTENT = {
   "application/problem+json": { schema: { $ref: getSchemaPath(ProblemDetailsDto) } },

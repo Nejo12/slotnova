@@ -4,7 +4,7 @@
  *
  * Zod-based since T064 (`docs/decisions/0004-validation-contract-integration.md`)
  * -- `createZodDto()` wraps each schema below as a DTO usable for both
- * runtime validation (`./zod-validation.js`'s `ZodValidationPipe`) and
+ * runtime validation (`../../../http/validation/zod-validation.js`'s `ZodValidationPipe`) and
  * OpenAPI generation (`@ApiBody`/`@ApiParam`/`@ZodResponse`).
  */
 import { createZodDto } from "nestjs-zod";

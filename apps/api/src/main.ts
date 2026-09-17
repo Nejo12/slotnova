@@ -83,7 +83,10 @@ export async function createApp(): Promise<NestFastifyApplication> {
     origin: security.corsOrigins.length > 0 ? [...security.corsOrigins] : false,
     credentials: security.corsOrigins.length > 0,
     methods: ["GET", "POST", "PATCH", "DELETE"],
-    allowedHeaders: ["Content-Type", CSRF_HEADER_NAME, REQUEST_ID_HEADER],
+    // `Idempotency-Key` is required by `POST /v1/catalog/services` (PR-02);
+    // without it on this allowlist a browser's preflight would reject the
+    // SPA's own retry-safe create before it ever reached the API.
+    allowedHeaders: ["Content-Type", CSRF_HEADER_NAME, REQUEST_ID_HEADER, "Idempotency-Key"],
   });
 
   return app;

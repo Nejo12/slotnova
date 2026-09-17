@@ -5,7 +5,7 @@
  * Zod-based since T064 (`docs/decisions/0004-validation-contract-integration.md`):
  * `nestjs-zod`'s `createZodDto()` wraps each schema below as a DTO class,
  * used both for runtime validation (via this module's
- * `ZodValidationPipe`, `./zod-validation.js`) and for the OpenAPI document
+ * `ZodValidationPipe`, `../../../http/validation/zod-validation.js`) and for the OpenAPI document
  * (via `@ApiBody`/`@ZodResponse` referencing the DTO) -- a single schema
  * declaration, no duplicated `@ApiProperty` decorators.
  */

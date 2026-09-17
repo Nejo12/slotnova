@@ -49,3 +49,7 @@ export {
   RequireCapability,
   REQUIRE_CAPABILITY_KEY,
 } from "./domain/policy/require-capability.decorator.js";
+export {
+  getRequestWorkspaceContext,
+  type RequestWorkspaceContext,
+} from "./domain/policy/request-workspace-context.js";

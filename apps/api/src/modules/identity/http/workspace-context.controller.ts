@@ -43,7 +43,7 @@ import {
   WorkspaceSwitchRequestDto,
   type WorkspaceSwitchRequestBody,
 } from "./workspace-context.schema.js";
-import { ZodValidationPipe } from "./zod-validation.js";
+import { ZodValidationPipe } from "../../../http/validation/zod-validation.js";
 
 const PROBLEM_JSON_CONTENT = {
   "application/problem+json": { schema: { $ref: getSchemaPath(ProblemDetailsDto) } },

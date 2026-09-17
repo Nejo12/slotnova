@@ -37,7 +37,7 @@ no PR combines schema + API + UI for more than one module at a time.
 
 ## PR-02A — Durable API idempotency foundation
 
-- **Status**: Complete (issue #61). A corrective, unplanned insertion
+- **Status**: Complete and merged (issue #61, PR #62). A corrective, unplanned insertion
   discovered mid-PR-02: the merged `contracts/catalog.contract.md`'s
   `POST /catalog/services` `Idempotency-Key` replay contract requires a
   durable, workspace-scoped claim/replay primitive that did not exist on
@@ -78,21 +78,37 @@ no PR combines schema + API + UI for more than one module at a time.
 
 ## PR-02 — Catalog API/contracts
 
-- **Status**: Paused pending PR-02A (issue #61) — do not resume until that
-  foundation merges. See PR-02A above for why.
+- **Status**: Complete (issue #60). Resumed and delivered once PR-02A
+  merged. Six endpoints live under `/v1/catalog`
+  (`GET|POST /services`, `GET|PATCH /services/{id}`,
+  `GET|POST /categories`), capability-gated by the existing
+  `CapabilityGuard`, with `problem+json` failures and no schema migration
+  (consumes `0006` + `0007` as-is).
 - **Dependency**: PR-01, **PR-02A** (durable API idempotency foundation —
   `POST /catalog/services`'s `Idempotency-Key` contract consumes
   `apps/api/src/modules/platform/idempotency/executeIdempotently`; PR-02
   does not add its own idempotency persistence).
-- **Files/areas**: `apps/api/src/modules/catalog/http`, runtime schemas,
-  generated OpenAPI delta, `packages/contracts` regeneration.
+- **Files/areas**: `apps/api/src/modules/catalog/{http,application,domain/policy}`,
+  narrow RLS-scoped repository list methods, `CatalogModule` wiring into
+  `AppModule`, generated OpenAPI delta, `packages/contracts` regeneration.
+  Supporting moves: `zod-validation.ts` relocated from `identity/http` to
+  the shared `apps/api/src/http/validation/` boundary (second consumer);
+  `idempotency-conflict` added to the problem catalogue; `CapabilityGuard`
+  now publishes the resolved workspace context to the authorized handler.
 - **Acceptance criteria**: endpoints per `contracts/catalog.contract.md`
-  live, capability-gated, `problem+json` failures.
+  live, capability-gated, `problem+json` failures. **Met.**
 - **Required tests**: Nest integration tests against real PostgreSQL;
   contract-drift test (generated client matches committed OpenAPI);
-  authorization tests (missing-capability → 403).
+  authorization tests (missing-capability → 403). **All present**, plus
+  idempotency replay/conflict proofs asserted on `services` row counts, not
+  only on matching HTTP responses.
 - **Constraints**: no hand-written DTOs duplicating the runtime schema; no
   add-on or staff-capability endpoints.
+- **Open Founder decision (not made here)**: which membership roles receive
+  `catalog:read`/`catalog:manage` by default. Enforcement is complete and
+  server-authoritative; `identity`'s `DEFAULT_ROLE_PERMISSIONS` is
+  deliberately unchanged because no accepted artifact specifies that
+  mapping.
 - **Out of scope**: Catalog management UI (deferred unless a later PR
   demonstrates Phase-2 UI needs it beyond service selection in Booking).
 
