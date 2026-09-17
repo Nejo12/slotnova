@@ -1,0 +1,212 @@
+/**
+ * `booking.bookings` access. Every method runs against a transaction that
+ * already has `app.workspace_id` set (RLS-scoped by construction, ADR-008) —
+ * this repository issues no unscoped query and exposes no `findAll()`, no
+ * cross-workspace lookup and no generic CRUD base class (AGENTS.md hard
+ * prohibitions; issue #68). There are exactly five methods, one per operation
+ * PR-05 has to prove; PR-07 adds a bounded list query when the approved
+ * `GET /bookings?from=&to=` contract needs one.
+ *
+ * ## Optimistic concurrency
+ *
+ * The three mutating methods all carry `AND version = $expectedVersion` in
+ * their own `WHERE` clause and report `updated = false` when that matches no
+ * row. The guard therefore lives in the write statement itself, never in a
+ * preceding `SELECT` — a read-then-write check as the sole protection is a
+ * hard prohibition, and PR-06 will prove the same guard under two genuinely
+ * concurrent connections.
+ *
+ * `AND status = 'confirmed'` is carried alongside it as defense in depth: the
+ * caller has already run the domain transition, so a row that changed state
+ * underneath it is a lost update, not a valid write.
+ *
+ * ## Temporal, not Date
+ *
+ * `to_json(...)#>>'{}'` renders a `timestamptz` as ISO-8601 with an explicit
+ * offset, which `Temporal.Instant.from` parses directly — unlike the default
+ * node-postgres parse (a JavaScript `Date`) or a bare `::text` cast (a
+ * space-separated form Temporal rejects). Same convention as
+ * `scheduling/infrastructure/repositories/*` (ADR-010).
+ */
+import { Temporal } from "@js-temporal/polyfill";
+import { Injectable } from "@nestjs/common";
+import type { Queryable } from "@slotnova/db";
+
+import type { WorkspaceId } from "../../../identity/index.js";
+import type { Booking } from "../../domain/booking.js";
+import type { BookingStatus } from "../../domain/booking-status.js";
+import type { BookingId, ServiceReferenceId } from "../../domain/ids.js";
+
+/**
+ * A persisted booking: the aggregate plus the two things only the database
+ * knows — its owning workspace and the generated blocking range's bounds.
+ */
+export interface BookingRecord extends Booking {
+  readonly workspaceId: WorkspaceId;
+  /** Inclusive lower bound of the generated half-open `blocking_range`. */
+  readonly blockingRangeStart: Temporal.Instant;
+  /** Exclusive upper bound of the generated half-open `blocking_range`. */
+  readonly blockingRangeEnd: Temporal.Instant;
+}
+
+interface BookingRow {
+  id: string;
+  workspace_id: string;
+  service_id: string;
+  starts_at: string;
+  service_duration_minutes: number;
+  pre_buffer_minutes: number;
+  post_buffer_minutes: number;
+  blocking_range_start: string;
+  blocking_range_end: string;
+  status: BookingStatus;
+  version: number;
+  cancelled_reason: string | null;
+}
+
+function toRecord(row: BookingRow): BookingRecord {
+  return {
+    id: row.id as BookingId,
+    workspaceId: row.workspace_id as WorkspaceId,
+    serviceId: row.service_id as ServiceReferenceId,
+    startsAt: Temporal.Instant.from(row.starts_at),
+    serviceDurationMinutes: row.service_duration_minutes,
+    preBufferMinutes: row.pre_buffer_minutes,
+    postBufferMinutes: row.post_buffer_minutes,
+    blockingRangeStart: Temporal.Instant.from(row.blocking_range_start),
+    blockingRangeEnd: Temporal.Instant.from(row.blocking_range_end),
+    status: row.status,
+    version: row.version,
+    cancelledReason: row.cancelled_reason,
+  };
+}
+
+const COLUMNS = `
+  id, workspace_id, service_id,
+  to_json(starts_at) #>> '{}' AS starts_at,
+  service_duration_minutes, pre_buffer_minutes, post_buffer_minutes,
+  to_json(lower(blocking_range)) #>> '{}' AS blocking_range_start,
+  to_json(upper(blocking_range)) #>> '{}' AS blocking_range_end,
+  status, version, cancelled_reason`;
+
+export interface RescheduleBookingRow {
+  readonly startsAt: Temporal.Instant;
+  readonly expectedVersion: number;
+  readonly nextVersion: number;
+}
+
+export interface CancelBookingRow {
+  readonly cancelledReason: string | null;
+  readonly expectedVersion: number;
+  readonly nextVersion: number;
+}
+
+export interface CompleteBookingRow {
+  readonly expectedVersion: number;
+  readonly nextVersion: number;
+}
+
+/**
+ * Result of a version-guarded UPDATE. `null` means the guard matched no row:
+ * the booking was concurrently mutated (or is no longer `confirmed`), which
+ * the application translates into the domain's stale-write condition.
+ */
+export type GuardedUpdateResult = BookingRecord | null;
+
+@Injectable()
+export class BookingsRepository {
+  /**
+   * Persists an already-constructed aggregate. `status`, `version` and
+   * `cancelled_reason` come from the domain rather than from database
+   * defaults, so the row is a faithful copy of `createBooking`'s output and
+   * the two cannot drift apart.
+   *
+   * `blocking_range` is NOT inserted: it is a STORED GENERATED column the
+   * database computes from the snapshot, which is what makes it trustworthy
+   * as PR-06's exclusion key.
+   */
+  async create(tx: Queryable, workspaceId: WorkspaceId, booking: Booking): Promise<BookingRecord> {
+    const { rows } = await tx.query(
+      `INSERT INTO public.bookings
+         (id, workspace_id, service_id, starts_at, service_duration_minutes,
+          pre_buffer_minutes, post_buffer_minutes, status, version, cancelled_reason)
+       VALUES ($1, $2, $3, $4::timestamptz, $5, $6, $7, $8::booking_status, $9, $10)
+       RETURNING ${COLUMNS}`,
+      [
+        booking.id,
+        workspaceId,
+        booking.serviceId,
+        booking.startsAt.toString(),
+        booking.serviceDurationMinutes,
+        booking.preBufferMinutes,
+        booking.postBufferMinutes,
+        booking.status,
+        booking.version,
+        booking.cancelledReason,
+      ],
+    );
+    return toRecord(rows[0] as BookingRow);
+  }
+
+  /** RLS-scoped point lookup. Returns `null` for another workspace's booking. */
+  async findById(tx: Queryable, id: BookingId): Promise<BookingRecord | null> {
+    const { rows } = await tx.query(`SELECT ${COLUMNS} FROM public.bookings WHERE id = $1`, [id]);
+    const row = rows[0] as BookingRow | undefined;
+    return row ? toRecord(row) : null;
+  }
+
+  /** `confirmed` -> `confirmed` at a new `starts_at`; the range follows automatically. */
+  async reschedule(
+    tx: Queryable,
+    id: BookingId,
+    input: RescheduleBookingRow,
+  ): Promise<GuardedUpdateResult> {
+    const { rows } = await tx.query(
+      `UPDATE public.bookings
+          SET starts_at = $2::timestamptz, version = $3, updated_at = now()
+        WHERE id = $1 AND version = $4 AND status = 'confirmed'
+       RETURNING ${COLUMNS}`,
+      [id, input.startsAt.toString(), input.nextVersion, input.expectedVersion],
+    );
+    const row = rows[0] as BookingRow | undefined;
+    return row ? toRecord(row) : null;
+  }
+
+  /**
+   * `confirmed` -> `cancelled`. The row and its `blocking_range` are kept
+   * intact — PR-06's exclusion predicate is `WHERE (status = 'confirmed')`,
+   * so the state change alone releases the capacity.
+   */
+  async cancel(
+    tx: Queryable,
+    id: BookingId,
+    input: CancelBookingRow,
+  ): Promise<GuardedUpdateResult> {
+    const { rows } = await tx.query(
+      `UPDATE public.bookings
+          SET status = 'cancelled', cancelled_reason = $2, version = $3, updated_at = now()
+        WHERE id = $1 AND version = $4 AND status = 'confirmed'
+       RETURNING ${COLUMNS}`,
+      [id, input.cancelledReason, input.nextVersion, input.expectedVersion],
+    );
+    const row = rows[0] as BookingRow | undefined;
+    return row ? toRecord(row) : null;
+  }
+
+  /** `confirmed` -> `completed`. Nothing is deleted; the booking stays historical. */
+  async complete(
+    tx: Queryable,
+    id: BookingId,
+    input: CompleteBookingRow,
+  ): Promise<GuardedUpdateResult> {
+    const { rows } = await tx.query(
+      `UPDATE public.bookings
+          SET status = 'completed', version = $2, updated_at = now()
+        WHERE id = $1 AND version = $3 AND status = 'confirmed'
+       RETURNING ${COLUMNS}`,
+      [id, input.nextVersion, input.expectedVersion],
+    );
+    const row = rows[0] as BookingRow | undefined;
+    return row ? toRecord(row) : null;
+  }
+}

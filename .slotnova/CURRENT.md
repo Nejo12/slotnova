@@ -9,10 +9,10 @@ and update this file.
 
 ## Current main
 
-`5740fa00a7dbdc4d86e13f6fea5e7cadbb953b8e` — merged PR #65 (Phase 2 PR-03 —
-Scheduling interval/recurrence domain). Issue #64 is closed. PR #63 (PR-02,
-issue #60), PR #62 (PR-02A, issue #61) and PR #59 (PR-01, issue #58) merged
-before it.
+`75babdc88aefe8100dbf39ff2f656709f6b5d9e5` — merged PR #67 (Phase 2 PR-04 —
+Scheduling persistence/API). Issue #66 is closed. PR #65 (PR-03, issue #64),
+PR #63 (PR-02, issue #60), PR #62 (PR-02A, issue #61) and PR #59 (PR-01,
+issue #58) merged before it.
 
 ## Current implementation state
 
@@ -94,8 +94,8 @@ produces no availability on 2026-10-01; (2)
 product promise of one-year booking visibility, and must not be silently
 widened.
 
-**Phase 2 PR-04 — Scheduling persistence/API (issue #66) is complete** on
-branch `phase-2/pr-04-scheduling-persistence-api`. Migration
+**Phase 2 PR-04 — Scheduling persistence/API (issue #66) is merged**
+(PR #67). Migration
 `0008_scheduling.sql` adds `availability_patterns` and
 `availability_exceptions` — workspace-scoped only (no
 `resource_id`/`location_id`/`staff_id`), RLS enabled + FORCE + workspace
@@ -110,8 +110,24 @@ merged PR-03 domain and reimplements none of its recurrence/DST/interval
 logic; it rejects an inverted range or one above 370 days with a 422 before
 any database access. `SchedulingModule` is wired into `AppModule`.
 
-**Open Founder decisions carried by PR-04:**
-1. **Pattern-history precedence (new).** PR-04 found no accepted artifact
+**Founder decision on PR #67 — pattern-history semantics (RATIFIED, now
+authoritative):** a workspace may have effective-dated availability-pattern
+history, but two pattern effective windows **must not overlap**; windows use
+the approved half-open `[effectiveFrom, effectiveUntil)` semantics, so
+adjacent windows are valid; there is **no** newest-wins/last-created-wins/
+id-based precedence rule, because resolve must never have to choose between
+two simultaneously-effective patterns. PR-04's per-workspace advisory-lock +
+same-transaction overlap check is accepted for that slice. **PR-06 must
+promote this invariant to a PostgreSQL `EXCLUDE` constraint in the same
+additive migration that introduces `btree_gist`**, provided the semantics are
+unchanged; the application check then remains only for friendly 422
+translation. PR-05 deliberately did NOT promote it early — `btree_gist` is
+PR-06's.
+
+**Open Founder decision carried by PR-04 (item 1 below is now resolved, kept
+for the record):**
+1. **Pattern-history precedence — RESOLVED by the ratification above.**
+   PR-04 found no accepted artifact
    defining precedence between two simultaneously-effective availability
    patterns, and did not invent one. It instead **proposes** the invariant
    the approved model already implies (`spec.md` Key Entities "one pattern
@@ -122,15 +138,56 @@ any database access. `SchedulingModule` is wired into `AppModule`.
    arises. Enforced in the application layer under a per-workspace
    transaction advisory lock; promoting it to a database `EXCLUDE`
    constraint is a one-line additive migration once PR-06 installs
-   `btree_gist`. **Needs Founder ratification.**
+   `btree_gist`. **Ratified by the Founder on PR #67 (above).**
 2. **Role→capability mapping.** Which membership roles receive
    `scheduling:read`/`scheduling:manage` by default is unspecified, exactly
    like the still-open `catalog:read`/`catalog:manage` question. PR-04
    deliberately left `identity`'s `DEFAULT_ROLE_PERMISSIONS` untouched;
    grant by writing the capability onto a membership's `permissions`.
 
-No Booking/Calendar/Staff/Clients work exists yet; later Phase-2 slices
-(PR-05 through PR-10) remain not implemented.
+**Phase 2 PR-05 — Booking aggregate/schema/state machine (issue #68) is
+complete** on branch `phase-2/pr-05-booking-aggregate-schema`. Migration
+`0009_booking.sql` adds the `booking_status` enum (exactly `confirmed`,
+`completed`, `cancelled` — no `draft`, no `pending`), the IMMUTABLE
+`public.booking_blocking_range()` helper and `public.bookings`: snapshotted
+`service_duration_minutes`/`pre_buffer_minutes`/`post_buffer_minutes`, a
+STORED GENERATED half-open `blocking_range` =
+`[starts_at - pre, starts_at + duration + post)`, an optimistic `version`
+(default 1), `cancelled_reason`, RLS enabled + FORCE + workspace policy, and
+SELECT + INSERT + UPDATE for the app role (no DELETE — cancellation is a
+state transition that keeps the historical row). `service_id` is an OPAQUE
+Catalog reference with deliberately no foreign key; the only FK is the tenant
+one. There is no `resource_id`/`location_id`/`staff_id`/`client_id` column.
+`apps/api/src/modules/booking/` holds the pure aggregate, one
+workspace-scoped repository whose three mutating statements each carry
+`AND version = $expectedVersion AND status = 'confirmed'`, and four use
+cases (`create`/`reschedule`/`cancel`/`complete`). There is **no
+`BookingModule` and no HTTP/OpenAPI surface** — PR-07 adds both, exactly as
+PR-03 shipped Scheduling's domain and PR-04 added the module with its
+controllers. Deliberately absent: `btree_gist`, any exclusion constraint,
+any overlap/concurrency proof (all PR-06), and any outbox/audit emission (no
+Phase-2 consumer exists — `research.md`, FR-027).
+
+**Founder-ratification note carried by PR-05 (resolved from the accepted
+text, not invented):** `data-model.md`'s transition table contains a general
+"`cancelled`/`completed` | any command | 409 terminal state" row AND
+command-specific Idempotency cells granting a same-command no-op
+("re-cancelling an already-`cancelled` booking with the same version is a
+no-op success"; "re-completing with same version is a no-op success").
+PR-05 reads the specific rows as exceptions to the general one, because each
+command row's own Invalid-transition cell names only the OTHER terminal
+state, `contracts/booking.contract.md` states the cancel no-op outright
+("cancelling an already-`cancelled` booking with a matching version returns
+`200` with the current state (no-op), not an error"), and `tasks.md` PR-05
+requires tests for "idempotent no-ops **and** terminal-state rejection".
+"Same version" is read as **matching the CURRENT row's version** (the
+contract's own word is "matching"), so a naive retry carrying the
+pre-transition version is a stale write, not a no-op. The version check runs
+before the state check. If the Founder intended a blanket 409 on every
+terminal-state command, only the two no-op branches need removing.
+
+Later Phase-2 slices (PR-06 through PR-10) remain not implemented; no
+Calendar/Staff/Clients work exists yet.
 
 ## Workflow-efficiency setup
 
