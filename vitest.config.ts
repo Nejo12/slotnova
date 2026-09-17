@@ -47,6 +47,12 @@ export default defineConfig({
         ),
       },
       {
+        find: "@slotnova/testing/property",
+        replacement: fileURLToPath(
+          new URL("./packages/testing/src/property/index.ts", import.meta.url),
+        ),
+      },
+      {
         find: "@slotnova/testing",
         replacement: fileURLToPath(new URL("./packages/testing/src/index.ts", import.meta.url)),
       },

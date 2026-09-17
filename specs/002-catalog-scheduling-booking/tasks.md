@@ -114,6 +114,22 @@ no PR combines schema + API + UI for more than one module at a time.
 
 ## PR-03 — Scheduling interval/recurrence domain
 
+- **Status**: Complete (issue #64). `apps/api/src/modules/scheduling/domain/`
+  only — `interval.ts` (immutable half-open `[start,end)` value over
+  `Temporal.Instant`), `interval-set.ts`
+  (normalize/union/intersect/subtract), `wall-clock.ts` (IANA validation +
+  the single documented DST resolution policy), `recurrence.ts` (weekly
+  local-time rules, bounded expansion, `MAX_EXPANSION_HORIZON_DAYS = 370`),
+  `scheduling-errors.ts`, plus `scheduling/index.ts` as the module public
+  entry. `@js-temporal/polyfill@0.5.1` added to `apps/api` (exact pin per
+  `docs/decisions/0002-version-pins.md`); no other dependency moved. **No
+  migration, no repository, no HTTP/OpenAPI layer, no NestJS module, no
+  Booking awareness, no `resourceId`/`locationId`/`staffId`** — all of that
+  is PR-04+. DST policy: repeated local hour → earlier occurrence
+  (`research.md` R-DST); missing local hour → clamped to the offset
+  transition, so an occurrence inside the gap is skipped rather than shifted
+  (FR-014). Cross-midnight recurrence was **not** implemented: the merged
+  planning authorises only per-local-day wall-time intervals.
 - **Dependency**: none beyond Phase-1 platform (can run parallel to
   PR-01/02).
 - **Files/areas**: `apps/api/src/modules/scheduling/domain` — pure
