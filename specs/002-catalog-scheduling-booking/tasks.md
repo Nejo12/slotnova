@@ -147,6 +147,27 @@ no PR combines schema + API + UI for more than one module at a time.
 
 ## PR-04 — Scheduling persistence/API
 
+- **Status**: Complete (issue #66). Migration
+  `packages/db/migrations/0008_scheduling.sql` creates
+  `availability_patterns` + `availability_exceptions` (both workspace-scoped
+  only, RLS enabled + FORCE + workspace policy, app role granted SELECT +
+  INSERT only because the contract has no update/delete endpoint). Four
+  endpoints under `/v1/scheduling`: `GET|POST /availability-patterns`,
+  `POST /availability-exceptions`, `POST /availability/resolve`.
+  `scheduling:read` gates the list and resolve, `scheduling:manage` the
+  writes, via the existing `CapabilityGuard`. `resolve` composes the merged
+  PR-03 domain only — it reimplements no recurrence, DST, normalisation or
+  interval-subtraction logic — and rejects a range over
+  `MAX_EXPANSION_HORIZON_DAYS` (370) before any database access.
+  `effectiveUntil` is EXCLUSIVE end to end. **Pattern-history invariant
+  (PROPOSED, awaiting Founder ratification):** a new pattern whose effective
+  window overlaps an existing one is rejected (422), so at most one pattern
+  is ever effective on a date and no precedence rule between simultaneously
+  effective patterns is needed — or invented. It is enforced in the
+  application layer under a per-workspace transaction advisory lock rather
+  than by an `EXCLUDE` constraint, because `btree_gist` belongs to PR-06.
+  No `btree_gist`, no Booking/Calendar/Catalog reference, no
+  `resource_id`/`location_id`/`staff_id`.
 - **Dependency**: PR-03.
 - **Files/areas**: `apps/api/src/modules/scheduling/{infrastructure,http}`,
   migration for `availability_patterns`, `availability_exceptions` (both
