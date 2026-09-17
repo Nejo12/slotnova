@@ -3,9 +3,9 @@
  * already has `app.workspace_id` set (RLS-scoped by construction, ADR-008) —
  * this repository issues no unscoped query and exposes no `findAll()`, no
  * cross-workspace lookup and no generic CRUD base class (AGENTS.md hard
- * prohibitions; issue #68). There are exactly five methods, one per operation
- * PR-05 has to prove; PR-07 adds a bounded list query when the approved
- * `GET /bookings?from=&to=` contract needs one.
+ * prohibitions; issue #68). PR-05 added exactly five methods, one per
+ * operation it had to prove; PR-07 adds the sixth — {@link list}, the bounded
+ * window query the approved `GET /bookings?from=&to=&status=` contract needs.
  *
  * ## Optimistic concurrency
  *
@@ -126,6 +126,17 @@ function translateOverlapViolation(error: unknown): never {
   throw error;
 }
 
+/**
+ * A bounded half-open `[from, to)` window over `starts_at`, plus an optional
+ * single-status filter. Both bounds are required — this repository never
+ * lists unbounded.
+ */
+export interface BookingListQuery {
+  readonly from: Temporal.Instant;
+  readonly to: Temporal.Instant;
+  readonly status?: BookingStatus | undefined;
+}
+
 export interface RescheduleBookingRow {
   readonly startsAt: Temporal.Instant;
   readonly expectedVersion: number;
@@ -190,6 +201,52 @@ export class BookingsRepository {
       )
       .catch(translateOverlapViolation);
     return toRecord(result.rows[0] as BookingRow);
+  }
+
+  /**
+   * The bounded window query behind `GET /v1/bookings?from=&to=&status=`
+   * (PR-07, issue #73). NOT a `findAll()`: `from`/`to` are both required by
+   * the boundary schema, so every call is bounded by an explicit half-open
+   * window, and RLS scopes it to the active workspace like every other
+   * method here.
+   *
+   * ## Which instant the window filters on
+   *
+   * `starts_at`, half-open `[from, to)` — the booking's own contract field,
+   * the one the caller sent and the one the response echoes. The accepted
+   * contract gives the parameters (`?from=&to=`) but not the column, and the
+   * alternative (matching `blocking_range &&` the window) would return
+   * bookings whose *appointment* lies outside the requested window purely
+   * because a buffer reached into it, which no accepted artifact asks for.
+   * Filtering on `starts_at` is also the only choice a client can reason
+   * about without knowing the Service's buffers.
+   *
+   * ## Deterministic ordering
+   *
+   * `starts_at ASC, id ASC`. The `id` tiebreak is not decoration: two
+   * bookings in one workspace can share a `starts_at` (they cannot both be
+   * `confirmed`, but a cancelled one and a confirmed one can), and without it
+   * PostgreSQL is free to return them in either order.
+   *
+   * No cursor/limit parameter: the accepted contract defines neither, and the
+   * window itself is the bound. No resource/staff/location/client filter
+   * exists here or anywhere — those dimensions do not exist in Phase 2.
+   */
+  async list(tx: Queryable, query: BookingListQuery): Promise<BookingRecord[]> {
+    const conditions = ["starts_at >= $1::timestamptz", "starts_at < $2::timestamptz"];
+    const params: unknown[] = [query.from.toString(), query.to.toString()];
+    if (query.status !== undefined) {
+      conditions.push(`status = $${params.length + 1}::booking_status`);
+      params.push(query.status);
+    }
+
+    const { rows } = await tx.query(
+      `SELECT ${COLUMNS} FROM public.bookings
+        WHERE ${conditions.join(" AND ")}
+        ORDER BY starts_at ASC, id ASC`,
+      params,
+    );
+    return (rows as BookingRow[]).map(toRecord);
   }
 
   /** RLS-scoped point lookup. Returns `null` for another workspace's booking. */

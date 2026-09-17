@@ -38,6 +38,30 @@ export const PROBLEM_CATALOGUE: Readonly<Record<ProblemSlug, { title: string; st
     title: "This idempotency key was already used with a different request.",
     status: 409,
   },
+  /**
+   * The three Booking conflict classes `contracts/booking.contract.md`'s
+   * "Problem+json conflict types" table names, at the 409 that table gives
+   * each of them (Phase-2 PR-07, issue #73). They are deliberately three
+   * separate slugs rather than one shared `conflict`: the accepted
+   * `data-model.md` requires "distinct `type` URIs in the problem body ... so
+   * clients can branch UX correctly" — refetch-and-retry for a stale write,
+   * pick-another-slot for an overlap, refresh-the-view for a command that is
+   * no longer legal. They carry no Booking vocabulary in this file beyond the
+   * slug itself, exactly like `idempotency-conflict` carries none of
+   * Catalog's.
+   */
+  "booking-overlap": {
+    title: "That time overlaps an existing booking.",
+    status: 409,
+  },
+  "stale-write": {
+    title: "This record changed since you loaded it.",
+    status: 409,
+  },
+  "invalid-transition": {
+    title: "That action is not valid from the record's current state.",
+    status: 409,
+  },
   "rate-limited": { title: "Too many requests.", status: 429 },
   "not-found": { title: "The requested resource could not be found.", status: 404 },
   internal: { title: "An unexpected error occurred.", status: 500 },

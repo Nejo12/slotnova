@@ -23,13 +23,18 @@ import {
   withWorkspaceContext,
   type WorkspaceContext,
 } from "../../platform/tenancy/with-workspace-context.js";
-import { rescheduleBooking } from "../domain/booking.js";
-import { BookingNotFoundError, StaleBookingVersionError } from "../domain/booking-errors.js";
+import { bookingBlockingInterval, rescheduleBooking } from "../domain/booking.js";
+import {
+  BookingNotFoundError,
+  BookingOverlapError,
+  StaleBookingVersionError,
+} from "../domain/booking-errors.js";
 import type { BookingId } from "../domain/ids.js";
 import {
   BookingsRepository,
   type BookingRecord,
 } from "../infrastructure/repositories/bookings.repository.js";
+import { RequestedBookingOverlapError } from "./booking-application-errors.js";
 
 export interface RescheduleBookingCommand {
   readonly bookingId: BookingId;
@@ -58,11 +63,23 @@ export class RescheduleBookingUseCase {
         startsAt: command.startsAt,
       });
 
-      const updated = await this.bookings.reschedule(tx, command.bookingId, {
-        startsAt: next.startsAt,
-        expectedVersion: command.expectedVersion,
-        nextVersion: next.version,
-      });
+      // Same overlap enrichment as creation (PR-07): the requested window is
+      // the ALREADY-SNAPSHOTTED duration/buffers applied to the new
+      // `startsAt`, so restating it re-reads nothing and reveals nothing
+      // about whichever confirmed booking is in the way.
+      const updated = await this.bookings
+        .reschedule(tx, command.bookingId, {
+          startsAt: next.startsAt,
+          expectedVersion: command.expectedVersion,
+          nextVersion: next.version,
+        })
+        .catch((error: unknown) => {
+          if (error instanceof BookingOverlapError) {
+            const requested = bookingBlockingInterval(next);
+            throw new RequestedBookingOverlapError(requested.start, requested.end);
+          }
+          throw error;
+        });
       if (updated !== null) return updated;
 
       // The guard matched no row: something committed between the read and

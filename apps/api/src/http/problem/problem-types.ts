@@ -28,6 +28,9 @@ export type ProblemSlug =
   | "already-member"
   | "workspace-unavailable"
   | "idempotency-conflict"
+  | "booking-overlap"
+  | "stale-write"
+  | "invalid-transition"
   | "rate-limited"
   | "not-found"
   | "internal";

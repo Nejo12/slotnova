@@ -275,6 +275,106 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/v1/bookings": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List this workspace's bookings in a bounded time window
+     * @description Half-open `[from, to)` over each booking's `startsAt`, ordered `startsAt` then `id`. Both bounds are required — this endpoint never lists unbounded. There is no resource, staff, location or client filter, and no pagination cursor.
+     */
+    get: operations["BookingsController_list"];
+    put?: never;
+    /**
+     * Create a booking, directly at `confirmed`
+     * @description The caller sends `serviceId` and `startsAt` only. The server reads the current Service and snapshots its duration and buffers; the blocking range and `confirmed`/version 1 are server-derived and cannot be supplied. There is no draft or pending state, and no `/confirm` step.
+     */
+    post: operations["BookingsController_create"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/bookings/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["BookingsController_detail"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/bookings/{id}/reschedule": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Move a confirmed booking to a new time
+     * @description Changes `startsAt` and nothing else. The Service snapshot is NOT re-read: `serviceId`, duration and both buffers are preserved exactly, so a later Service edit never retroactively changes an existing booking's blocking window. Not idempotent — each reschedule is a distinct intent, guarded only by `version`.
+     */
+    post: operations["BookingsController_reschedule"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/bookings/{id}/cancel": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Cancel a booking
+     * @description Founder-ratified semantics: `confirmed` + matching version -> `cancelled` at version + 1; already `cancelled` + matching CURRENT version -> 200 with the current booking and NO write at all (version, `updated_at` and `cancelledReason` are untouched); a stale version -> `stale-write`; a `completed` booking -> `invalid-transition`. The row and its historical blocking range are preserved — capacity is released by the state change alone.
+     */
+    post: operations["BookingsController_cancel"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/bookings/{id}/complete": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Mark a booking completed
+     * @description Founder-ratified semantics: `confirmed` + matching version -> `completed` at version + 1; already `completed` + matching CURRENT version -> 200 with the current booking and NO write; a stale version -> `stale-write`; a `cancelled` booking -> `invalid-transition`. A completed booking stays a historical record — nothing is deleted.
+     */
+    post: operations["BookingsController_complete"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -472,6 +572,56 @@ export interface components {
         start: string;
         end: string;
       }[];
+    };
+    BookingListResponseDto_Output: {
+      items: {
+        id: string;
+        serviceId: string;
+        startsAt: string;
+        serviceDurationMinutes: number;
+        preBufferMinutes: number;
+        postBufferMinutes: number;
+        blockingRange: {
+          start: string;
+          end: string;
+        };
+        /** @enum {string} */
+        status: "confirmed" | "completed" | "cancelled";
+        version: number;
+        cancelledReason: string | null;
+      }[];
+    };
+    BookingResponseDto_Output: {
+      id: string;
+      serviceId: string;
+      startsAt: string;
+      serviceDurationMinutes: number;
+      preBufferMinutes: number;
+      postBufferMinutes: number;
+      blockingRange: {
+        start: string;
+        end: string;
+      };
+      /** @enum {string} */
+      status: "confirmed" | "completed" | "cancelled";
+      version: number;
+      cancelledReason: string[];
+    };
+    CreateBookingRequestDto: {
+      /** Format: uuid */
+      serviceId: string;
+      startsAt: string;
+    };
+    RescheduleBookingRequestDto: {
+      version: number;
+      startsAt: string;
+    };
+    CancelBookingRequestDto: {
+      version: number;
+      reason?: string;
+    };
+    CompleteBookingRequestDto: {
+      version: number;
     };
     ProblemDetailsDto: {
       type: string;
@@ -1478,6 +1628,403 @@ export interface operations {
       };
       /** @description `from` is not strictly before `to`, or the window exceeds 370 days (`validation`). */
       422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+    };
+  };
+  BookingsController_list: {
+    parameters: {
+      query: {
+        status?: "confirmed" | "completed" | "cancelled";
+        to: string;
+        from: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BookingListResponseDto_Output"];
+        };
+      };
+      /** @description Malformed body/query or an unknown property — including `clientId`, `resourceId`, `locationId` and `staffId`, none of which exist in Phase 2 (`validation`). */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description No/invalid session (`session-invalid`). */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description Missing `booking:read`, or no active workspace (`forbidden`). */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description `to` is not strictly after `from` (`validation`). */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+    };
+  };
+  BookingsController_create: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Client-supplied replay key. Retrying with the same key and the same body returns the original 201 response and creates no second booking (and no spurious overlap conflict against the booking it already created); the same key with a materially different body is a 409 conflict. */
+        "Idempotency-Key": string;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateBookingRequestDto"];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BookingResponseDto_Output"];
+        };
+      };
+      /** @description Malformed body, an unknown property (`clientId`/`resourceId`/`locationId`/`staffId` included), or a missing `Idempotency-Key` (`validation`). */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description No/invalid session (`session-invalid`). */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description Missing `booking:create`, or no active workspace (`forbidden`). */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description The requested window overlaps an existing confirmed booking (`booking-overlap`), or the `Idempotency-Key` was reused with a different request (`idempotency-conflict`). */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description The referenced service is unavailable in this workspace or is not active (`validation`). */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+    };
+  };
+  BookingsController_detail: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BookingResponseDto_Output"];
+        };
+      };
+      /** @description Malformed body/query or an unknown property — including `clientId`, `resourceId`, `locationId` and `staffId`, none of which exist in Phase 2 (`validation`). */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description No/invalid session (`session-invalid`). */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description Missing `booking:read`, or no active workspace (`forbidden`). */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description No such booking in the active workspace (`not-found`). A booking belonging to another workspace is indistinguishable from one that does not exist. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+    };
+  };
+  BookingsController_reschedule: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RescheduleBookingRequestDto"];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BookingResponseDto_Output"];
+        };
+      };
+      /** @description Malformed body/query or an unknown property — including `clientId`, `resourceId`, `locationId` and `staffId`, none of which exist in Phase 2 (`validation`). */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description No/invalid session (`session-invalid`). */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description Missing `booking:edit`, or no active workspace (`forbidden`). */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description No such booking in the active workspace (`not-found`). A booking belonging to another workspace is indistinguishable from one that does not exist. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description The new window overlaps an existing confirmed booking (`booking-overlap`), `version` was stale (`stale-write`), or the booking is no longer `confirmed` (`invalid-transition`). */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+    };
+  };
+  BookingsController_cancel: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CancelBookingRequestDto"];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BookingResponseDto_Output"];
+        };
+      };
+      /** @description Malformed body/query or an unknown property — including `clientId`, `resourceId`, `locationId` and `staffId`, none of which exist in Phase 2 (`validation`). */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description No/invalid session (`session-invalid`). */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description Missing `booking:cancel`, or no active workspace (`forbidden`). */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description No such booking in the active workspace (`not-found`). A booking belonging to another workspace is indistinguishable from one that does not exist. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description `version` did not match the booking's current version (`stale-write`), or the command is not valid from its current state (`invalid-transition`). */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+    };
+  };
+  BookingsController_complete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CompleteBookingRequestDto"];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BookingResponseDto_Output"];
+        };
+      };
+      /** @description Malformed body/query or an unknown property — including `clientId`, `resourceId`, `locationId` and `staffId`, none of which exist in Phase 2 (`validation`). */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description No/invalid session (`session-invalid`). */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description Missing `booking:complete`, or no active workspace (`forbidden`). */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description No such booking in the active workspace (`not-found`). A booking belonging to another workspace is indistinguishable from one that does not exist. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description `version` did not match the booking's current version (`stale-write`), or the command is not valid from its current state (`invalid-transition`). */
+      409: {
         headers: {
           [name: string]: unknown;
         };
