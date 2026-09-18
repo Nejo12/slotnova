@@ -35,7 +35,15 @@ export class ApiRequestError extends Error {
   }
 }
 
-function readCsrfCookie(): string {
+/**
+ * Reads the double-submit CSRF cookie the API issues
+ * (`apps/api/src/modules/platform/security/csrf.ts`), which every
+ * state-changing request must mirror into `x-csrf-token`. Exported because
+ * the Booking surface's generated-contract client needs exactly the same
+ * value for its mutations — a second real consumer, so promoting it is
+ * cheaper and safer than a second copy of the cookie-parsing rule.
+ */
+export function readCsrfCookie(): string {
   for (const name of ["__Host-slotnova_csrf", "slotnova_csrf"]) {
     const pair = document.cookie.split("; ").find((entry) => entry.startsWith(`${name}=`));
     if (pair) return pair.slice(name.length + 1);

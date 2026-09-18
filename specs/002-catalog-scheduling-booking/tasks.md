@@ -352,6 +352,24 @@ no PR combines schema + API + UI for more than one module at a time.
 
 ## PR-08 — Booking frontend flow
 
+- **Status**: Complete (issue #77). `apps/web/src/features/booking` adds the
+  routes `/bookings`, `/bookings/new` and `/bookings/:bookingId` over the
+  generated `@slotnova/contracts` client. The create journey is Service ->
+  start time -> check-answers Review -> submit, with Draft/Review held
+  purely in component state — no server-side draft or pending exists, and
+  abandoning the flow creates nothing. One `Idempotency-Key` per intended
+  submission: reused for a retry of the same Service+time, regenerated once
+  either is materially edited. Detail exposes reschedule, cancel (with the
+  shared destructive confirmation) and complete, each gated on the
+  authoritative `GET /v1/me` capability list AND the booking's
+  server-returned status, so a terminal-state booking never presents an
+  action that would be an invalid transition. `booking-overlap`,
+  `stale-write`, `invalid-transition`, `validation`, `forbidden` and
+  `session-invalid` each render a distinct experience, branching only on the
+  problem+json `type` slug. All query keys are workspace-scoped via `wsKey`.
+  No client/customer/staff/resource/location UI, no Calendar, **no backend,
+  schema, migration, contract-shape or default-role-mapping change** — the
+  only non-frontend edits are E2E harness seed data and Vitest MSW aliases.
 - **Dependency**: PR-07 (generated client available).
 - **Files/areas**: `apps/web/src/features/booking` — create/review/detail/
   cancel flow, TanStack Query workspace-scoped keys, SCSS Modules +

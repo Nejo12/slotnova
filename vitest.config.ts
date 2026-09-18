@@ -52,6 +52,20 @@ export default defineConfig({
           new URL("./packages/testing/src/property/index.ts", import.meta.url),
         ),
       },
+      // The MSW subpath exports must be listed BEFORE the package root:
+      // vite alias `find` is a prefix match, so "@slotnova/testing" would
+      // otherwise swallow "@slotnova/testing/msw..." and resolve it to
+      // `src/index.ts/msw`.
+      {
+        find: "@slotnova/testing/msw/node",
+        replacement: fileURLToPath(new URL("./packages/testing/src/msw/node.ts", import.meta.url)),
+      },
+      {
+        find: "@slotnova/testing/msw",
+        replacement: fileURLToPath(
+          new URL("./packages/testing/src/msw/handlers.ts", import.meta.url),
+        ),
+      },
       {
         find: "@slotnova/testing",
         replacement: fileURLToPath(new URL("./packages/testing/src/index.ts", import.meta.url)),

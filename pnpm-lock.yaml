@@ -276,6 +276,9 @@ importers:
       '@slotnova/eslint-config':
         specifier: workspace:*
         version: link:../../packages/eslint-config
+      '@slotnova/testing':
+        specifier: workspace:*
+        version: link:../../packages/testing
       '@slotnova/tsconfig':
         specifier: workspace:*
         version: link:../../packages/tsconfig
