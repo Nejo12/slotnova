@@ -9,18 +9,19 @@ and update this file.
 
 ## Current main
 
-`aed8552fbde9d3ca4a776eaa472e72e717711200` — merged PR #76 (Phase 2 PR-07A —
-Booking list-window + contract reconciliation). Issue #75 is closed. PR #74
-(PR-07, issue #73), PR #72 (PR-06, issue #70), PR #69 (PR-05, issue #68),
-PR #67 (PR-04, issue #66), PR #65 (PR-03, issue #64), PR #63 (PR-02,
-issue #60), PR #62 (PR-02A, issue #61) and PR #59 (PR-01, issue #58) merged
-before it.
+`79d8bcfcb6f094ab0e9eb64903b3d39f39fee0db` — merged PR #78 (Phase 2 PR-08 —
+Booking frontend flow). Issue #77 is closed. PR #76 (PR-07A, issue #75),
+PR #74 (PR-07, issue #73), PR #72 (PR-06, issue #70), PR #69 (PR-05,
+issue #68), PR #67 (PR-04, issue #66), PR #65 (PR-03, issue #64), PR #63
+(PR-02, issue #60), PR #62 (PR-02A, issue #61) and PR #59 (PR-01,
+issue #58) merged before it.
 
 The Phase-2 Catalog, Scheduling and Booking APIs are complete: Catalog
 (PR-01/PR-02), Scheduling (PR-03/PR-04/PR-05), Booking domain/overlap
 (PR-06) and the Booking HTTP surface + generated contracts (PR-07/PR-07A).
 
-Issue #77 (Phase 2 PR-08 — Booking frontend flow) is the active slice.
+Issue #79 (Phase 2 corrective — OpenAPI nullable scalar generation) is the
+active slice. PR-09 (Calendar) is NOT started.
 Issue #71 is a **closed duplicate of #70** and carries no separate work.
 
 ## Current implementation state
@@ -316,7 +317,7 @@ state-machine change. The only generated-artifact delta is the one
 openapi.json` and `types.ts` — no path, parameter, schema or response shape
 moved.
 
-**Phase 2 PR-08 — Booking frontend flow (issue #77) is the active slice.**
+**Phase 2 PR-08 — Booking frontend flow (issue #77) is merged** (PR #78).
 It adds `apps/web/src/features/booking` — the first product feature in the
 web SPA — consuming the generated `@slotnova/contracts` client only:
 
@@ -348,14 +349,30 @@ Later Phase-2 slices (PR-09 Calendar, PR-10 E2E/hardening/exit) remain not
 implemented; no Calendar/Staff/Clients work exists yet. PR-08 provides the
 Booking routes PR-09 will navigate into but implements no Calendar itself.
 
-**Known contract defect, deliberately NOT fixed in PR-08** (it would be a
-backend/contract change outside this slice): `BookingResponseDto_Output.
-cancelledReason` and `ServiceListResponseDto_Output.nextCursor` are rendered
-in the OpenAPI document as `array of string` although the runtime Zod
-schemas declare them `string | null` (the list DTO's `cancelledReason`
-renders correctly as `string | null`). The Booking frontend reads neither
-field. This needs a Founder decision on where the nullable-rendering fix
-belongs.
+**Phase 2 corrective — OpenAPI nullable scalar generation (issue #79) is
+the active slice**, on branch `fix/openapi-nullable-scalars`. It resolves
+the contract defect PR-08 recorded and deliberately left alone: six
+top-level response properties rendered as `array of string` although their
+runtime Zod schemas declare them `string | null` —
+`BookingResponseDto_Output.cancelledReason`,
+`ServiceListResponseDto_Output.nextCursor`,
+`ServiceResponseDto_Output.categoryId`,
+`AvailabilityPatternResponseDto_Output.effectiveFrom` / `.effectiveUntil`
+and `AvailabilityExceptionResponseDto_Output.reason`.
+
+Root cause: Zod 4 emits a bare nullable scalar as JSON Schema's compact
+`type: ["string", "null"]`; `nestjs-zod` forwards a DTO's top-level
+properties to `@nestjs/swagger` verbatim; and `@nestjs/swagger` reads an
+array-valued `type` as its own `@ApiProperty({ type: [String] })`
+"array of" vocabulary, keeping element `[0]` and discarding `"null"`.
+Nested schemas were never scanned, which is why the Booking LIST DTO's
+nested `cancelledReason` was always correct. Fixed generically by the
+project-owned `createZodDto` in `apps/api/src/http/openapi/zod-dto.ts`,
+which de-sugars every compact multi-type node into the OpenAPI 3.0
+`{ type, nullable: true }` form before `@nestjs/swagger` sees it. No
+runtime, endpoint, serialization or schema/migration change.
+
+PR-09 (Calendar) remains NOT started.
 
 ## Workflow-efficiency setup
 

@@ -49,7 +49,7 @@
  * carry an explicit UTC offset, exactly as `scheduling.schema.ts` requires.
  */
 import { Temporal } from "@js-temporal/polyfill";
-import { createZodDto } from "nestjs-zod";
+import { createZodDto } from "../../../http/openapi/zod-dto.js";
 import { z } from "zod";
 
 import { BOOKING_STATUSES } from "../domain/booking-status.js";

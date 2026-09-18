@@ -1523,7 +1523,7 @@
               "properties": {
                 "id": { "type": "string" },
                 "name": { "type": "string" },
-                "categoryId": { "type": ["string", "null"] },
+                "categoryId": { "type": "string", "nullable": true },
                 "durationMinutes": { "type": "number" },
                 "preBufferMinutes": { "type": "number" },
                 "postBufferMinutes": { "type": "number" },
@@ -1545,7 +1545,7 @@
               "additionalProperties": false
             }
           },
-          "nextCursor": { "type": "array", "items": { "type": "string" } }
+          "nextCursor": { "type": "string", "nullable": true }
         },
         "required": ["items", "nextCursor"],
         "additionalProperties": false
@@ -1555,7 +1555,7 @@
         "properties": {
           "id": { "type": "string" },
           "name": { "type": "string" },
-          "categoryId": { "type": "array", "items": { "type": "string" } },
+          "categoryId": { "type": "string", "nullable": true },
           "durationMinutes": { "type": "number" },
           "preBufferMinutes": { "type": "number" },
           "postBufferMinutes": { "type": "number" },
@@ -1711,8 +1711,8 @@
                     "additionalProperties": false
                   }
                 },
-                "effectiveFrom": { "type": ["string", "null"] },
-                "effectiveUntil": { "type": ["string", "null"] }
+                "effectiveFrom": { "type": "string", "nullable": true },
+                "effectiveUntil": { "type": "string", "nullable": true }
               },
               "required": ["id", "timezone", "weeklyRule", "effectiveFrom", "effectiveUntil"],
               "additionalProperties": false
@@ -1763,8 +1763,8 @@
               "additionalProperties": false
             }
           },
-          "effectiveFrom": { "type": "array", "items": { "type": "string" } },
-          "effectiveUntil": { "type": "array", "items": { "type": "string" } }
+          "effectiveFrom": { "type": "string", "nullable": true },
+          "effectiveUntil": { "type": "string", "nullable": true }
         },
         "required": ["id", "timezone", "weeklyRule", "effectiveFrom", "effectiveUntil"],
         "additionalProperties": false
@@ -1785,7 +1785,7 @@
           "id": { "type": "string" },
           "startsAt": { "type": "string" },
           "endsAt": { "type": "string" },
-          "reason": { "type": "array", "items": { "type": "string" } }
+          "reason": { "type": "string", "nullable": true }
         },
         "required": ["id", "startsAt", "endsAt", "reason"],
         "additionalProperties": false
@@ -1837,7 +1837,7 @@
                 },
                 "status": { "type": "string", "enum": ["confirmed", "completed", "cancelled"] },
                 "version": { "type": "number" },
-                "cancelledReason": { "type": ["string", "null"] }
+                "cancelledReason": { "type": "string", "nullable": true }
               },
               "required": [
                 "id",
@@ -1875,7 +1875,7 @@
           },
           "status": { "type": "string", "enum": ["confirmed", "completed", "cancelled"] },
           "version": { "type": "number" },
-          "cancelledReason": { "type": "array", "items": { "type": "string" } }
+          "cancelledReason": { "type": "string", "nullable": true }
         },
         "required": [
           "id",

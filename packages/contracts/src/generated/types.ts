@@ -465,12 +465,12 @@ export interface components {
         priceCurrency: string;
         active: boolean;
       }[];
-      nextCursor: string[];
+      nextCursor: string | null;
     };
     ServiceResponseDto_Output: {
       id: string;
       name: string;
-      categoryId: string[];
+      categoryId: string | null;
       durationMinutes: number;
       preBufferMinutes: number;
       postBufferMinutes: number;
@@ -549,8 +549,8 @@ export interface components {
         startMinuteOfDay: number;
         endMinuteOfDay: number;
       }[];
-      effectiveFrom: string[];
-      effectiveUntil: string[];
+      effectiveFrom: string | null;
+      effectiveUntil: string | null;
     };
     CreateAvailabilityExceptionRequestDto: {
       startsAt: string;
@@ -561,7 +561,7 @@ export interface components {
       id: string;
       startsAt: string;
       endsAt: string;
-      reason: string[];
+      reason: string | null;
     };
     ResolveAvailabilityRequestDto: {
       from: string;
@@ -605,7 +605,7 @@ export interface components {
       /** @enum {string} */
       status: "confirmed" | "completed" | "cancelled";
       version: number;
-      cancelledReason: string[];
+      cancelledReason: string | null;
     };
     CreateBookingRequestDto: {
       /** Format: uuid */

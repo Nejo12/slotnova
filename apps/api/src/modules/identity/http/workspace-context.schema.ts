@@ -7,7 +7,7 @@
  * below as a DTO usable for both runtime validation
  * (`../../../http/validation/zod-validation.js`'s `ZodValidationPipe`) and OpenAPI generation.
  */
-import { createZodDto } from "nestjs-zod";
+import { createZodDto } from "../../../http/openapi/zod-dto.js";
 import { z } from "zod";
 
 export const workspaceSwitchRequestSchema = z.object({

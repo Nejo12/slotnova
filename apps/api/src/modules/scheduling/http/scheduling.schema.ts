@@ -38,7 +38,7 @@
  * wall time), which is what "always resolved instants" in the contract means.
  */
 import { Temporal } from "@js-temporal/polyfill";
-import { createZodDto } from "nestjs-zod";
+import { createZodDto } from "../../../http/openapi/zod-dto.js";
 import { z } from "zod";
 
 import { MINUTES_PER_DAY } from "../domain/recurrence.js";

@@ -83,11 +83,7 @@ export function bookingFixture(overrides: Partial<Booking> = {}): Booking {
     blockingRange: { start: "2026-10-01T08:55:00.000Z", end: "2026-10-01T09:55:00.000Z" },
     status: "confirmed",
     version: 1,
-    // The generated contract renders this nullable field as an array (a
-    // known OpenAPI-generation defect noted in the PR description); this
-    // surface never reads it, and the fixture keeps the generated shape so
-    // the type still proves alignment.
-    cancelledReason: [],
+    cancelledReason: null,
     ...overrides,
   };
 }

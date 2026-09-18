@@ -9,7 +9,7 @@
  * (via `@ApiBody`/`@ZodResponse` referencing the DTO) -- a single schema
  * declaration, no duplicated `@ApiProperty` decorators.
  */
-import { createZodDto } from "nestjs-zod";
+import { createZodDto } from "../../../http/openapi/zod-dto.js";
 import { z } from "zod";
 
 /**
