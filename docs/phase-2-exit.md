@@ -338,7 +338,7 @@ set is green before merging.
 | `security` | [`35346271257`](https://github.com/Nejo12/slotnova/actions/runs/35346271257) | **success** | 12:44:26Z–12:45:11Z = **45s** |
 | `heavy` (authoritative) | [`35346379557`](https://github.com/Nejo12/slotnova/actions/runs/35346379557) | **success — every job** | 12:45:34Z–12:47:39Z = **125s** |
 | `heavy` (superseded first attempt) | [`35346271312`](https://github.com/Nejo12/slotnova/actions/runs/35346271312) | failure — `migration-checklist` only | 12:44:26Z–12:46:39Z = 133s |
-| `e2e` | [`35346271303`](https://github.com/Nejo12/slotnova/actions/runs/35346271303) | in progress at the time of writing — see "Remaining" below | — |
+| `e2e` | [`35346271303`](https://github.com/Nejo12/slotnova/actions/runs/35346271303) | **success** | 12:44:26Z–12:48:59Z = **273s** |
 
 ### Heavy-lane budget
 
@@ -379,12 +379,18 @@ The two authoritative pixel/accessibility gates — `visual-regression` and
 the CI evidence the "Local validation results" section defers to for visual
 regression.
 
-**Remaining**: the `e2e` workflow (`pnpm test:integration` + `pnpm e2e`) was
-still executing when this document was written, so its result is **not** claimed
-here. `fast`, `heavy` and `security` are all green on this head. The Founder
-should confirm `e2e` is green before merging; everything it runs was executed
-locally on the same tree and passed (`verify:integration` 2/2 including the full
-real-PostgreSQL suite, and `pnpm e2e` 13/13 standalone).
+**All four required workflows are green on `1f209ed`**: `fast` ✅, `e2e` ✅,
+`heavy` ✅, `security` ✅ — each inspected at job level, not by aggregate badge.
+The `e2e` lane (`pnpm test:integration` + `pnpm e2e`) is the one that executes
+the two new Playwright journeys and the new `tenant-table-census.int.test.ts`
+against real PostgreSQL in a clean room, and it passed there as it did locally
+(`verify:integration` 2/2, `pnpm e2e` 13/13).
+
+The only branch commits after `1f209ed` are the documentation-only ones that
+write this very section. They re-trigger the same four workflows on the final
+head; since they change no code, test, config or generated artifact, the result
+above is the substantive CI evidence for this PR. The Founder should still
+confirm the final head's runs are green before merging.
 
 ## Final exit assessment
 
