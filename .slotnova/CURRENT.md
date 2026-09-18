@@ -9,7 +9,33 @@ and update this file.
 
 ## Current main
 
-`de3cbe1baaf92ace9305b3a5e03b89571feaa6bf` — merged PR #80 (Phase 2
+`cd95b8269c5ce1a937da574399d50e845cc0e584` — merged PR #82 (Phase 2 PR-09 —
+Calendar composition/UI). **Issue #81 is closed.**
+
+**Issue #83 (PR-10 — Phase-2 E2E hardening & exit validation) is the active
+slice**, the FINAL Phase-2 slice, on branch
+`phase-2/pr-10-e2e-hardening-exit`. All Phase-2 product slices
+(PR-01…PR-09) are implemented and merged; **no Phase-3 work has started.**
+Exit validation is complete locally and recorded in `docs/phase-2-exit.md`:
+all eleven success criteria SC-001…SC-011 PASS and **no defect in accepted
+Phase-2 behaviour was found**, so PR-10 changed no product code, schema,
+migration, contract shape, RLS policy or capability rule. The one defect it
+did find is low-severity tooling hygiene: `storybook-static/` is gitignored
+but was in neither ESLint's nor Stylelint's own ignore list, so building
+Storybook (the visual-regression lane) and then running `verify:fast` in the
+same checkout failed on vendored bundles. Fixed with one
+`**/storybook-static/**` entry beside the existing `**/dist/**` entry in
+`packages/eslint-config/src/base.js` and `stylelint.config.cjs`; no rule was
+relaxed. Its other additions are three bounded evidence-gap tests
+(`apps/web/e2e/journey-10-reschedule-mobile.spec.ts`,
+`apps/api/src/test/isolation/tenant-table-census.int.test.ts`, two cases in
+`apps/web/src/features/booking/__tests__/booking-a11y.test.tsx`) plus
+`docs/phase-2-exit.md` and these records. Phase 2 is assessed **READY TO
+EXIT**, pending the Founder's manual review/merge and the exact-head CI
+evidence. **Parent issue #3 is reopened and stays OPEN — PR-10 must not
+close it**; the Founder closes it after merging.
+
+Earlier on `main`: `de3cbe1` merged PR #80 (Phase 2
 corrective — OpenAPI nullable scalar generation). Issue #79 is closed.
 PR #78 (PR-08, issue #77), PR #76 (PR-07A, issue #75),
 PR #74 (PR-07, issue #73), PR #72 (PR-06, issue #70), PR #69 (PR-05,
@@ -21,9 +47,9 @@ The Phase-2 Catalog, Scheduling and Booking APIs are complete: Catalog
 (PR-01/PR-02), Scheduling (PR-03/PR-04/PR-05), Booking domain/overlap
 (PR-06) and the Booking HTTP surface + generated contracts (PR-07/PR-07A).
 
-The Phase-2 Booking frontend (PR-08) is merged. **Issue #81 (PR-09 —
-Calendar composition/UI) is the active slice.** PR-10 (Phase-2
-E2E/hardening/exit) is NOT implemented.
+The Phase-2 Booking frontend (PR-08) and the Calendar composition/UI (PR-09)
+are both merged. PR-10 (Phase-2 E2E/hardening/exit, issue #83) is the active
+slice — see "Current main" above.
 Issue #71 is a **closed duplicate of #70** and carries no separate work.
 
 ## Current implementation state
@@ -454,7 +480,32 @@ ports, the `/calendar` router entry, the `bookingCreatePath` helper, the
 create flow's one-line prefill read, and one E2E seed row (an Alpha
 availability pattern) so the Calendar journey has open time to render.
 
-PR-10 (Phase-2 E2E/hardening/exit) remains NOT implemented.
+**Phase 2 PR-10 — E2E hardening & exit validation (issue #83) is complete**
+on branch `phase-2/pr-10-e2e-hardening-exit`, awaiting Founder merge. It is
+an evidence PR, not a feature PR: **no product code, schema, migration
+(`0001`–`0010` unchanged, no `0011`), contract shape, RLS policy, capability
+rule or `DEFAULT_ROLE_PERMISSIONS` entry was touched.** The SC-001…SC-011
+matrix was built from the merged Phase-2 corpus before any code was written;
+exit validation found **no defect in accepted Phase-2 behaviour**, so none
+was "fixed" (the single low-severity lint-ignore fix is described above). Three genuine evidence gaps were closed with bounded tests:
+an integrated reschedule journey and a real-browser 390px mobile path
+(`apps/web/e2e/journey-10-reschedule-mobile.spec.ts`); SC-005's unproven
+"100%" quantifier (`apps/api/src/test/isolation/tenant-table-census.int.test.ts`,
+which discovers tenant ownership from the live PostgreSQL catalog via a
+NOT NULL `workspace_id` rather than from a hand-maintained list — and proves
+`outbox_records`' nullable `workspace_id` is the one documented
+context-not-ownership case); and axe + keyboard-only coverage of the
+reschedule panel inside the existing `booking-a11y.test.tsx`. The full
+evidence matrix, the Phase-2 Founder decision register and the exit
+assessment (**READY TO EXIT**) live in `docs/phase-2-exit.md`.
+
+**Still open after Phase 2:** the default role→capability mapping for
+`catalog:*`/`scheduling:*`/`booking:*`. Every Phase-2 PR left
+`DEFAULT_ROLE_PERMISSIONS` untouched and PR-10 deliberately did NOT resolve
+it — it is assessed as NOT an exit blocker (capabilities are enforced
+server-authoritatively through explicit membership `permissions`, and no
+accepted artifact specifies a default mapping) and is recorded as a deferred
+product-policy decision.
 
 ## Workflow-efficiency setup
 
