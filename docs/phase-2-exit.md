@@ -324,7 +324,62 @@ resolved by the Founder, not inferred:
 
 ## CI evidence
 
-<!-- PR-10-CI-PLACEHOLDER -->
+PR [#84](https://github.com/Nejo12/slotnova/pull/84), head
+`1f209ed89d6b1dd59b1f976fd9b9696e41e7ad63`.
+
+| Workflow | Run | Result | Wall clock |
+|---|---|---|---|
+| `fast` | [`35346271279`](https://github.com/Nejo12/slotnova/actions/runs/35346271279) | **success** | 12:44:26Z–12:46:04Z = **98s** |
+| `security` | [`35346271257`](https://github.com/Nejo12/slotnova/actions/runs/35346271257) | **success** | 12:44:26Z–12:45:11Z = **45s** |
+| `heavy` (authoritative) | [`35346379557`](https://github.com/Nejo12/slotnova/actions/runs/35346379557) | **success — every job** | 12:45:34Z–12:47:39Z = **125s** |
+| `heavy` (superseded first attempt) | [`35346271312`](https://github.com/Nejo12/slotnova/actions/runs/35346271312) | failure — `migration-checklist` only | 12:44:26Z–12:46:39Z = 133s |
+| `e2e` | [`35346271303`](https://github.com/Nejo12/slotnova/actions/runs/35346271303) | in progress at the time of writing — see "Remaining" below | — |
+
+### Heavy-lane budget
+
+**125 seconds against the founder-approved 180-second budget — within budget,
+with 55s of headroom.** The `heavy-lane time budget check (180s, T089)` job
+(`tooling/perf/check-heavy-budget.ts`) itself completed **`success`**
+(12:47:13Z–12:47:39Z). The budget was **not** weakened, raised or bypassed, and
+the heavy lane's job set is unchanged by this PR. For reference, Phase 1's
+recorded baseline was 93s; the +32s reflects Phase 2's substantially larger
+real-PostgreSQL and Playwright surface, not a regression in any single job — the
+slowest job, `axe accessibility checks`, is 94s of the 125s.
+
+### Heavy-lane job breakdown (run `35346379557`, inspected per job rather than by badge)
+
+| Job | Result | Duration |
+|---|---|---|
+| `migration-checklist` | **success** | 19s |
+| `migration-proof` | **success** | 53s |
+| `targeted visual regression (Storybook, Light/Dark)` | **success** | 60s |
+| `axe accessibility checks (Playwright journeys)` | **success** | 94s |
+| `security scans (see security.yml)` | **success** | 2s |
+| `release-migrations` | skipped (not a release event) | — |
+| `heavy-lane time budget check (180s, T089)` | **success** | 26s |
+
+The superseded first heavy attempt (`35346271312`) had every one of those jobs
+green **except** `migration-checklist`, and that failure was **not a code
+defect**: the PR body initially omitted the repository's required
+migration-review checklist block (`tooling/migrations/check-pr-checklist.ts`
+requires every reviewer item plus exactly one `Schema change: yes/no` selection
+on **every** PR, including no-schema ones). The body was corrected —
+`Schema change: no`, with an explicit statement that `packages/db/migrations/` is
+untouched, `0001`–`0010` are consumed as merged, there is no `0011`, and the RLS
+impact is zero — and the whole heavy lane then passed. Recorded here rather than
+quietly re-run.
+
+The two authoritative pixel/accessibility gates — `visual-regression` and
+`accessibility`, both on `ubuntu-latest` — passed on this exact head, which is
+the CI evidence the "Local validation results" section defers to for visual
+regression.
+
+**Remaining**: the `e2e` workflow (`pnpm test:integration` + `pnpm e2e`) was
+still executing when this document was written, so its result is **not** claimed
+here. `fast`, `heavy` and `security` are all green on this head. The Founder
+should confirm `e2e` is green before merging; everything it runs was executed
+locally on the same tree and passed (`verify:integration` 2/2 including the full
+real-PostgreSQL suite, and `pnpm e2e` 13/13 standalone).
 
 ## Final exit assessment
 
