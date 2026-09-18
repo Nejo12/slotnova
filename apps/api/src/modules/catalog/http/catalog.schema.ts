@@ -32,7 +32,7 @@
  * "duration/price invariants". The invariants themselves are therefore
  * asserted exactly once, in `catalog/domain`, and are NOT re-encoded here.
  */
-import { createZodDto } from "nestjs-zod";
+import { createZodDto } from "../../../http/openapi/zod-dto.js";
 import { z } from "zod";
 
 /** Bounded so an absurd page size cannot be requested; 50 matches nothing pre-existing because no other list endpoint exists yet. */

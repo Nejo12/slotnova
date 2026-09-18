@@ -8,7 +8,7 @@
  * the OpenAPI document (via `createZodDto` + `@ZodResponse`) -- no
  * hand-duplicated `@ApiProperty` decorators.
  */
-import { createZodDto } from "nestjs-zod";
+import { createZodDto } from "../../../http/openapi/zod-dto.js";
 import { z } from "zod";
 
 import { workspaceSummarySchema } from "./session.schema.js";

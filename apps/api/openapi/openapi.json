@@ -2064,10 +2064,8 @@
                   "type": "string"
                 },
                 "categoryId": {
-                  "type": [
-                    "string",
-                    "null"
-                  ]
+                  "type": "string",
+                  "nullable": true
                 },
                 "durationMinutes": {
                   "type": "number"
@@ -2103,10 +2101,8 @@
             }
           },
           "nextCursor": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
+            "type": "string",
+            "nullable": true
           }
         },
         "required": [
@@ -2125,10 +2121,8 @@
             "type": "string"
           },
           "categoryId": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
+            "type": "string",
+            "nullable": true
           },
           "durationMinutes": {
             "type": "number"
@@ -2376,16 +2370,12 @@
                   }
                 },
                 "effectiveFrom": {
-                  "type": [
-                    "string",
-                    "null"
-                  ]
+                  "type": "string",
+                  "nullable": true
                 },
                 "effectiveUntil": {
-                  "type": [
-                    "string",
-                    "null"
-                  ]
+                  "type": "string",
+                  "nullable": true
                 }
               },
               "required": [
@@ -2509,16 +2499,12 @@
             }
           },
           "effectiveFrom": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
+            "type": "string",
+            "nullable": true
           },
           "effectiveUntil": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
+            "type": "string",
+            "nullable": true
           }
         },
         "required": [
@@ -2564,10 +2550,8 @@
             "type": "string"
           },
           "reason": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
+            "type": "string",
+            "nullable": true
           }
         },
         "required": [
@@ -2678,10 +2662,8 @@
                   "type": "number"
                 },
                 "cancelledReason": {
-                  "type": [
-                    "string",
-                    "null"
-                  ]
+                  "type": "string",
+                  "nullable": true
                 }
               },
               "required": [
@@ -2754,10 +2736,8 @@
             "type": "number"
           },
           "cancelledReason": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
+            "type": "string",
+            "nullable": true
           }
         },
         "required": [

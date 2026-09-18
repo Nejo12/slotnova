@@ -42,7 +42,7 @@
  * what this task's own no-duplication/no-invention instruction forbids. A
  * caller that wants the correlation id parses it out of `instance`.
  */
-import { createZodDto } from "nestjs-zod";
+import { createZodDto } from "../openapi/zod-dto.js";
 import { z } from "zod";
 
 export const problemValidationErrorSchema = z.object({
