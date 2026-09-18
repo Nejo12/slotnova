@@ -297,7 +297,9 @@ no PR combines schema + API + UI for more than one module at a time.
   to the shared problem catalogue at 409 each; the overlap response restates
   the REQUESTED window only and never queries the conflicting booking.
   **No schema migration** (0009 + 0010 consumed as-is), no Booking
-  audit/outbox behaviour, no frontend.
+  audit/outbox behaviour, no frontend. **Corrected by PR-07A** (below): as
+  merged, `GET /bookings` filtered the window on `starts_at`, not on the
+  booking's occupied interval.
 - **Dependency**: PR-06.
 - **Files/areas**: `apps/api/src/modules/booking/http`, runtime schemas,
   OpenAPI/`packages/contracts` regeneration.
@@ -313,6 +315,40 @@ no PR combines schema + API + UI for more than one module at a time.
 - **Constraints**: no GET for any mutating action; no client/resource/
   location field anywhere in the request/response schema.
 - **Out of scope**: frontend (PR-08).
+
+## PR-07A — Booking list-window + contract reconciliation
+
+- **Status**: Complete (issue #75). A bounded corrective slice for the two
+  Founder-review corrections that did not land before PR #74 merged.
+  (1) `GET /v1/bookings?from=&to=` now selects bookings whose stored
+  `blocking_range` OVERLAPS the requested half-open window
+  (`blocking_range && tstzrange(from, to, '[)')`) instead of filtering
+  `starts_at >= from AND starts_at < to`, so a booking that begins before
+  `from` but is still occupied inside the window — duration, post-buffer or a
+  crossing booking — is returned, which is what `calendar.contract.md`'s
+  occupied-interval composition (PR-09) depends on. The authoritative
+  generated column `bookings_no_overlap` excludes on is reused, not
+  recomputed; half-open adjacency is proved through PostgreSQL's own `'[)'`
+  range semantics with no epsilon. Required bounds, the optional `status`
+  filter, RLS scoping and `ORDER BY starts_at ASC, id ASC` are unchanged, and
+  no pagination/resource/staff/location/client filter was added.
+  (2) `contracts/booking.contract.md`'s reschedule failure prose now reads
+  `409 invalid-transition` instead of `422`, matching its own conflict-type
+  table and the shipped runtime behaviour — **doc reconciliation only, no
+  runtime error-mapping change** — and its `GET /bookings` section now
+  records the overlap window semantics. **No schema migration**, no frontend,
+  no Calendar implementation, no capability/default-role change.
+- **Dependency**: PR-07.
+- **Files/areas**: `booking/infrastructure/repositories/bookings.repository.ts`,
+  `booking/http` (boundary/OpenAPI documentation only),
+  `contracts/booking.contract.md`.
+- **Acceptance criteria**: a booking whose occupied interval crosses into the
+  requested window is listed; adjacency at either bound is not.
+- **Required tests**: real-PostgreSQL HTTP proofs for the half-open boundary
+  table (overlap in, upper bound touching `from` out, lower bound touching
+  `to` out), a post-buffer-only crossing case, status filter composed with
+  overlap, deterministic ordering and workspace isolation.
+- **Out of scope**: everything else in PR-07, and all of PR-08+.
 
 ## PR-08 — Booking frontend flow
 

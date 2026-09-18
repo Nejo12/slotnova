@@ -533,20 +533,147 @@ describe("/v1/bookings (real PostgreSQL)", () => {
       expect(items.map((b) => b.id)).not.toContain(outside.json<{ id: string }>().id);
     });
 
-    it("includes a booking starting exactly at `from` and excludes one starting exactly at `to`", async () => {
+    /**
+     * Half-open `[)` proof against the STORED GENERATED `blocking_range`
+     * (PR-07A, issue #75). The three cases below are the boundary table
+     * exactly as the issue states it, and none of them nudges a timestamp by
+     * an epsilon to make a bound behave: each asserts a whole minute on a
+     * bound, so only PostgreSQL's own `tstzrange(..., '[)')` overlap
+     * semantics can produce the expected answer.
+     *
+     * Each case gets its own workspace: cases A and B would overlap each
+     * other inside one workspace and `bookings_no_overlap` would (correctly)
+     * reject the second insert.
+     */
+    const zeroBufferService = async (actor: Actor, durationMinutes: number): Promise<string> =>
+      seedService(actor, { durationMinutes, preBufferMinutes: 0, postBufferMinutes: 0 });
+
+    const listWindow = async (actor: Actor, query: string): Promise<{ startsAt: string }[]> => {
+      const res = await app.inject({
+        method: "GET",
+        url: `/v1/bookings?${query}`,
+        headers: { cookie: actor.sessionCookie },
+      });
+      expect(res.statusCode).toBe(200);
+      return res.json<{ items: { startsAt: string }[] }>().items;
+    };
+
+    it("A: returns a booking whose blocking range overlaps the window although it starts before `from`", async () => {
       const actor = await seedActor(FULL_BOOKING_PERMISSIONS);
-      const serviceId = await seedService(actor);
-      await createBooking(actor, { serviceId, startsAt: "2027-01-04T08:00:00Z" });
-      await createBooking(actor, { serviceId, startsAt: "2027-01-04T12:00:00Z" });
+      const serviceId = await zeroBufferService(actor, 120);
+      // blocking_range = [08:00, 10:00)
+      expect(
+        (await createBooking(actor, { serviceId, startsAt: "2027-01-04T08:00:00Z" })).statusCode,
+      ).toBe(201);
+
+      const items = await listWindow(actor, "from=2027-01-04T09:00:00Z&to=2027-01-04T11:00:00Z");
+
+      // `starts_at` (08:00) is OUTSIDE the requested window; the booking is
+      // still occupied inside it, so Calendar composition must see it.
+      expect(items.map((b) => b.startsAt)).toEqual(["2027-01-04T08:00:00Z"]);
+    });
+
+    it("B: excludes a booking whose blocking range ends exactly at `from`", async () => {
+      const actor = await seedActor(FULL_BOOKING_PERMISSIONS);
+      const serviceId = await zeroBufferService(actor, 60);
+      // blocking_range = [08:00, 09:00) — upper bound touches `from`.
+      expect(
+        (await createBooking(actor, { serviceId, startsAt: "2027-01-05T08:00:00Z" })).statusCode,
+      ).toBe(201);
+
+      const items = await listWindow(actor, "from=2027-01-05T09:00:00Z&to=2027-01-05T11:00:00Z");
+
+      expect(items).toEqual([]);
+    });
+
+    it("C: excludes a booking whose blocking range starts exactly at `to`", async () => {
+      const actor = await seedActor(FULL_BOOKING_PERMISSIONS);
+      const serviceId = await zeroBufferService(actor, 60);
+      // blocking_range = [11:00, 12:00) — lower bound touches `to`.
+      expect(
+        (await createBooking(actor, { serviceId, startsAt: "2027-01-06T11:00:00Z" })).statusCode,
+      ).toBe(201);
+
+      const items = await listWindow(actor, "from=2027-01-06T09:00:00Z&to=2027-01-06T11:00:00Z");
+
+      expect(items).toEqual([]);
+    });
+
+    it("returns a booking pulled into the window by its POST-BUFFER alone, and never another workspace's", async () => {
+      const actor = await seedActor(FULL_BOOKING_PERMISSIONS);
+      // 30 minutes of service then 45 minutes of post-buffer: the appointment
+      // itself ends exactly at `from` (which case B proves is NOT an overlap),
+      // so only the buffer can put this booking inside the window.
+      const serviceId = await seedService(actor, {
+        durationMinutes: 30,
+        preBufferMinutes: 0,
+        postBufferMinutes: 45,
+      });
+      // blocking_range = [09:30, 10:45)
+      expect(
+        (await createBooking(actor, { serviceId, startsAt: "2027-01-07T09:30:00Z" })).statusCode,
+      ).toBe(201);
+
+      // Another workspace's booking crossing the same window stays invisible.
+      const foreignService = await seedService(otherOperator, {
+        durationMinutes: 30,
+        preBufferMinutes: 0,
+        postBufferMinutes: 45,
+      });
+      expect(
+        (
+          await createBooking(otherOperator, {
+            serviceId: foreignService,
+            startsAt: "2027-01-07T09:30:00Z",
+          })
+        ).statusCode,
+      ).toBe(201);
+
+      const items = await listWindow(actor, "from=2027-01-07T10:00:00Z&to=2027-01-07T11:00:00Z");
+
+      expect(items.map((b) => b.startsAt)).toEqual(["2027-01-07T09:30:00Z"]);
+    });
+
+    it("composes the optional status filter with overlap and keeps deterministic ordering", async () => {
+      const actor = await seedActor(FULL_BOOKING_PERMISSIONS);
+      const serviceId = await zeroBufferService(actor, 120);
+
+      // Created first so it can be cancelled, freeing the capacity the
+      // confirmed booking below needs. Both cross into the window from
+      // BEFORE `from`, so both are only visible under overlap filtering.
+      const cancelledRes = await createBooking(actor, {
+        serviceId,
+        startsAt: "2027-01-08T09:30:00Z",
+      });
+      const cancelled = cancelledRes.json<{ id: string; version: number }>();
+      expect(
+        (await command(actor, cancelled.id, "cancel", { version: cancelled.version })).statusCode,
+      ).toBe(200);
+
+      // blocking_range = [09:00, 11:00)
+      const confirmedRes = await createBooking(actor, {
+        serviceId,
+        startsAt: "2027-01-08T09:00:00Z",
+      });
+      expect(confirmedRes.statusCode).toBe(201);
+      const confirmed = confirmedRes.json<{ id: string }>();
+
+      const window = "from=2027-01-08T10:00:00Z&to=2027-01-08T12:00:00Z";
+      expect(
+        (await listWindow(actor, `${window}&status=confirmed`)).map((b) => b.startsAt),
+      ).toEqual(["2027-01-08T09:00:00Z"]);
+      expect(
+        (await listWindow(actor, `${window}&status=cancelled`)).map((b) => b.startsAt),
+      ).toEqual(["2027-01-08T09:30:00Z"]);
 
       const res = await app.inject({
         method: "GET",
-        url: "/v1/bookings?from=2027-01-04T08:00:00Z&to=2027-01-04T12:00:00Z",
+        url: `/v1/bookings?${window}`,
         headers: { cookie: actor.sessionCookie },
       });
-
-      expect(res.json<{ items: { startsAt: string }[] }>().items.map((b) => b.startsAt)).toEqual([
-        "2027-01-04T08:00:00Z",
+      expect(res.json<{ items: { id: string }[] }>().items.map((b) => b.id)).toEqual([
+        confirmed.id,
+        cancelled.id,
       ]);
     });
 

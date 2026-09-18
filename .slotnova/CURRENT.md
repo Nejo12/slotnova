@@ -9,13 +9,16 @@ and update this file.
 
 ## Current main
 
-`fa7072aef83ca0c512eb0a379653932c839df633` — merged PR #72 (Phase 2 PR-06 —
-Booking overlap/concurrency). Issue #70 is closed. PR #69 (PR-05, issue #68),
+`2cbef6ceb09a2c618e7d7f84c8fd035cf6ef0556` — merged PR #74 (Phase 2 PR-07 —
+Booking API/contracts). Issue #73 is closed. PR #72 (PR-06, issue #70),
+PR #69 (PR-05, issue #68),
 PR #67 (PR-04, issue #66), PR #65 (PR-03, issue #64), PR #63 (PR-02,
 issue #60), PR #62 (PR-02A, issue #61) and PR #59 (PR-01, issue #58) merged
 before it.
 
-Issue #73 (Phase 2 PR-07 — Booking API/contracts) is the active slice. Issue
+Issue #75 (Phase 2 PR-07A — Booking list-window + contract reconciliation) is
+the active slice: a bounded corrective PR for the two Founder-review
+corrections that did not land before PR #74 merged. Issue
 #71 is a **closed duplicate of #70** and carries no separate work.
 
 ## Current implementation state
@@ -240,8 +243,8 @@ violating rows make the whole file roll back with 0010 unrecorded.
 generated contracts, `BookingModule` wiring, capability annotations or
 problem+json filter — PR-07 owns all of them.
 
-**Phase 2 PR-07 — Booking API/contracts (issue #73) is complete** on branch
-`phase-2/pr-07-booking-api-contracts`. Six endpoints under `/v1/bookings`:
+**Phase 2 PR-07 — Booking API/contracts (issue #73) is merged** (PR #74).
+Six endpoints under `/v1/bookings`:
 `GET|POST /bookings`, `GET /bookings/{id}` and
 `POST /bookings/{id}/{reschedule,cancel,complete}`. There is no `/confirm`
 route and no draft/pending state anywhere. `booking:read` gates the two
@@ -267,14 +270,49 @@ Three problem slugs were added to the shared catalogue at the 409 the accepted
 contract's conflict-type table gives each: `booking-overlap`, `stale-write`
 and `invalid-transition`. `BookingOverlapError` responses restate the
 REQUESTED blocking window only; the conflicting booking is never queried,
-named or timed. NOTE for the Founder: `booking.contract.md`'s reschedule
-section says `422` for a source status that does not permit reschedule, while
-its own conflict-type table (and issue #73) put `invalid-transition` at `409`
-— this PR follows the table/issue uniformly and flags the wording for repair.
+named or timed. The reschedule wording PR-07 flagged
+(`booking.contract.md` said `422` for a source status that does not permit
+reschedule, against its own conflict-type table's `409 invalid-transition`)
+is repaired by PR-07A below.
 
 **No schema migration in PR-07**: `0009`/`0010` are consumed unchanged, no
 `0011` exists, and no Booking audit/outbox/event behaviour was added. No
 Booking frontend and no Calendar work (PR-08/PR-09 own those).
+
+**Phase 2 PR-07A — Booking list-window + contract reconciliation (issue #75)
+is complete** on branch `fix/pr-07a-booking-list-window-contract`. It exists
+only because two Founder-review corrections requested on PR #74 did not land
+before that PR merged, and it fixes exactly those two things:
+
+1. `GET /v1/bookings?from=&to=` filtered `starts_at >= from AND starts_at <
+   to`. It now filters `blocking_range && tstzrange(from, to, '[)')` — the
+   booking's OCCUPIED interval must overlap the requested window. A booking
+   that begins before `from` but is still occupied inside the window (service
+   duration reaching in, a post-buffer reaching in, or a booking crossing
+   midnight) is now returned; a `starts_at`-only predicate hid exactly those,
+   which would have made PR-09's Calendar composition show free time that is
+   not free. The authoritative generated `blocking_range` that
+   `bookings_no_overlap` excludes on is REUSED, never recomputed, so
+   "visible in this window" and "occupies this window" cannot drift apart.
+   Half-open adjacency is decided by PostgreSQL's own `'[)'` range semantics
+   with no epsilon anywhere. Required `from`/`to`, the optional `status`
+   filter, RLS/workspace scoping and `ORDER BY starts_at ASC, id ASC` are all
+   unchanged, and no pagination/resource/staff/location/client filter was
+   added.
+2. `contracts/booking.contract.md`'s reschedule section now says `409
+   invalid-transition` instead of `422`, matching its own conflict-type
+   table, issue #73 and the already-shipped runtime behaviour. **No runtime
+   error-mapping code changed** — this is doc reconciliation only. The same
+   file's `GET /bookings` section now records the overlap window semantics so
+   the ambiguity that produced correction 1 cannot recur.
+
+**No schema migration** (no `0011`; `0009`/`0010` consumed as-is), no
+frontend, no Calendar implementation, no capability/default-role change, no
+state-machine change. The only generated-artifact delta is the one
+`GET /v1/bookings` operation DESCRIPTION string in
+`apps/api/openapi/openapi.json`, `packages/contracts/src/generated/
+openapi.json` and `types.ts` — no path, parameter, schema or response shape
+moved.
 
 Later Phase-2 slices (PR-08 through PR-10) remain not implemented; no
 Calendar/Staff/Clients work exists yet.

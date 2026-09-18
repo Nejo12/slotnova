@@ -172,7 +172,7 @@ export class BookingsController {
   @ApiOperation({
     summary: "List this workspace's bookings in a bounded time window",
     description:
-      "Half-open `[from, to)` over each booking's `startsAt`, ordered `startsAt` then `id`. Both bounds are required — this endpoint never lists unbounded. There is no resource, staff, location or client filter, and no pagination cursor.",
+      "Returns every booking whose occupied interval (`blockingRange`) overlaps the half-open `[from, to)` window, ordered `startsAt` then `id`. A booking that starts before `from` is included when its duration or buffers reach into the window; one that ends exactly at `from`, or starts exactly at `to`, is adjacent and excluded. Both bounds are required — this endpoint never lists unbounded. There is no resource, staff, location or client filter, and no pagination cursor.",
   })
   @ApiQuery({ name: "from", required: true, type: "string", format: "date-time" })
   @ApiQuery({ name: "to", required: true, type: "string", format: "date-time" })
