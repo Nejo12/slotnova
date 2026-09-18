@@ -324,8 +324,13 @@ resolved by the Founder, not inferred:
 
 ## CI evidence
 
-PR [#84](https://github.com/Nejo12/slotnova/pull/84), head
-`1f209ed89d6b1dd59b1f976fd9b9696e41e7ad63`.
+PR [#84](https://github.com/Nejo12/slotnova/pull/84). The runs below are the
+exact-head runs for `1f209ed89d6b1dd59b1f976fd9b9696e41e7ad63`, which is the
+head carrying **every** code and test change in this PR. The only later commit
+on the branch is the one that writes this very section into this file — a
+documentation-only change with no effect on any gate — and it re-triggers the
+same four workflows on the final head. The Founder should confirm that final
+set is green before merging.
 
 | Workflow | Run | Result | Wall clock |
 |---|---|---|---|
