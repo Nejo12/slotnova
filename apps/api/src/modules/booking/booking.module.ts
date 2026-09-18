@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 
 import { CatalogModule } from "../catalog/catalog.module.js";
 import { IdentityModule } from "../identity/identity.module.js";
+import { BookingOccupancyPort } from "./application/booking-occupancy.port.js";
 import { CancelBookingUseCase } from "./application/cancel-booking.use-case.js";
 import { CompleteBookingUseCase } from "./application/complete-booking.use-case.js";
 import { CreateBookingIdempotentlyUseCase } from "./application/create-booking-idempotently.use-case.js";
@@ -52,6 +53,10 @@ import { BookingsRepository } from "./infrastructure/repositories/bookings.repos
     RescheduleBookingUseCase,
     CancelBookingUseCase,
     CompleteBookingUseCase,
+    BookingOccupancyPort,
   ],
+  // The ONE provider another module may resolve: Calendar's occupancy read
+  // seam (PR-09). Repositories and every other use case stay unexported.
+  exports: [BookingOccupancyPort],
 })
 export class BookingModule {}

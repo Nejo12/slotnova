@@ -9,8 +9,9 @@ and update this file.
 
 ## Current main
 
-`79d8bcfcb6f094ab0e9eb64903b3d39f39fee0db` — merged PR #78 (Phase 2 PR-08 —
-Booking frontend flow). Issue #77 is closed. PR #76 (PR-07A, issue #75),
+`de3cbe1baaf92ace9305b3a5e03b89571feaa6bf` — merged PR #80 (Phase 2
+corrective — OpenAPI nullable scalar generation). Issue #79 is closed.
+PR #78 (PR-08, issue #77), PR #76 (PR-07A, issue #75),
 PR #74 (PR-07, issue #73), PR #72 (PR-06, issue #70), PR #69 (PR-05,
 issue #68), PR #67 (PR-04, issue #66), PR #65 (PR-03, issue #64), PR #63
 (PR-02, issue #60), PR #62 (PR-02A, issue #61) and PR #59 (PR-01,
@@ -20,8 +21,9 @@ The Phase-2 Catalog, Scheduling and Booking APIs are complete: Catalog
 (PR-01/PR-02), Scheduling (PR-03/PR-04/PR-05), Booking domain/overlap
 (PR-06) and the Booking HTTP surface + generated contracts (PR-07/PR-07A).
 
-Issue #79 (Phase 2 corrective — OpenAPI nullable scalar generation) is the
-active slice. PR-09 (Calendar) is NOT started.
+The Phase-2 Booking frontend (PR-08) is merged. **Issue #81 (PR-09 —
+Calendar composition/UI) is the active slice.** PR-10 (Phase-2
+E2E/hardening/exit) is NOT implemented.
 Issue #71 is a **closed duplicate of #70** and carries no separate work.
 
 ## Current implementation state
@@ -372,7 +374,87 @@ which de-sugars every compact multi-type node into the OpenAPI 3.0
 `{ type, nullable: true }` form before `@nestjs/swagger` sees it. No
 runtime, endpoint, serialization or schema/migration change.
 
-PR-09 (Calendar) remains NOT started.
+**Phase 2 PR-09 — Calendar composition/UI (issue #81) is complete** on
+branch `phase-2/pr-09-calendar-composition-ui`. **No schema migration**:
+`0001`–`0010` are consumed unchanged, there is no `0011`, no Calendar
+table, no Calendar repository and no `infrastructure/` directory in the
+module — proved by an integration test that snapshots every tenant table's
+row count across repeated reads and asserts no relation matching
+`%calendar%` exists.
+
+Backend: one thin read-composition endpoint, `GET /v1/calendar?from=&to=`,
+in `apps/api/src/modules/calendar-read/` (`application/` + `http/` only).
+It composes TWO newly published application ports and owns nothing:
+`AvailabilityReadPort` (Scheduling, delegates verbatim to the same
+`ResolveAvailabilityUseCase` that serves `POST /availability/resolve`) and
+`BookingOccupancyPort` (Booking, delegates verbatim to `ListBookingsUseCase`
+and therefore to PR-07A's `blocking_range && [from,to)` predicate). Each is
+the ONLY provider its module exports, mirroring PR-07's Catalog
+`ServiceSnapshotPort`; no recurrence, DST, exception or overlap logic is
+duplicated in Calendar. Booking — not Calendar — decides that a `cancelled`
+booking occupies nothing, matching `bookings_no_overlap`'s partial
+predicate.
+
+The window is absolute instants (the only vocabulary both halves share).
+Scheduling is asked for the UTC-date span of `[from,to)` widened one day
+each side (UTC offsets reach ±14h, so a boundary local day can land on the
+neighbouring UTC date) and the answer is clipped back with Scheduling's own
+`intersectIntervals`. The horizon guard is Scheduling's own
+`assertValidExpansionRange` applied to that widened window, so the 370-day
+safety cap is never exceeded and a Calendar window may be up to 368 days;
+369+ is a 422, never a silent clamp.
+
+Authorization: the accepted contract gates the route on `booking:read`
+**and** `scheduling:read`. `@RequireCapability` now takes a LIST and
+`CapabilityGuard` requires every entry (stacking two decorators would have
+silently kept only one — `SetMetadata` overwrites). Every pre-existing
+single-capability route is unaffected. `DEFAULT_ROLE_PERMISSIONS` is again
+deliberately untouched: the role→capability mapping remains the open Founder
+product decision PR-02/PR-04/PR-07 all left open.
+
+Failure semantics are coherent, never partial: 401 unauthenticated, 403 for
+either missing capability (never an empty calendar), 422 for an inverted /
+empty / over-horizon window, and the canonical `internal` 500 when either
+underlying read fails. **Deviation recorded:** `calendar.contract.md` words
+that last case as "502/503-mapped", written when the two halves were
+imagined as out-of-process calls; in the shipped modular monolith both are
+in-process application ports, so `internal` is the accurate existing slug
+and no `bad-gateway` slug was invented. The required behaviour — canonical
+problem+json, no partial data, an explicit frontend error+retry state — is
+unchanged.
+
+Frontend: `apps/web/src/features/calendar/` replaces the `/calendar`
+placeholder. ONE bounded range mode — a single local day, deep-linkable as
+`?day=YYYY-MM-DD` — because approved Figma `06 — Calendar` was not
+reachable (the Figma MCP server is unauthenticated in this environment, the
+same finding PR-08 recorded) and no committed artifact mandates week/month
+modes; a malformed `?day` degrades to today. Desktop renders a time-gutter
+timeline and mobile a stacked agenda, chosen at RENDER TIME by viewport
+exactly as `ShellLayout` picks a shell — not a CSS compression. Loading,
+empty, error+retry and permission-restricted are four distinct
+presentations, never a blank grid, and permission is checked both against
+`GET /v1/me` and against an actual `forbidden`. Availability never depends
+on colour: every entry carries "Open"/"Booked"/"Completed" in words plus a
+full time range. Entries are a semantic `<ol>` of real buttons — deliberately
+NOT an ARIA grid. Query keys are `["ws", workspaceId, "calendar", "window",
+from, to]`, so they are scoped to the workspace AND the visible range.
+
+Occupied entries navigate to PR-08's `/bookings/:bookingId` (no Booking
+detail is duplicated). Open time enters PR-08's create flow at
+`/bookings/new?startsAt=<instant>` — a CLIENT-SIDE-ONLY search parameter
+read once as an initial value: no server state, no draft, no shared store,
+and a malformed value is ignored so the field simply starts empty.
+
+Deliberately absent: any Clients/Recovery/Payments work, any
+resource/staff/location/client dimension, any Tailwind, any mobile-IA change
+(`Home · Calendar · Clients · Recovery · More` is untouched) and any PR-10
+exit/hardening work. The only non-Calendar edits are the
+`@RequireCapability`/`CapabilityGuard` widening above, the two new module
+ports, the `/calendar` router entry, the `bookingCreatePath` helper, the
+create flow's one-line prefill read, and one E2E seed row (an Alpha
+availability pattern) so the Calendar journey has open time to render.
+
+PR-10 (Phase-2 E2E/hardening/exit) remains NOT implemented.
 
 ## Workflow-efficiency setup
 

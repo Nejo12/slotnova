@@ -375,6 +375,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/v1/calendar": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Read the composed calendar for a bounded window
+     * @description A read composition over Scheduling's resolved availability and Booking's occupancy for the workspace's implicit resource — it persists nothing and owns no table. Returns the open intervals clipped to the half-open `[from, to)` window, and the bookings whose occupied interval (buffers included) overlaps it. A booking occupied across `from` is included; one adjacent at either bound is not. Cancelled bookings never appear: they occupy no time. The window is bounded by the same expansion horizon as `POST /v1/scheduling/availability/resolve`. Requires both `booking:read` and `scheduling:read`. There is no resource, staff, location or client dimension.
+     */
+    get: operations["CalendarController_read"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -622,6 +642,27 @@ export interface components {
     };
     CompleteBookingRequestDto: {
       version: number;
+    };
+    CalendarResponseDto_Output: {
+      range: {
+        start: string;
+        end: string;
+      };
+      open: {
+        start: string;
+        end: string;
+      }[];
+      occupied: {
+        bookingId: string;
+        serviceId: string;
+        startsAt: string;
+        occupied: {
+          start: string;
+          end: string;
+        };
+        /** @enum {string} */
+        status: "confirmed" | "completed";
+      }[];
     };
     ProblemDetailsDto: {
       type: string;
@@ -2025,6 +2066,73 @@ export interface operations {
       };
       /** @description `version` did not match the booking's current version (`stale-write`), or the command is not valid from its current state (`invalid-transition`). */
       409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+    };
+  };
+  CalendarController_read: {
+    parameters: {
+      query: {
+        to: string;
+        from: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CalendarResponseDto_Output"];
+        };
+      };
+      /** @description Malformed or unknown query parameter (`validation`). */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description No/invalid session (`session-invalid`). */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description Missing `booking:read` or `scheduling:read` (both are required), or no active workspace (`forbidden`). */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description `to` is not strictly after `from`, or the window exceeds the expansion horizon (`validation`). */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ProblemDetailsDto"];
+        };
+      };
+      /** @description An underlying Scheduling or Booking read failed (`internal`). The response is never partial calendar data. */
+      500: {
         headers: {
           [name: string]: unknown;
         };

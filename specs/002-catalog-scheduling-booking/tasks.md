@@ -392,8 +392,60 @@ no PR combines schema + API + UI for more than one module at a time.
   built "for later."
 - **Out of scope**: Calendar UI (PR-09), any Clients-domain UI.
 
+## Corrective — OpenAPI nullable scalar generation (issue #79)
+
+- **Status**: Complete and merged (PR #80), between PR-08 and PR-09. Not a
+  numbered slice of this plan: it repaired a contract-generation defect PR-08
+  found and recorded, where six top-level response properties declared
+  `string | null` at runtime were published as `array of string`. Fixed
+  generically by the project-owned `createZodDto`
+  (`apps/api/src/http/openapi/zod-dto.ts`), which every boundary schema —
+  PR-09's included — now imports instead of `nestjs-zod` directly. No
+  runtime, endpoint, serialization or schema change.
+
 ## PR-09 — Calendar composition/UI
 
+- **Status**: Complete (issue #81). ONE thin read-composition endpoint,
+  `GET /v1/calendar?from=&to=`, in `apps/api/src/modules/calendar-read/`
+  (`application/` + `http/` only — no `domain/`, no `infrastructure/`, no
+  table, **no migration**). It composes two newly published application
+  ports, `AvailabilityReadPort` (Scheduling) and `BookingOccupancyPort`
+  (Booking), each the only provider its module exports, mirroring PR-07's
+  Catalog `ServiceSnapshotPort`. Both delegate verbatim to the use cases the
+  existing endpoints already use, so Scheduling keeps sole authority over
+  recurrence/DST/exceptions/horizon and Booking keeps sole authority over
+  `blocking_range` overlap, status and identity; PR-07A's crossing-window
+  semantics are inherited, not re-derived. Booking (not Calendar) excludes
+  `cancelled` from occupancy, matching `bookings_no_overlap`'s partial
+  predicate. The request window is absolute instants; Scheduling is asked for
+  the UTC-date span widened one day each side (UTC offsets reach ±14h) and
+  clipped back with Scheduling's own `intersectIntervals`, with the 370-day
+  guard applied to that widened window — so a Calendar window may be up to
+  368 days and 369+ is a 422, never a silent clamp. The route requires BOTH
+  `booking:read` and `scheduling:read`: `@RequireCapability` was widened to
+  take a list and `CapabilityGuard` now requires every entry (stacking two
+  decorators would have silently kept one). `DEFAULT_ROLE_PERMISSIONS`
+  remains untouched. Failures are coherent and never partial — 401 / 403 /
+  422 / canonical `internal` 500. **Contract reconciliation recorded, not
+  silently changed:** `calendar.contract.md` words the underlying-failure
+  case as "502/503-mapped"; both halves are in-process application ports in
+  the shipped modular monolith, so the existing `internal` slug is used and
+  no `bad-gateway` slug was invented — the required behaviour (canonical
+  problem+json, no partial data, explicit frontend error+retry) is unchanged.
+  Frontend `apps/web/src/features/calendar/` replaces the `/calendar`
+  placeholder with ONE bounded day mode (`?day=YYYY-MM-DD`, malformed
+  degrades to today), a desktop timeline and a deliberately different mobile
+  agenda chosen at render time, four distinct states, colour-independent
+  labelling, a semantic list of buttons rather than a fake ARIA grid, and
+  workspace+range-scoped query keys. Occupied entries navigate to PR-08's
+  `/bookings/:bookingId`; open time enters `/bookings/new?startsAt=` through
+  a client-side-only, safely-degrading search parameter. **Approved Figma was
+  NOT reachable** (the Figma MCP server is unauthenticated in this
+  environment — the same finding PR-08 recorded), so `docs/product-handoff.md`
+  and the committed contracts were used as authority and the single-day mode
+  is documented as a decision rather than inferred from absent visuals. No
+  Clients/Recovery/Payments work, no resource/staff/location/client
+  dimension, no mobile-IA change and no PR-10 work.
 - **Dependency**: PR-04 (Scheduling resolve), PR-07 (Booking list/detail),
   and the composition endpoint from `research.md` R-CAL (thin
   `apps/api/src/modules/calendar-read` application service with no

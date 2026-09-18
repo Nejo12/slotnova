@@ -43,6 +43,23 @@ await admin.query(`
     ('30000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000001', 'E2E Alpha Haircut', 45, 5, 10, 4500, 'EUR', true),
     ('30000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000002', 'E2E Beta Massage', 60, 0, 0, 7000, 'EUR', true);
 
+  -- One 09:00-18:00 availability pattern for the Alpha workspace so the PR-09
+  -- Calendar journey has open time to render and to start a booking from.
+  -- Seed data only: no schema change, no default role mapping, and Beta /
+  -- Restricted deliberately keep none so their calendars stay empty.
+  INSERT INTO public.availability_patterns
+    (id, workspace_id, timezone, weekly_rule, effective_from, effective_until)
+  VALUES
+    ('40000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000001', 'Europe/Berlin',
+     '[{"dayOfWeek":1,"startMinuteOfDay":540,"endMinuteOfDay":1080},
+       {"dayOfWeek":2,"startMinuteOfDay":540,"endMinuteOfDay":1080},
+       {"dayOfWeek":3,"startMinuteOfDay":540,"endMinuteOfDay":1080},
+       {"dayOfWeek":4,"startMinuteOfDay":540,"endMinuteOfDay":1080},
+       {"dayOfWeek":5,"startMinuteOfDay":540,"endMinuteOfDay":1080},
+       {"dayOfWeek":6,"startMinuteOfDay":540,"endMinuteOfDay":1080},
+       {"dayOfWeek":7,"startMinuteOfDay":540,"endMinuteOfDay":1080}]'::jsonb,
+     NULL, NULL);
+
   INSERT INTO public.locations (workspace_id, name, timezone)
   VALUES
     ('20000000-0000-4000-8000-000000000001', 'Alpha Front Desk', 'Europe/Berlin'),

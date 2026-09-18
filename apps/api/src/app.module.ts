@@ -4,6 +4,7 @@ import { APP_FILTER } from "@nestjs/core";
 import { SecurityConfigModule } from "./config/security-config.module.js";
 import { ProblemExceptionFilter } from "./http/problem/problem.filter.js";
 import { BookingModule } from "./modules/booking/booking.module.js";
+import { CalendarReadModule } from "./modules/calendar-read/calendar-read.module.js";
 import { CatalogModule } from "./modules/catalog/catalog.module.js";
 import { IdentityModule } from "./modules/identity/identity.module.js";
 import { DatabaseModule } from "./modules/platform/database/database.module.js";
@@ -20,8 +21,10 @@ import { SchedulingModule } from "./modules/scheduling/scheduling.module.js";
  * `SchedulingModule` joins in PR-04 (issue #66) for the same reason now that
  * PR-03's domain has a persistence/HTTP layer. `BookingModule` joins in PR-07
  * (issue #73) on the same terms — PR-05/PR-06 deliberately left it unwired
- * while it had no controller. No Calendar, Recovery or Payments module exists
- * yet.
+ * while it had no controller. `CalendarReadModule` joins in PR-09 (issue #81)
+ * — a read COMPOSITION over Scheduling and Booking with no table, no
+ * migration and no persistence of its own (ADR-012). No Recovery or Payments
+ * module exists yet.
  */
 @Module({
   imports: [
@@ -34,6 +37,7 @@ import { SchedulingModule } from "./modules/scheduling/scheduling.module.js";
     CatalogModule,
     SchedulingModule,
     BookingModule,
+    CalendarReadModule,
   ],
   providers: [{ provide: APP_FILTER, useClass: ProblemExceptionFilter }],
 })
