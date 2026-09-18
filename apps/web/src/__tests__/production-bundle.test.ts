@@ -14,7 +14,7 @@ const created: string[] = [];
 // by building its missing prerequisites without changing the bundle assertions.
 beforeAll(() => {
   const repoRoot = new URL("../../../../", import.meta.url).pathname;
-  for (const name of ["ui", "deployment-config"]) {
+  for (const name of ["ui", "deployment-config", "contracts"]) {
     const entry = join(repoRoot, "packages", name, "dist", "index.js");
     if (!existsSync(entry)) {
       execFileSync("pnpm", ["--filter", `@slotnova/${name}`, "build"], {
