@@ -127,9 +127,9 @@ function translateOverlapViolation(error: unknown): never {
 }
 
 /**
- * A bounded half-open `[from, to)` window over `starts_at`, plus an optional
- * single-status filter. Both bounds are required — this repository never
- * lists unbounded.
+ * A bounded half-open `[from, to)` window a booking's occupied interval must
+ * OVERLAP, plus an optional single-status filter. Both bounds are required —
+ * this repository never lists unbounded.
  */
 export interface BookingListQuery {
   readonly from: Temporal.Instant;
@@ -205,21 +205,37 @@ export class BookingsRepository {
 
   /**
    * The bounded window query behind `GET /v1/bookings?from=&to=&status=`
-   * (PR-07, issue #73). NOT a `findAll()`: `from`/`to` are both required by
-   * the boundary schema, so every call is bounded by an explicit half-open
-   * window, and RLS scopes it to the active workspace like every other
-   * method here.
+   * (PR-07, issue #73; window semantics corrected by PR-07A, issue #75). NOT
+   * a `findAll()`: `from`/`to` are both required by the boundary schema, so
+   * every call is bounded by an explicit half-open window, and RLS scopes it
+   * to the active workspace like every other method here.
    *
-   * ## Which instant the window filters on
+   * ## Which interval the window filters on
    *
-   * `starts_at`, half-open `[from, to)` — the booking's own contract field,
-   * the one the caller sent and the one the response echoes. The accepted
-   * contract gives the parameters (`?from=&to=`) but not the column, and the
-   * alternative (matching `blocking_range &&` the window) would return
-   * bookings whose *appointment* lies outside the requested window purely
-   * because a buffer reached into it, which no accepted artifact asks for.
-   * Filtering on `starts_at` is also the only choice a client can reason
-   * about without knowing the Service's buffers.
+   * The booking's OCCUPIED interval — the STORED GENERATED `blocking_range`
+   * — must OVERLAP the requested half-open `[from, to)` window:
+   *
+   * ```sql
+   * blocking_range && tstzrange($1::timestamptz, $2::timestamptz, '[)')
+   * ```
+   *
+   * PR-07 originally filtered `starts_at >= from AND starts_at < to`. That is
+   * wrong for occupation, and Founder review said so before PR #74 merged:
+   * `contracts/calendar.contract.md` composes a day's occupied intervals from
+   * this endpoint's results, and a booking can BEGIN before `from` while
+   * remaining occupied inside the window — because the service duration
+   * reaches in, because a post-buffer reaches in, or because the booking
+   * crosses midnight. A `starts_at`-only predicate hides exactly those
+   * bookings, so a Calendar built on it would show free time that is not.
+   *
+   * `blocking_range` is reused rather than recomputed in SQL or TypeScript:
+   * it is the same generated column `bookings_no_overlap` excludes on
+   * (`0010_booking_overlap_exclusion.sql`), so "visible in this window" and
+   * "occupies this window" can never drift apart. The `'[)'` literal makes
+   * the requested window half-open too, so PostgreSQL's own range semantics —
+   * not an epsilon adjustment here — decide the boundaries: a booking ending
+   * exactly at `from` and one starting exactly at `to` are both adjacent, not
+   * overlapping, and neither is returned.
    *
    * ## Deterministic ordering
    *
@@ -233,7 +249,7 @@ export class BookingsRepository {
    * exists here or anywhere — those dimensions do not exist in Phase 2.
    */
   async list(tx: Queryable, query: BookingListQuery): Promise<BookingRecord[]> {
-    const conditions = ["starts_at >= $1::timestamptz", "starts_at < $2::timestamptz"];
+    const conditions = ["blocking_range && tstzrange($1::timestamptz, $2::timestamptz, '[)')"];
     const params: unknown[] = [query.from.toString(), query.to.toString()];
     if (query.status !== undefined) {
       conditions.push(`status = $${params.length + 1}::booking_status`);

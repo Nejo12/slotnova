@@ -143,7 +143,9 @@ export type BookingListResponseBody = z.infer<typeof bookingListResponseSchema>;
  *
  * `from`/`to` are both REQUIRED: the repository never lists unbounded, and an
  * optional bound would be exactly that. The window is half-open `[from, to)`
- * over `startsAt` — see `BookingsRepository.list` for why that column. That
+ * and a booking matches when its OCCUPIED interval (`blockingRange`) overlaps
+ * it, not when its `startsAt` falls inside it — see `BookingsRepository.list`
+ * for why (PR-07A, issue #75). That
  * `to` must be strictly after `from` is the merged PR-03 interval invariant
  * (`createInterval`, a 422), deliberately NOT re-encoded here as a `.refine`
  * that would report the same rule at a different status.

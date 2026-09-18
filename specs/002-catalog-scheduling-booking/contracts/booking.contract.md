@@ -8,6 +8,14 @@ creation path and no `/confirm` endpoint in Phase 2.
 ## `GET /bookings?from=&to=&status=`
 
 - Auth: session + workspace. Capability: `booking:read`.
+- Window: `from`/`to` are both required and half-open `[from, to)`. A
+  booking matches when its OCCUPIED interval (`blockingRange`, i.e.
+  duration plus buffers) overlaps the window — not merely when `startsAt`
+  falls inside it — so a booking that begins before `from` but is still
+  occupied inside the window is returned, while one ending exactly at
+  `from` or beginning exactly at `to` is adjacent and excluded. This is
+  what lets `calendar.contract.md` compose a range's occupied intervals
+  from this endpoint's results without missing an in-progress booking.
 - Response `200`: `Booking[]` (summary shape).
 
 ## `GET /bookings/:id`
@@ -42,8 +50,8 @@ creation path and no `/confirm` endpoint in Phase 2.
 - Input: `{ version, startsAt }`.
 - Response `200`: updated `Booking` with new `blocking_range`.
 - Failures: `409` `stale-write`, `409` `booking-overlap` (new range
-  conflicts), `422` if source status does not permit reschedule (only
-  `confirmed` bookings can be rescheduled).
+  conflicts), `409` `invalid-transition` if source status does not permit
+  reschedule (only `confirmed` bookings can be rescheduled).
 
 ## `POST /bookings/:id/cancel`
 
