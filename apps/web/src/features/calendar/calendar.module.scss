@@ -1,0 +1,208 @@
+// Calendar surface layout (PR-09). Feature-local composition only: every
+// colour, space, radius and type value is a semantic token, so Light/Dark
+// follows the theme with no per-mode overrides here, and no motion is
+// declared at all (nothing to suppress under prefers-reduced-motion beyond
+// the global floor in src/styles/reduced-motion.css).
+// The <= 400px rules are NOT a compressed desktop timeline. The structural
+// substitution happens in React (CalendarTimeline vs CalendarAgenda, chosen
+// by viewport in CalendarRoute, exactly as ShellLayout picks a shell); these
+// rules only style the two structures each layout already produces. The
+// desktop timeline is a three-column row (time | state | action); the mobile
+// agenda is a stacked card whose whole surface is the touch target.
+
+$mobile-max: 400px;
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nova-space-5);
+  max-width: 900px;
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--nova-space-3);
+  justify-content: space-between;
+}
+
+.title {
+  margin: 0;
+  color: var(--slotnova-text-primary);
+  font-size: var(--slotnova-typography-2xl);
+  font-weight: var(--slotnova-typography-semibold);
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--slotnova-text-secondary);
+  font-size: var(--slotnova-typography-sm);
+}
+
+.daynav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--nova-space-3);
+  padding: var(--nova-space-3) var(--nova-space-4);
+  background: var(--slotnova-surface-bg-surface);
+  border: 1px solid var(--slotnova-border-default);
+  border-radius: var(--nova-radius-lg);
+}
+
+.daynav-forward {
+  display: flex;
+  align-items: center;
+  gap: var(--nova-space-2);
+}
+
+.day-heading {
+  margin: 0;
+  color: var(--slotnova-text-primary);
+  font-size: var(--slotnova-typography-lg);
+  font-weight: var(--slotnova-typography-semibold);
+  text-align: center;
+}
+
+.summary {
+  margin: 0;
+  color: var(--slotnova-text-secondary);
+  font-size: var(--slotnova-typography-sm);
+}
+
+.timeline,
+.agenda {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nova-space-3);
+}
+
+.timeline-list,
+.agenda-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nova-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.entry-row {
+  display: block;
+}
+
+.entry {
+  display: grid;
+  width: 100%;
+  align-items: center;
+  gap: var(--nova-space-3);
+  min-height: var(--nova-control-touch-target);
+  padding: var(--nova-space-3) var(--nova-space-4);
+  border: 1px solid var(--slotnova-border-default);
+  border-radius: var(--nova-radius-md);
+  background: var(--slotnova-surface-bg-surface);
+  color: var(--slotnova-text-primary);
+  font: inherit;
+  text-align: left;
+}
+
+button.entry {
+  cursor: pointer;
+}
+
+.entry:focus-visible {
+  outline: 2px solid var(--slotnova-interaction-focus-ring);
+  outline-offset: 2px;
+}
+
+// Desktop timeline: a leading time gutter, the state in the middle, the
+// action trailing. The left border is a redundant reinforcement only — the
+// word in the badge is what carries the meaning.
+.timeline-list .entry {
+  grid-template-columns: minmax(9rem, 11rem) 1fr auto;
+}
+
+.entry-occupied {
+  border-left: 4px solid var(--slotnova-border-strong);
+}
+
+.entry-open {
+  border-left: 4px solid var(--slotnova-border-default);
+}
+
+.entry-inert {
+  background: var(--slotnova-surface-bg-muted);
+}
+
+.entry-time {
+  color: var(--slotnova-text-primary);
+  font-size: var(--slotnova-typography-md);
+  font-weight: var(--slotnova-typography-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.entry-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--nova-space-2);
+}
+
+.entry-detail {
+  color: var(--slotnova-text-secondary);
+  font-size: var(--slotnova-typography-sm);
+}
+
+.entry-action {
+  color: var(--slotnova-action-primary);
+  font-size: var(--slotnova-typography-sm);
+  font-weight: var(--slotnova-typography-semibold);
+}
+
+// Mobile agenda: one stacked card per entry. The time leads on its own
+// line with the full width, and the whole card is the target.
+.agenda-list .entry {
+  grid-template-columns: 1fr;
+  gap: var(--nova-space-2);
+  padding: var(--nova-space-4);
+}
+
+@media (max-width: $mobile-max) {
+  .page {
+    gap: var(--nova-space-4);
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--nova-space-2);
+  }
+
+  // The pager stacks so each control keeps a full-width touch target
+  // instead of three cramped buttons on one line.
+  .daynav {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--nova-space-2);
+    padding: var(--nova-space-3);
+  }
+
+  .daynav-forward {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--nova-space-2);
+  }
+
+  .daynav button {
+    width: 100%;
+    min-height: var(--nova-control-touch-target);
+  }
+
+  .day-heading {
+    order: -1;
+    font-size: var(--slotnova-typography-md);
+    text-align: left;
+  }
+}

@@ -1,13 +1,13 @@
 import { PermissionRestrictedStatePresentation } from "@slotnova/ui";
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 
 import { useSession } from "../../../app/auth/use-session.js";
 import { ROUTES, bookingDetailPath } from "../../../app/routes/routes.js";
 import { ApiProblemError } from "../api/problem.js";
 import { useActiveServices, useCreateBooking } from "../api/queries.js";
 import { BOOKING_CREATE, CATALOG_READ, hasCapability } from "../capabilities.js";
-import { focusFieldById, localInputToInstant } from "../format.js";
+import { focusFieldById, instantToLocalInput, localInputToInstant } from "../format.js";
 import { ProblemAlert } from "../ProblemAlert.js";
 import styles from "../booking.module.scss";
 import { ReviewStep } from "./ReviewStep.js";
@@ -35,6 +35,15 @@ const STEP_ORDER: readonly Step[] = ["service", "time", "review"];
  * only ever change which step is shown and which alert is rendered, never
  * the selections themselves.
  *
+ * ## Optional start-time prefill (PR-09)
+ * `/bookings/new?startsAt=<instant>` prefills the time field when the
+ * operator arrives from an open Calendar slot. It is a pure convenience:
+ * nothing is reserved or persisted by arriving with it, the flow still
+ * starts at the Service step and still validates and submits exactly what
+ * the operator confirms, and an absent/malformed value is IGNORED so the
+ * field simply starts empty. The Calendar owns no draft state here — it
+ * wrote a URL, and this component read it once.
+ *
  * ## Idempotency key
  * See `./submission-key.ts`. The key is held in a ref keyed by the intent
  * signature: the same intent (a transport retry, a "Try again") reuses it;
@@ -45,9 +54,15 @@ export function CreateBookingRoute(): React.JSX.Element {
   const { activeWorkspace } = useSession();
   const workspaceId = activeWorkspace?.id ?? "";
 
+  const [searchParams] = useSearchParams();
+
   const [step, setStep] = useState<Step>("service");
   const [serviceId, setServiceId] = useState<string | null>(null);
-  const [startsAtLocal, setStartsAtLocal] = useState("");
+  // Read ONCE, as the initial value only: the operator's subsequent edits
+  // are never overwritten by the URL, and a stale link cannot fight them.
+  const [startsAtLocal, setStartsAtLocal] = useState(() =>
+    prefilledLocalTime(searchParams.get("startsAt")),
+  );
   const [timeError, setTimeError] = useState<string | null>(null);
 
   const submissionKey = useRef<SubmissionKey | null>(null);
@@ -193,6 +208,19 @@ export function CreateBookingRoute(): React.JSX.Element {
       ) : null}
     </div>
   );
+}
+
+/**
+ * `?startsAt=<ISO-8601 instant>` -> a `datetime-local` value, or `""` when
+ * the parameter is absent or not a real instant. Degrading to an empty
+ * field is deliberate: a bad link must produce a usable form, never an
+ * error state or an `Invalid Date` in the control.
+ */
+function prefilledLocalTime(raw: string | null): string {
+  if (raw === null || raw.trim() === "") return "";
+  const local = instantToLocalInput(raw);
+  // `instantToLocalInput` already returns "" for an unparseable instant.
+  return local;
 }
 
 function ServicesErrorAlert({

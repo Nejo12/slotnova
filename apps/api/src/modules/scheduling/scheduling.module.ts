@@ -4,6 +4,7 @@ import { IdentityModule } from "../identity/identity.module.js";
 import { CreateAvailabilityExceptionUseCase } from "./application/create-availability-exception.use-case.js";
 import { CreateAvailabilityPatternUseCase } from "./application/create-availability-pattern.use-case.js";
 import { ListAvailabilityPatternsUseCase } from "./application/list-availability-patterns.use-case.js";
+import { AvailabilityReadPort } from "./application/availability-read.port.js";
 import { ResolveAvailabilityUseCase } from "./application/resolve-availability.use-case.js";
 import { SchedulingController } from "./http/scheduling.controller.js";
 import { AvailabilityExceptionsRepository } from "./infrastructure/repositories/availability-exceptions.repository.js";
@@ -43,6 +44,11 @@ import { AvailabilityPatternsRepository } from "./infrastructure/repositories/av
     CreateAvailabilityPatternUseCase,
     CreateAvailabilityExceptionUseCase,
     ResolveAvailabilityUseCase,
+    AvailabilityReadPort,
   ],
+  // The ONE provider another module may resolve: Calendar's read seam
+  // (PR-09). Repositories and every other use case stay unexported, so no
+  // sibling module can acquire a Scheduling repository as a shortcut.
+  exports: [AvailabilityReadPort],
 })
 export class SchedulingModule {}

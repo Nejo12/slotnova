@@ -1,0 +1,119 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Calendar stable primitives > occupied slot — completed 1`] = `
+"<li>
+  <button type="button">
+    <span>
+      "HH:MM – HH:MM"
+    <span>
+      <span data-tone="success">
+        "Completed"
+      <span>
+        "Starts"
+        "HH:MM"
+        "· includes buffers"
+    <span>
+      "View booking""
+`;
+
+exports[`Calendar stable primitives > occupied slot — confirmed (desktop) 1`] = `
+"<li>
+  <button type="button">
+    <span>
+      "HH:MM – HH:MM"
+    <span>
+      <span data-tone="info">
+        "Booked"
+      <span>
+        "Starts"
+        "HH:MM"
+        "· includes buffers"
+    <span>
+      "View booking""
+`;
+
+exports[`Calendar stable primitives > occupied slot — confirmed (mobile) 1`] = `
+"<li>
+  <button type="button">
+    <span>
+      "HH:MM – HH:MM"
+    <span>
+      <span data-tone="info">
+        "Booked"
+      <span>
+        "Starts"
+        "HH:MM"
+        "· includes buffers"
+    <span>
+      "View booking""
+`;
+
+exports[`Calendar stable primitives > open slot (desktop, bookable) 1`] = `
+"<li>
+  <button type="button">
+    <span>
+      "HH:MM – HH:MM"
+    <span>
+      <span data-tone="neutral">
+        "Open"
+      <span>
+        "Available to book"
+    <span>
+      "New booking""
+`;
+
+exports[`Calendar stable primitives > open slot (inert — no booking:create) 1`] = `
+"<li>
+  <div>
+    <span>
+      "HH:MM – HH:MM"
+    <span>
+      <span data-tone="neutral">
+        "Open"
+      <span>
+        "Available to book""
+`;
+
+exports[`Calendar stable primitives > open slot (mobile, bookable) 1`] = `
+"<li>
+  <button type="button">
+    <span>
+      "HH:MM – HH:MM"
+    <span>
+      <span data-tone="neutral">
+        "Open"
+      <span>
+        "Available to book"
+    <span>
+      "Start a new booking at this time""
+`;
+
+exports[`Calendar state banners > empty banner 1`] = `
+"<section>
+  <h3>
+    "Nothing scheduled for this day"
+  <div>
+    "There is no open time and no booking on this day. Check another day, or set working hours in Scheduling.""
+`;
+
+exports[`Calendar state banners > error banner with retry 1`] = `
+"<div aria-atomic="true" aria-live="assertive" data-tone="error" role="alert">
+  <span aria-hidden="true">
+    "×"
+  <div>
+    <div>
+      "This calendar couldn't be loaded"
+    <div>
+      "Something went wrong while loading availability and bookings for this day. Nothing was changed."
+    <div>
+      <button data-variant="secondary" type="button">
+        "Try again""
+`;
+
+exports[`Calendar state banners > permission-restricted banner 1`] = `
+"<section>
+  <h3>
+    "You can't view this calendar"
+  <div>
+    "The calendar combines availability and bookings, so it needs both the booking:read and scheduling:read permissions in this workspace. Ask a workspace owner to grant them.""
+`;

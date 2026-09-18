@@ -22,7 +22,7 @@ import { MembershipsRepository } from "../../../infrastructure/repositories/memb
 import { SessionsRepository } from "../../../infrastructure/repositories/sessions.repository.js";
 import { UsersRepository } from "../../../infrastructure/repositories/users.repository.js";
 import { CapabilityGuard } from "../capability.guard.js";
-import { MEMBERS_INVITE } from "../capabilities.js";
+import { MEMBERS_INVITE, MEMBERS_MANAGE } from "../capabilities.js";
 import { RequireCapability } from "../require-capability.decorator.js";
 
 class ProtectedTestTarget {
@@ -33,6 +33,16 @@ class ProtectedTestTarget {
 
   ungatedAction(): void {
     /* declares no @RequireCapability -- guard must pass through */
+  }
+
+  /**
+   * Two capabilities on one route (PR-09, issue #81 -- Calendar's read
+   * composition is gated on `booking:read` AND `scheduling:read`). The guard
+   * must require EVERY listed capability; holding one must not pass.
+   */
+  @RequireCapability(MEMBERS_INVITE, MEMBERS_MANAGE)
+  doublyGatedAction(): void {
+    /* no-op: only the decorator metadata matters */
   }
 }
 
@@ -128,6 +138,40 @@ describe("CapabilityGuard (real PostgreSQL)", () => {
   it("denies with 403 forbidden + requiredCapability when the capability is missing", async () => {
     const { rawToken } = await seedActiveMembership([]);
     const context = fakeContext({ cookies: { [SESSION_COOKIE]: rawToken } }, target.gatedAction);
+    await expect(guard.canActivate(context)).rejects.toMatchObject({
+      slug: "forbidden",
+      problemOptions: { requiredCapability: MEMBERS_INVITE },
+    });
+  });
+
+  it("requires EVERY capability when a route declares more than one", async () => {
+    const { rawToken } = await seedActiveMembership([MEMBERS_INVITE, MEMBERS_MANAGE]);
+    const context = fakeContext(
+      { cookies: { [SESSION_COOKIE]: rawToken } },
+      target.doublyGatedAction,
+    );
+    await expect(guard.canActivate(context)).resolves.toBe(true);
+  });
+
+  it("denies a multi-capability route when only the FIRST capability is held", async () => {
+    const { rawToken } = await seedActiveMembership([MEMBERS_INVITE]);
+    const context = fakeContext(
+      { cookies: { [SESSION_COOKIE]: rawToken } },
+      target.doublyGatedAction,
+    );
+    await expect(guard.canActivate(context)).rejects.toMatchObject({
+      slug: "forbidden",
+      // The MISSING one is reported, not the first declared one.
+      problemOptions: { requiredCapability: MEMBERS_MANAGE },
+    });
+  });
+
+  it("denies a multi-capability route when only the SECOND capability is held", async () => {
+    const { rawToken } = await seedActiveMembership([MEMBERS_MANAGE]);
+    const context = fakeContext(
+      { cookies: { [SESSION_COOKIE]: rawToken } },
+      target.doublyGatedAction,
+    );
     await expect(guard.canActivate(context)).rejects.toMatchObject({
       slug: "forbidden",
       problemOptions: { requiredCapability: MEMBERS_INVITE },

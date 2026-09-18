@@ -2,12 +2,13 @@
  * `booking` module public entry point — the pure domain surface only,
  * mirroring `catalog/index.ts` and `scheduling/index.ts`.
  *
- * Nothing from `booking/application/**` or `booking/infrastructure/**` is
- * exported: no sibling module needs a Booking concept yet (Calendar's
- * read-composition endpoint is PR-09), and a repository or use case exported
- * "just in case" would be exactly the cross-domain shortcut constitution III
- * forbids. Widen this file when a real consumer appears; never import
- * `booking/infrastructure/**` from another module (enforced by
+ * PR-05 exported nothing from `booking/application/**` because no sibling
+ * module needed a Booking concept yet. PR-09 (issue #81) is that real
+ * consumer: Calendar's read composition. Exactly ONE application symbol is
+ * published for it — {@link BookingOccupancyPort}, the narrow occupancy read
+ * seam — and no repository, no other use case and no schema is reachable
+ * from here. Widen this file only when another real consumer appears; never
+ * import `booking/infrastructure/**` from another module (enforced by
  * `no-cross-module-internals`).
  *
  * There is deliberately no `BookingModule` in PR-05: the module has no
@@ -16,6 +17,24 @@
  * HTTP layer, exactly as PR-03 shipped Scheduling's domain with no module and
  * PR-04 added `SchedulingModule` with its controllers.
  */
+
+export {
+  BOOKING_CANCEL,
+  BOOKING_CAPABILITIES,
+  BOOKING_COMPLETE,
+  BOOKING_CREATE,
+  BOOKING_EDIT,
+  BOOKING_READ,
+  type BookingCapability,
+} from "./domain/policy/capabilities.js";
+
+export {
+  BookingOccupancyPort,
+  OCCUPYING_BOOKING_STATUSES,
+  type BookingOccupancyRange,
+  type OccupiedBooking,
+  type OccupyingBookingStatus,
+} from "./application/booking-occupancy.port.js";
 
 export {
   BOOKING_COMMANDS,

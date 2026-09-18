@@ -3,6 +3,7 @@ import { createBrowserRouter, type RouteObject } from "react-router";
 import { BookingHomeRoute } from "../features/booking/BookingHomeRoute.js";
 import { CreateBookingRoute } from "../features/booking/create/CreateBookingRoute.js";
 import { BookingDetailRoute } from "../features/booking/detail/BookingDetailRoute.js";
+import { CalendarRoute } from "../features/calendar/CalendarRoute.js";
 import { PlaceholderRoute } from "./routes/PlaceholderRoute.js";
 import { ROUTES } from "./routes/routes.js";
 import { ShellLayout } from "./shell/ShellLayout.js";
@@ -12,7 +13,9 @@ const shellRoutes: RouteObject = {
   element: <ShellLayout />,
   children: [
     { index: true, element: <PlaceholderRoute destination="Home" /> },
-    { path: "calendar", element: <PlaceholderRoute destination="Calendar" /> },
+    // Phase-2 PR-09 Calendar surface, replacing the T060 placeholder. The
+    // visible day is a search parameter (`?day=`), so it stays one route.
+    { path: "calendar", element: <CalendarRoute /> },
     // Phase-2 PR-08 Booking surface. `new` is declared before `:bookingId`
     // so the literal segment always wins over the dynamic one.
     { path: "bookings", element: <BookingHomeRoute /> },

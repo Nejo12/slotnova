@@ -1,16 +1,30 @@
 /**
- * `scheduling` module public entry point — the pure domain surface only,
- * mirroring `catalog/index.ts`'s convention.
+ * `scheduling` module public entry point — the pure domain surface plus the
+ * ONE application port a sibling module consumes, mirroring
+ * `catalog/index.ts`'s convention.
  *
- * PR-04 added `scheduling/{application,infrastructure,http}` and
- * `SchedulingModule` behind this entry point, but deliberately exported none
- * of it: no sibling module needs a Scheduling concept yet (Calendar's
- * read-composition endpoint is PR-09), and a repository or use case exported
- * "just in case" would be exactly the cross-domain shortcut constitution III
- * forbids. Widen this file when a real consumer appears; never import
- * `scheduling/infrastructure/**` or `scheduling/application/**` directly from
- * another module (enforced by `no-cross-module-internals`).
+ * PR-04 added `scheduling/{application,infrastructure,http}` behind this
+ * entry point and deliberately exported none of it, because no sibling
+ * module needed a Scheduling concept yet. PR-09 (issue #81) is that real
+ * consumer: Calendar's read composition. Exactly ONE application symbol is
+ * published for it — {@link AvailabilityReadPort}, the narrow read seam —
+ * and no repository, no other use case and no schema is reachable from
+ * here. Widen this file only when another real consumer appears; never
+ * import `scheduling/infrastructure/**` directly from another module
+ * (enforced by `no-cross-module-internals`).
  */
+
+export {
+  SCHEDULING_CAPABILITIES,
+  SCHEDULING_MANAGE,
+  SCHEDULING_READ,
+  type SchedulingCapability,
+} from "./domain/policy/capabilities.js";
+
+export {
+  AvailabilityReadPort,
+  type AvailabilityReadRange,
+} from "./application/availability-read.port.js";
 
 export {
   compareIntervals,

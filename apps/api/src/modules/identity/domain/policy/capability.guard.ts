@@ -38,11 +38,21 @@ export class CapabilityGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const requiredCapability = this.reflector.getAllAndOverride<string | undefined>(
+    const metadata = this.reflector.getAllAndOverride<string | readonly string[] | undefined>(
       REQUIRE_CAPABILITY_KEY,
       [context.getHandler(), context.getClass()],
     );
-    if (requiredCapability === undefined) return true;
+    if (metadata === undefined) return true;
+    // `@RequireCapability` stores a list (PR-09); a bare string is still
+    // accepted so no route can be left ungated by a shape mismatch.
+    const requiredCapabilities = typeof metadata === "string" ? [metadata] : metadata;
+    if (requiredCapabilities.length === 0) {
+      // Metadata that gates nothing is a wiring mistake, not an open door.
+      throw new ProblemException("forbidden");
+    }
+    // Reported on 401/403 as the FIRST required capability, so the existing
+    // single-capability problem shape is unchanged for every pre-PR-09 route.
+    const requiredCapability = requiredCapabilities[0]!;
 
     const request = context.switchToHttp().getRequest<FastifyRequest>();
     const rawToken = request.cookies[sessionCookieName(this.security.secureCookies)];
@@ -56,16 +66,17 @@ export class CapabilityGuard implements CanActivate {
       throw new ProblemException("forbidden", { requiredCapability });
     }
 
-    const authorized = authorize(
-      {
-        membershipStatus: "active",
-        workspaceStatus: "active",
-        permissions: sessionContext.activeWorkspace.permissions,
-      },
-      requiredCapability,
-    );
-    if (!authorized) {
-      throw new ProblemException("forbidden", { requiredCapability });
+    // EVERY required capability must be held — a route gated on two is not
+    // satisfied by holding either one. `authorize()` stays the single
+    // decision function; nothing about its rule is relaxed here.
+    const subject = {
+      membershipStatus: "active",
+      workspaceStatus: "active",
+      permissions: sessionContext.activeWorkspace.permissions,
+    } as const;
+    const missing = requiredCapabilities.find((capability) => !authorize(subject, capability));
+    if (missing !== undefined) {
+      throw new ProblemException("forbidden", { requiredCapability: missing });
     }
     // Publish the server-resolved ids for the authorized handler (PR-02) —
     // never read from client input. See `request-workspace-context.ts`.
