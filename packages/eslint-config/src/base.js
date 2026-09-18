@@ -34,6 +34,11 @@ export const base = tseslint.config(
     ignores: [
       "**/node_modules/**",
       "**/dist/**",
+      // Storybook's production build output. Already gitignored beside
+      // `dist`, but ESLint has its own ignore list, so building Storybook
+      // for the visual-regression lane and then running `verify:fast` in the
+      // same checkout otherwise lints thousands of vendored bundle lines.
+      "**/storybook-static/**",
       "**/.turbo/**",
       "**/coverage/**",
       "**/.output/**",

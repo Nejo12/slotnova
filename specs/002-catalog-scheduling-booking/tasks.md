@@ -405,7 +405,8 @@ no PR combines schema + API + UI for more than one module at a time.
 
 ## PR-09 — Calendar composition/UI
 
-- **Status**: Complete (issue #81). ONE thin read-composition endpoint,
+- **Status**: Complete and **merged** (PR #82, issue #81 closed,
+  merge commit `cd95b82`). ONE thin read-composition endpoint,
   `GET /v1/calendar?from=&to=`, in `apps/api/src/modules/calendar-read/`
   (`application/` + `http/` only — no `domain/`, no `infrastructure/`, no
   table, **no migration**). It composes two newly published application
@@ -467,6 +468,35 @@ no PR combines schema + API + UI for more than one module at a time.
 
 ## PR-10 — Phase-2 E2E/hardening/exit
 
+- **Status**: Implemented and locally verified (issue #83); **not yet merged** —
+  the Founder performs every merge manually, so this slice is marked complete
+  only once that merge lands. Evidence-first, not a feature PR: the SC-001…
+  SC-011 matrix was built from the merged Phase-2 corpus BEFORE any code was
+  written, and **exit validation found no defect in accepted Phase-2
+  behaviour** — no product code, schema, migration, contract shape, RLS policy,
+  capability rule or default role mapping was changed. The one defect it did
+  find is low-severity tooling hygiene: `storybook-static/` was missing from
+  ESLint's and Stylelint's own ignore lists, so building Storybook and then
+  running `verify:fast` in the same checkout failed on vendored bundles; fixed
+  with one ignore entry in each config, beside the existing `dist` entry, with
+  no rule relaxed. Three genuine *evidence*
+  gaps were closed with bounded tests: (1) reschedule had no integrated
+  real-browser/real-PostgreSQL journey and (2) no E2E ran at a ≤400px viewport,
+  both closed by `apps/web/e2e/journey-10-reschedule-mobile.spec.ts`; (3)
+  SC-005's "100%" quantifier was unproven — every tenant table had a
+  hand-written suite, but each asserted only the tables it already knew about,
+  closed by `apps/api/src/test/isolation/tenant-table-census.int.test.ts`, which
+  discovers tenant ownership from the live PostgreSQL catalog (NOT NULL
+  `workspace_id`) instead of from a list. A fourth, smaller gap — the reschedule
+  panel was the one changed interactive flow with no axe run and no
+  keyboard-only assertion — was closed inside the existing
+  `booking-a11y.test.tsx`. The full evidence matrix, the Phase-2 Founder
+  decision register and the exit assessment are in `docs/phase-2-exit.md`. The
+  default role→capability mapping remains an **open Founder product decision**
+  and is recorded there as deferred: it is assessed as NOT an exit blocker
+  because capabilities are already enforced server-authoritatively through
+  explicit membership `permissions`, and no accepted artifact specifies a
+  default mapping.
 - **Dependency**: PR-01…PR-09.
 - **Files/areas**: `apps/web` Playwright specs, `.slotnova/CURRENT.md`,
   `docs/decisions/000X-*.md` Phase-2 exit records (including a record of

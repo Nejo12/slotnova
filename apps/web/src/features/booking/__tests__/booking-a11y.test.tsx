@@ -41,6 +41,9 @@ function seedHappyPath(): void {
     http.post(`${API_ORIGIN}/v1/bookings/:id/cancel`, () =>
       HttpResponse.json(bookingFixture({ status: "cancelled", version: 2 })),
     ),
+    http.post(`${API_ORIGIN}/v1/bookings/:id/reschedule`, () =>
+      HttpResponse.json(bookingFixture({ startsAt: "2026-10-01T13:00:00.000Z", version: 2 })),
+    ),
   );
 }
 
@@ -130,6 +133,54 @@ describe("Booking accessibility", () => {
     await user.keyboard("{Enter}");
 
     expect(await screen.findByText("Booking confirmed")).toBeDefined();
+  });
+
+  /**
+   * PR-10 exit gap-closer. SC-009 names reschedule alongside create and
+   * cancel, but the reschedule panel was the one changed interactive flow
+   * with no axe run and no keyboard-only assertion of its own — it was
+   * covered functionally (`booking-detail.test.tsx`) but not for
+   * accessibility.
+   */
+  it("is axe-clean on the reschedule panel and operable with the keyboard only", async () => {
+    const { container, user } = renderBooking({ path: `/bookings/${bookingFixture().id}` });
+
+    const trigger = await screen.findByRole("button", { name: "Reschedule" });
+    trigger.focus();
+    await user.keyboard("{Enter}");
+
+    const field = await screen.findByLabelText(/New start time/);
+    await expectAxeClean(container);
+
+    // The field opens prefilled with the booking's current start time, so a
+    // keyboard user can commit from here without retyping it.
+    expect((field as HTMLInputElement).value).not.toBe("");
+    field.focus();
+
+    // Tab out of the field reaches the panel's own actions, in order, with
+    // no trap: Back (safe exit) first, then the committing action.
+    await user.tab();
+    expect(document.activeElement?.textContent).toBe("Back");
+    await user.tab();
+    expect(document.activeElement?.textContent).toBe("Save new time");
+    await user.keyboard("{Enter}");
+
+    await waitFor(() => expect(screen.queryByLabelText(/New start time/)).toBeNull());
+    expect(screen.getAllByText("Confirmed").length).toBeGreaterThan(0);
+  });
+
+  it("associates a reschedule field error with its control and moves focus to it", async () => {
+    const { container, user } = renderBooking({ path: `/bookings/${bookingFixture().id}` });
+
+    await user.click(await screen.findByRole("button", { name: "Reschedule" }));
+    const field = await screen.findByLabelText(/New start time/);
+    await user.clear(field);
+    await user.click(screen.getByRole("button", { name: "Save new time" }));
+
+    await waitFor(() => expect(field.getAttribute("aria-invalid")).toBe("true"));
+    expect(field.getAttribute("aria-describedby")).toBe("reschedule-starts-at-error");
+    expect(document.activeElement).toBe(field);
+    await expectAxeClean(container);
   });
 
   it("operates the destructive cancel confirmation with the keyboard only", async () => {
