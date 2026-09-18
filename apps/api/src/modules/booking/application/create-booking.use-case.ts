@@ -25,7 +25,7 @@ import { randomUUID } from "node:crypto";
 
 import { Inject, Injectable } from "@nestjs/common";
 import type { Temporal } from "@js-temporal/polyfill";
-import type { Pool } from "@slotnova/db";
+import type { Pool, PoolClient } from "@slotnova/db";
 
 import { asWorkspaceId } from "../../identity/index.js";
 import { DB_POOL } from "../../platform/database/database.tokens.js";
@@ -33,12 +33,14 @@ import {
   withWorkspaceContext,
   type WorkspaceContext,
 } from "../../platform/tenancy/with-workspace-context.js";
-import { createBooking } from "../domain/booking.js";
+import { bookingBlockingInterval, createBooking } from "../domain/booking.js";
+import { BookingOverlapError } from "../domain/booking-errors.js";
 import { asBookingId, type ServiceReferenceId } from "../domain/ids.js";
 import {
   BookingsRepository,
   type BookingRecord,
 } from "../infrastructure/repositories/bookings.repository.js";
+import { RequestedBookingOverlapError } from "./booking-application-errors.js";
 
 export interface CreateBookingCommand {
   readonly serviceId: ServiceReferenceId;
@@ -57,6 +59,26 @@ export class CreateBookingUseCase {
   ) {}
 
   async execute(context: WorkspaceContext, command: CreateBookingCommand): Promise<BookingRecord> {
+    return withWorkspaceContext(this.pool, context, (tx) =>
+      this.executeInTransaction(tx, context, command),
+    );
+  }
+
+  /**
+   * The same creation, run on a transaction the caller already owns.
+   * Extracted in PR-07 so `CreateBookingIdempotentlyUseCase` can place the
+   * idempotency claim, the Catalog Service snapshot read, this insert and the
+   * stored replay response in ONE transaction — the mandatory contract of
+   * `platform/idempotency/executeIdempotently` — instead of duplicating the
+   * creation logic. Mirrors `CreateServiceUseCase.executeInTransaction`
+   * exactly (PR-02). `execute` above is unchanged behaviorally: it simply
+   * opens the transaction itself and delegates here.
+   */
+  async executeInTransaction(
+    tx: PoolClient,
+    context: WorkspaceContext,
+    command: CreateBookingCommand,
+  ): Promise<BookingRecord> {
     // Domain first: an invalid duration/buffer is rejected before any
     // database work, and the aggregate decides the status and version.
     const booking = createBooking({
@@ -68,8 +90,21 @@ export class CreateBookingUseCase {
       postBufferMinutes: command.postBufferMinutes,
     });
 
-    return withWorkspaceContext(this.pool, context, (tx) =>
-      this.bookings.create(tx, asWorkspaceId(context.workspaceId), booking),
-    );
+    try {
+      return await this.bookings.create(tx, asWorkspaceId(context.workspaceId), booking);
+    } catch (error) {
+      // The database rejected the insert under `bookings_no_overlap`. Restate
+      // the window THIS request asked to block — computed from the aggregate
+      // that was just built, via the same `bookingBlockingInterval` the
+      // database's generated column mirrors, never a second formula — so the
+      // HTTP boundary can answer "try another slot" with real context
+      // (`contracts/booking.contract.md`). Nothing is read about the booking
+      // that was already there; no extra query is issued.
+      if (error instanceof BookingOverlapError) {
+        const requested = bookingBlockingInterval(booking);
+        throw new RequestedBookingOverlapError(requested.start, requested.end);
+      }
+      throw error;
+    }
   }
 }

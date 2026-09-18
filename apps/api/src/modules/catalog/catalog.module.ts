@@ -10,6 +10,7 @@ import {
   ListServiceCategoriesUseCase,
   ListServicesUseCase,
 } from "./application/read-catalog.use-case.js";
+import { ServiceSnapshotPort } from "./application/service-snapshot.port.js";
 import { UpdateServiceUseCase } from "./application/update-service.use-case.js";
 import { ServiceCategoriesController } from "./http/service-categories.controller.js";
 import { ServicesController } from "./http/services.controller.js";
@@ -30,6 +31,13 @@ import { ServicesRepository } from "./infrastructure/repositories/services.repos
  * Repositories stay providers of this module and are exported to nobody:
  * `index.ts` remains ports/types only, so no other module can acquire a
  * Catalog repository (constitution III).
+ *
+ * PR-07 (issue #73) adds exactly one `exports` entry:
+ * {@link ServiceSnapshotPort}, the Catalog-owned seam Booking reads a
+ * Service snapshot through while running on Booking's own idempotency
+ * transaction. It is the only Catalog provider any other module can inject,
+ * and `ServicesRepository` remains unexported — a consumer gets the
+ * five-member snapshot or nothing.
  */
 @Module({
   imports: [IdentityModule],
@@ -45,6 +53,8 @@ import { ServicesRepository } from "./infrastructure/repositories/services.repos
     ListServicesUseCase,
     GetServiceUseCase,
     ListServiceCategoriesUseCase,
+    ServiceSnapshotPort,
   ],
+  exports: [ServiceSnapshotPort],
 })
 export class CatalogModule {}

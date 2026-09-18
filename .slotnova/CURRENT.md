@@ -9,13 +9,14 @@ and update this file.
 
 ## Current main
 
-`cfdf680c5008ac87aa0f8188d9d7285589a149f4` — merged PR #69 (Phase 2 PR-05 —
-Booking aggregate/schema/state machine). Issue #68 is closed. PR #67 (PR-04,
-issue #66), PR #65 (PR-03, issue #64), PR #63 (PR-02, issue #60), PR #62
-(PR-02A, issue #61) and PR #59 (PR-01, issue #58) merged before it.
+`fa7072aef83ca0c512eb0a379653932c839df633` — merged PR #72 (Phase 2 PR-06 —
+Booking overlap/concurrency). Issue #70 is closed. PR #69 (PR-05, issue #68),
+PR #67 (PR-04, issue #66), PR #65 (PR-03, issue #64), PR #63 (PR-02,
+issue #60), PR #62 (PR-02A, issue #61) and PR #59 (PR-01, issue #58) merged
+before it.
 
-Issue #70 (Phase 2 PR-06 — Booking overlap/concurrency) is the active slice.
-Issue #71 is a **closed duplicate of #70** and carries no separate work.
+Issue #73 (Phase 2 PR-07 — Booking API/contracts) is the active slice. Issue
+#71 is a **closed duplicate of #70** and carries no separate work.
 
 ## Current implementation state
 
@@ -239,7 +240,43 @@ violating rows make the whole file roll back with 0010 unrecorded.
 generated contracts, `BookingModule` wiring, capability annotations or
 problem+json filter — PR-07 owns all of them.
 
-Later Phase-2 slices (PR-07 through PR-10) remain not implemented; no
+**Phase 2 PR-07 — Booking API/contracts (issue #73) is complete** on branch
+`phase-2/pr-07-booking-api-contracts`. Six endpoints under `/v1/bookings`:
+`GET|POST /bookings`, `GET /bookings/{id}` and
+`POST /bookings/{id}/{reschedule,cancel,complete}`. There is no `/confirm`
+route and no draft/pending state anywhere. `booking:read` gates the two
+reads and `booking:create`/`booking:edit`/`booking:cancel`/`booking:complete`
+gate the four writes, enforced by the existing server-authoritative
+`CapabilityGuard`; as in PR-02/PR-04, `DEFAULT_ROLE_PERMISSIONS` is
+deliberately untouched — the default role mapping for `booking:*` remains an
+OPEN Founder product decision, and every test grants capabilities explicitly.
+
+`POST /v1/bookings` requires an `Idempotency-Key` and runs the idempotency
+claim, the Catalog Service snapshot read, the `bookings` insert and the stored
+replay response in ONE PostgreSQL transaction, satisfying PR-02A's
+same-transaction-only contract. Booking reaches Catalog through a new
+Catalog-owned public port, `ServiceSnapshotPort` (`catalog/application/
+service-snapshot.port.ts`, exported from `catalog/index.ts` and from
+`CatalogModule`), whose `readInTransaction(tx, id)` runs on the CALLER's
+transaction and returns exactly `{ id, active, durationMinutes,
+preBufferMinutes, postBufferMinutes }` — no Catalog repository, schema or
+cross-module join is reachable from `booking/`. A replay returns the stored
+`201` before any INSERT, so it cannot collide with the booking it created.
+
+Three problem slugs were added to the shared catalogue at the 409 the accepted
+contract's conflict-type table gives each: `booking-overlap`, `stale-write`
+and `invalid-transition`. `BookingOverlapError` responses restate the
+REQUESTED blocking window only; the conflicting booking is never queried,
+named or timed. NOTE for the Founder: `booking.contract.md`'s reschedule
+section says `422` for a source status that does not permit reschedule, while
+its own conflict-type table (and issue #73) put `invalid-transition` at `409`
+— this PR follows the table/issue uniformly and flags the wording for repair.
+
+**No schema migration in PR-07**: `0009`/`0010` are consumed unchanged, no
+`0011` exists, and no Booking audit/outbox/event behaviour was added. No
+Booking frontend and no Calendar work (PR-08/PR-09 own those).
+
+Later Phase-2 slices (PR-08 through PR-10) remain not implemented; no
 Calendar/Staff/Clients work exists yet.
 
 ## Workflow-efficiency setup

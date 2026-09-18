@@ -923,6 +923,427 @@
         "summary": "Resolve availability over a bounded date range",
         "tags": ["Scheduling"]
       }
+    },
+    "/v1/bookings": {
+      "get": {
+        "description": "Half-open `[from, to)` over each booking's `startsAt`, ordered `startsAt` then `id`. Both bounds are required — this endpoint never lists unbounded. There is no resource, staff, location or client filter, and no pagination cursor.",
+        "operationId": "BookingsController_list",
+        "parameters": [
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": { "enum": ["confirmed", "completed", "cancelled"], "type": "string" }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "schema": { "format": "date-time", "type": "string" }
+          },
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "schema": { "format": "date-time", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BookingListResponseDto_Output" }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed body/query or an unknown property — including `clientId`, `resourceId`, `locationId` and `staffId`, none of which exist in Phase 2 (`validation`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "401": {
+            "description": "No/invalid session (`session-invalid`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing `booking:read`, or no active workspace (`forbidden`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "422": {
+            "description": "`to` is not strictly after `from` (`validation`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          }
+        },
+        "summary": "List this workspace's bookings in a bounded time window",
+        "tags": ["Bookings"]
+      },
+      "post": {
+        "description": "The caller sends `serviceId` and `startsAt` only. The server reads the current Service and snapshots its duration and buffers; the blocking range and `confirmed`/version 1 are server-derived and cannot be supplied. There is no draft or pending state, and no `/confirm` step.",
+        "operationId": "BookingsController_create",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Client-supplied replay key. Retrying with the same key and the same body returns the original 201 response and creates no second booking (and no spurious overlap conflict against the booking it already created); the same key with a materially different body is a 409 conflict.",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateBookingRequestDto" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BookingResponseDto_Output" }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed body, an unknown property (`clientId`/`resourceId`/`locationId`/`staffId` included), or a missing `Idempotency-Key` (`validation`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "401": {
+            "description": "No/invalid session (`session-invalid`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing `booking:create`, or no active workspace (`forbidden`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "409": {
+            "description": "The requested window overlaps an existing confirmed booking (`booking-overlap`), or the `Idempotency-Key` was reused with a different request (`idempotency-conflict`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "422": {
+            "description": "The referenced service is unavailable in this workspace or is not active (`validation`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          }
+        },
+        "summary": "Create a booking, directly at `confirmed`",
+        "tags": ["Bookings"]
+      }
+    },
+    "/v1/bookings/{id}": {
+      "get": {
+        "operationId": "BookingsController_detail",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BookingResponseDto_Output" }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed body/query or an unknown property — including `clientId`, `resourceId`, `locationId` and `staffId`, none of which exist in Phase 2 (`validation`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "401": {
+            "description": "No/invalid session (`session-invalid`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing `booking:read`, or no active workspace (`forbidden`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "404": {
+            "description": "No such booking in the active workspace (`not-found`). A booking belonging to another workspace is indistinguishable from one that does not exist.",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          }
+        },
+        "tags": ["Bookings"]
+      }
+    },
+    "/v1/bookings/{id}/reschedule": {
+      "post": {
+        "description": "Changes `startsAt` and nothing else. The Service snapshot is NOT re-read: `serviceId`, duration and both buffers are preserved exactly, so a later Service edit never retroactively changes an existing booking's blocking window. Not idempotent — each reschedule is a distinct intent, guarded only by `version`.",
+        "operationId": "BookingsController_reschedule",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RescheduleBookingRequestDto" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BookingResponseDto_Output" }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed body/query or an unknown property — including `clientId`, `resourceId`, `locationId` and `staffId`, none of which exist in Phase 2 (`validation`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "401": {
+            "description": "No/invalid session (`session-invalid`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing `booking:edit`, or no active workspace (`forbidden`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "404": {
+            "description": "No such booking in the active workspace (`not-found`). A booking belonging to another workspace is indistinguishable from one that does not exist.",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "409": {
+            "description": "The new window overlaps an existing confirmed booking (`booking-overlap`), `version` was stale (`stale-write`), or the booking is no longer `confirmed` (`invalid-transition`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          }
+        },
+        "summary": "Move a confirmed booking to a new time",
+        "tags": ["Bookings"]
+      }
+    },
+    "/v1/bookings/{id}/cancel": {
+      "post": {
+        "description": "Founder-ratified semantics: `confirmed` + matching version -> `cancelled` at version + 1; already `cancelled` + matching CURRENT version -> 200 with the current booking and NO write at all (version, `updated_at` and `cancelledReason` are untouched); a stale version -> `stale-write`; a `completed` booking -> `invalid-transition`. The row and its historical blocking range are preserved — capacity is released by the state change alone.",
+        "operationId": "BookingsController_cancel",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CancelBookingRequestDto" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BookingResponseDto_Output" }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed body/query or an unknown property — including `clientId`, `resourceId`, `locationId` and `staffId`, none of which exist in Phase 2 (`validation`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "401": {
+            "description": "No/invalid session (`session-invalid`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing `booking:cancel`, or no active workspace (`forbidden`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "404": {
+            "description": "No such booking in the active workspace (`not-found`). A booking belonging to another workspace is indistinguishable from one that does not exist.",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "409": {
+            "description": "`version` did not match the booking's current version (`stale-write`), or the command is not valid from its current state (`invalid-transition`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          }
+        },
+        "summary": "Cancel a booking",
+        "tags": ["Bookings"]
+      }
+    },
+    "/v1/bookings/{id}/complete": {
+      "post": {
+        "description": "Founder-ratified semantics: `confirmed` + matching version -> `completed` at version + 1; already `completed` + matching CURRENT version -> 200 with the current booking and NO write; a stale version -> `stale-write`; a `cancelled` booking -> `invalid-transition`. A completed booking stays a historical record — nothing is deleted.",
+        "operationId": "BookingsController_complete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CompleteBookingRequestDto" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BookingResponseDto_Output" }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed body/query or an unknown property — including `clientId`, `resourceId`, `locationId` and `staffId`, none of which exist in Phase 2 (`validation`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "401": {
+            "description": "No/invalid session (`session-invalid`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing `booking:complete`, or no active workspace (`forbidden`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "404": {
+            "description": "No such booking in the active workspace (`not-found`). A booking belonging to another workspace is indistinguishable from one that does not exist.",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          },
+          "409": {
+            "description": "`version` did not match the booking's current version (`stale-write`), or the command is not valid from its current state (`invalid-transition`).",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetailsDto" }
+              }
+            }
+          }
+        },
+        "summary": "Mark a booking completed",
+        "tags": ["Bookings"]
+      }
     }
   },
   "info": {
@@ -1392,6 +1813,121 @@
           }
         },
         "required": ["intervals"],
+        "additionalProperties": false
+      },
+      "BookingListResponseDto_Output": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "string" },
+                "serviceId": { "type": "string" },
+                "startsAt": { "type": "string" },
+                "serviceDurationMinutes": { "type": "number" },
+                "preBufferMinutes": { "type": "number" },
+                "postBufferMinutes": { "type": "number" },
+                "blockingRange": {
+                  "type": "object",
+                  "properties": { "start": { "type": "string" }, "end": { "type": "string" } },
+                  "required": ["start", "end"],
+                  "additionalProperties": false
+                },
+                "status": { "type": "string", "enum": ["confirmed", "completed", "cancelled"] },
+                "version": { "type": "number" },
+                "cancelledReason": { "type": ["string", "null"] }
+              },
+              "required": [
+                "id",
+                "serviceId",
+                "startsAt",
+                "serviceDurationMinutes",
+                "preBufferMinutes",
+                "postBufferMinutes",
+                "blockingRange",
+                "status",
+                "version",
+                "cancelledReason"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["items"],
+        "additionalProperties": false
+      },
+      "BookingResponseDto_Output": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "serviceId": { "type": "string" },
+          "startsAt": { "type": "string" },
+          "serviceDurationMinutes": { "type": "number" },
+          "preBufferMinutes": { "type": "number" },
+          "postBufferMinutes": { "type": "number" },
+          "blockingRange": {
+            "type": "object",
+            "properties": { "start": { "type": "string" }, "end": { "type": "string" } },
+            "required": ["start", "end"],
+            "additionalProperties": false
+          },
+          "status": { "type": "string", "enum": ["confirmed", "completed", "cancelled"] },
+          "version": { "type": "number" },
+          "cancelledReason": { "type": "array", "items": { "type": "string" } }
+        },
+        "required": [
+          "id",
+          "serviceId",
+          "startsAt",
+          "serviceDurationMinutes",
+          "preBufferMinutes",
+          "postBufferMinutes",
+          "blockingRange",
+          "status",
+          "version",
+          "cancelledReason"
+        ],
+        "additionalProperties": false
+      },
+      "CreateBookingRequestDto": {
+        "type": "object",
+        "properties": {
+          "serviceId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "startsAt": { "type": "string" }
+        },
+        "required": ["serviceId", "startsAt"],
+        "additionalProperties": false
+      },
+      "RescheduleBookingRequestDto": {
+        "type": "object",
+        "properties": {
+          "version": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 },
+          "startsAt": { "type": "string" }
+        },
+        "required": ["version", "startsAt"],
+        "additionalProperties": false
+      },
+      "CancelBookingRequestDto": {
+        "type": "object",
+        "properties": {
+          "version": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 },
+          "reason": { "type": "string", "minLength": 1, "maxLength": 500 }
+        },
+        "required": ["version"],
+        "additionalProperties": false
+      },
+      "CompleteBookingRequestDto": {
+        "type": "object",
+        "properties": {
+          "version": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 }
+        },
+        "required": ["version"],
         "additionalProperties": false
       },
       "ProblemDetailsDto": {

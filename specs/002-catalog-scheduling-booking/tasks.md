@@ -280,6 +280,24 @@ no PR combines schema + API + UI for more than one module at a time.
 
 ## PR-07 — Booking API/contracts
 
+- **Status**: Complete (issue #73). Six endpoints under `/v1/bookings`:
+  `GET|POST /bookings`, `GET /bookings/{id}` and
+  `POST /bookings/{id}/{reschedule,cancel,complete}`. No `/confirm` route and
+  no draft/pending state. `booking:read` gates the reads;
+  `booking:create`/`booking:edit`/`booking:cancel`/`booking:complete` gate the
+  writes through the existing `CapabilityGuard`, with
+  `DEFAULT_ROLE_PERMISSIONS` deliberately untouched (the default role mapping
+  stays an open Founder decision, as in PR-02/PR-04). `POST /bookings`
+  requires an `Idempotency-Key` and runs the claim, the Catalog Service
+  snapshot read, the `bookings` insert and the stored replay response in ONE
+  transaction — the Service snapshot arrives through a new Catalog-owned
+  public port (`ServiceSnapshotPort`) that takes the caller's transaction, so
+  Booking imports no Catalog repository/schema and issues no cross-module
+  join. `booking-overlap`, `stale-write` and `invalid-transition` were added
+  to the shared problem catalogue at 409 each; the overlap response restates
+  the REQUESTED window only and never queries the conflicting booking.
+  **No schema migration** (0009 + 0010 consumed as-is), no Booking
+  audit/outbox behaviour, no frontend.
 - **Dependency**: PR-06.
 - **Files/areas**: `apps/api/src/modules/booking/http`, runtime schemas,
   OpenAPI/`packages/contracts` regeneration.
