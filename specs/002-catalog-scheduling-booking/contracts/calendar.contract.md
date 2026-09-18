@@ -16,15 +16,22 @@ workspace-implicit (`research.md` R-SCOPE).
 - Response `200`: a merged view model — open intervals (from Scheduling's
   resolve) and occupied intervals with booking summaries (from Booking's
   list) for the workspace's implicit resource over the requested date
-  range, bounded by the same expansion horizon as
-  `scheduling.contract.md`'s resolve endpoint.
+  range. Calendar preserves Scheduling's 370-day expansion safety cap.
+  Because Calendar widens the local-date expansion window by one day on
+  each side before clipping the result back to the caller's requested
+  half-open interval, the largest accepted caller-visible Calendar window
+  is 368 days. Larger windows are rejected rather than silently clamped.
 - Failures:
   - `403` `problem+json` — permission-restricted state (FR-032); the
     frontend renders this distinctly from empty/error.
-  - `422` — range exceeds horizon.
-  - `502`/`503`-mapped `problem+json` if either underlying application
-    service call fails — the frontend renders an explicit error+retry
-    state, distinguishable from "no bookings" empty state.
+  - `422` — range exceeds the Calendar limit above (and therefore would
+    exceed Scheduling's 370-day expanded local-date safety cap), or the
+    requested range is otherwise invalid.
+  - `500` `internal` `problem+json` if either in-process underlying
+    application-service read fails. The response is never partial Calendar
+    data; the frontend renders an explicit error+retry state, distinguishable
+    from "no bookings" empty state. `502`/`503` gateway semantics are not
+    used for these modular-monolith application ports.
 
 No booking or availability data is persisted by this endpoint; it
 composes existing Scheduling/Booking application services and returns a
