@@ -9,17 +9,19 @@ and update this file.
 
 ## Current main
 
-`2cbef6ceb09a2c618e7d7f84c8fd035cf6ef0556` — merged PR #74 (Phase 2 PR-07 —
-Booking API/contracts). Issue #73 is closed. PR #72 (PR-06, issue #70),
-PR #69 (PR-05, issue #68),
+`aed8552fbde9d3ca4a776eaa472e72e717711200` — merged PR #76 (Phase 2 PR-07A —
+Booking list-window + contract reconciliation). Issue #75 is closed. PR #74
+(PR-07, issue #73), PR #72 (PR-06, issue #70), PR #69 (PR-05, issue #68),
 PR #67 (PR-04, issue #66), PR #65 (PR-03, issue #64), PR #63 (PR-02,
 issue #60), PR #62 (PR-02A, issue #61) and PR #59 (PR-01, issue #58) merged
 before it.
 
-Issue #75 (Phase 2 PR-07A — Booking list-window + contract reconciliation) is
-the active slice: a bounded corrective PR for the two Founder-review
-corrections that did not land before PR #74 merged. Issue
-#71 is a **closed duplicate of #70** and carries no separate work.
+The Phase-2 Catalog, Scheduling and Booking APIs are complete: Catalog
+(PR-01/PR-02), Scheduling (PR-03/PR-04/PR-05), Booking domain/overlap
+(PR-06) and the Booking HTTP surface + generated contracts (PR-07/PR-07A).
+
+Issue #77 (Phase 2 PR-08 — Booking frontend flow) is the active slice.
+Issue #71 is a **closed duplicate of #70** and carries no separate work.
 
 ## Current implementation state
 
@@ -314,8 +316,46 @@ state-machine change. The only generated-artifact delta is the one
 openapi.json` and `types.ts` — no path, parameter, schema or response shape
 moved.
 
-Later Phase-2 slices (PR-08 through PR-10) remain not implemented; no
-Calendar/Staff/Clients work exists yet.
+**Phase 2 PR-08 — Booking frontend flow (issue #77) is the active slice.**
+It adds `apps/web/src/features/booking` — the first product feature in the
+web SPA — consuming the generated `@slotnova/contracts` client only:
+
+- routes `/bookings` (entry), `/bookings/new` (create) and
+  `/bookings/:bookingId` (detail), reachable from the shell's Booking
+  navigation item (desktop sidebar per Figma; under "More" on mobile, since
+  the five-item mobile primary bar is a hard invariant).
+- create journey Service -> start time -> check-answers Review -> submit,
+  with Draft/Review held ENTIRELY in component state. No server-side draft
+  or pending exists, so abandoning the flow creates nothing.
+- one `Idempotency-Key` per intended submission: reused for a retry of the
+  same Service+time, regenerated once either is materially edited.
+- Booking detail with reschedule, cancel (destructive confirmation) and
+  complete, each gated on the authoritative `GET /v1/me` capability list
+  and on the booking's server-returned status.
+- `booking-overlap`, `stale-write`, `invalid-transition`, `validation`,
+  `forbidden` and `session-invalid` each render a distinct experience,
+  branching only on the problem+json `type` slug.
+- workspace-scoped query keys throughout (`wsKey`), so the shell's existing
+  `queryClient.clear()` on workspace switch/logout is sufficient.
+
+**No backend, schema, migration, contract-shape or default-role-mapping
+change.** The only non-frontend edits are test-harness seed data
+(`tooling/e2e/api-server.ts` grants the E2E memberships their Booking and
+Catalog capabilities explicitly and seeds one active Service per workspace)
+and Vitest MSW subpath aliases.
+
+Later Phase-2 slices (PR-09 Calendar, PR-10 E2E/hardening/exit) remain not
+implemented; no Calendar/Staff/Clients work exists yet. PR-08 provides the
+Booking routes PR-09 will navigate into but implements no Calendar itself.
+
+**Known contract defect, deliberately NOT fixed in PR-08** (it would be a
+backend/contract change outside this slice): `BookingResponseDto_Output.
+cancelledReason` and `ServiceListResponseDto_Output.nextCursor` are rendered
+in the OpenAPI document as `array of string` although the runtime Zod
+schemas declare them `string | null` (the list DTO's `cancelledReason`
+renders correctly as `string | null`). The Booking frontend reads neither
+field. This needs a Founder decision on where the nullable-rendering fix
+belongs.
 
 ## Workflow-efficiency setup
 

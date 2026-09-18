@@ -21,11 +21,27 @@ await admin.query(`
     ('20000000-0000-4000-8000-000000000002', 'E2E Beta Workspace', 'e2e-beta'),
     ('20000000-0000-4000-8000-000000000003', 'E2E Restricted Workspace', 'e2e-restricted');
 
+  -- Booking/Catalog capabilities are granted explicitly on the membership
+  -- row, exactly as the Founder decision on Phase-2 role mapping requires:
+  -- identity's DEFAULT_ROLE_PERMISSIONS is deliberately NOT changed here,
+  -- because no accepted artifact specifies a role -> capability mapping yet
+  -- (see .slotnova/CURRENT.md, "Open Founder decision"). The restricted
+  -- workspace keeps an empty permission set so journey-07 still proves the
+  -- server-authoritative refusal path.
   INSERT INTO public.memberships (workspace_id, user_id, role, permissions)
   VALUES
-    ('20000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001', 'owner', ARRAY['members:invite','members:manage']),
-    ('20000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000001', 'owner', ARRAY['members:invite','members:manage']),
+    ('20000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001', 'owner', ARRAY['members:invite','members:manage','catalog:read','catalog:manage','scheduling:read','booking:read','booking:create','booking:edit','booking:cancel','booking:complete']),
+    ('20000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000001', 'owner', ARRAY['members:invite','members:manage','catalog:read','booking:read','booking:create','booking:edit','booking:cancel','booking:complete']),
     ('20000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000002', 'staff', ARRAY[]::text[]);
+
+  -- One active Service per workspace so the PR-08 Booking journey has
+  -- something bookable without the E2E run first driving Catalog UI (which
+  -- Phase 2 deliberately does not build).
+  INSERT INTO public.services
+    (id, workspace_id, name, duration_minutes, pre_buffer_minutes, post_buffer_minutes, price_amount_minor, price_currency, active)
+  VALUES
+    ('30000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000001', 'E2E Alpha Haircut', 45, 5, 10, 4500, 'EUR', true),
+    ('30000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000002', 'E2E Beta Massage', 60, 0, 0, 7000, 'EUR', true);
 
   INSERT INTO public.locations (workspace_id, name, timezone)
   VALUES

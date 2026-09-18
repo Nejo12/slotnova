@@ -1,0 +1,172 @@
+// Booking surface layout (PR-08). Feature-local composition only: every
+// colour, space, radius and type value is a semantic token, so Light/Dark
+// follows the theme with no per-mode overrides here, and no motion is
+// declared at all (nothing to suppress under prefers-reduced-motion beyond
+// the global floor in src/styles/reduced-motion.css).
+// The mobile rules further down are a deliberate substitution, not a compressed
+// desktop grid: the two-column summary collapses to stacked label/value
+// pairs, and the action row becomes full-width stacked buttons in the
+// normal content flow, so the fixed bottom navigation (which already
+// reserves its own height in MobileShell.module.scss) never covers the
+// primary action.
+
+$mobile-max: 400px;
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nova-space-5);
+  max-width: 720px;
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--nova-space-3);
+  justify-content: space-between;
+}
+
+.title {
+  margin: 0;
+  color: var(--slotnova-text-primary);
+  font-size: var(--slotnova-typography-2xl);
+  font-weight: var(--slotnova-typography-semibold);
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--slotnova-text-secondary);
+  font-size: var(--slotnova-typography-sm);
+}
+
+.step-heading {
+  margin: 0 0 var(--nova-space-3);
+  color: var(--slotnova-text-primary);
+  font-size: var(--slotnova-typography-xl);
+  font-weight: var(--slotnova-typography-semibold);
+}
+
+.step-heading:focus-visible {
+  outline: 2px solid var(--slotnova-interaction-focus-ring);
+  outline-offset: 4px;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nova-space-4);
+  background: var(--slotnova-surface-bg-surface);
+  border: 1px solid var(--slotnova-border-default);
+  border-radius: var(--nova-radius-lg);
+  padding: var(--nova-space-5);
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nova-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  min-height: var(--nova-control-touch-target);
+  padding: var(--nova-space-2) var(--nova-space-3);
+  border: 1px solid var(--slotnova-border-default);
+  border-radius: var(--nova-radius-md);
+  background: var(--slotnova-surface-bg-surface);
+}
+
+.option-selected {
+  border-color: var(--slotnova-action-primary);
+  background: var(--slotnova-action-subtle);
+}
+
+.summary-list {
+  display: grid;
+  grid-template-columns: minmax(8rem, 12rem) 1fr;
+  gap: var(--nova-space-2) var(--nova-space-4);
+  margin: 0;
+}
+
+.summary-term {
+  margin: 0;
+  color: var(--slotnova-text-secondary);
+  font-size: var(--slotnova-typography-sm);
+  font-weight: var(--slotnova-typography-semibold);
+}
+
+.summary-value {
+  margin: 0;
+  color: var(--slotnova-text-primary);
+  font-size: var(--slotnova-typography-md);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--nova-space-3);
+}
+
+.actions-end {
+  justify-content: flex-end;
+}
+
+.alert-region:focus-visible {
+  outline: 2px solid var(--slotnova-interaction-focus-ring);
+  outline-offset: 4px;
+}
+
+.note {
+  margin: 0;
+  color: var(--slotnova-text-secondary);
+  font-size: var(--slotnova-typography-sm);
+}
+
+@media (max-width: $mobile-max) {
+  .page {
+    gap: var(--nova-space-4);
+  }
+
+  .panel {
+    padding: var(--nova-space-4);
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--nova-space-2);
+  }
+
+  // Stacked label/value pairs instead of a squeezed two-column grid.
+  .summary-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--nova-space-3);
+  }
+
+  // Full-width stacked actions in normal flow.
+  .actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--nova-space-2);
+  }
+
+  // A step footer reads "Back, Continue" on desktop; stacked, the forward
+  // action belongs on top, so this one variant reverses. The plain action
+  // row above keeps DOM order, which is what stops a destructive action
+  // from being hoisted to the top of a mobile stack.
+  .actions-end {
+    flex-direction: column-reverse;
+  }
+
+  .actions button {
+    width: 100%;
+    min-height: var(--nova-control-touch-target);
+  }
+}
